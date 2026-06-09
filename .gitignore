@@ -1,1 +1,31 @@
+# === Java & Maven Defaults ===
+*.class
+*.war
+*.ear
+*.jar
+# Maven builds everything into the target directory
+**/target/
+# If you use NetBeans Maven, it sometimes generates these
+nbactions.xml
+nb-configuration.xml
 
+# === IntelliJ IDEA Specific ===
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# === NetBeans Specific (Legacy/Ant cleanup) ===
+**/nbproject/private/
+**/nbproject/Makefile-*.mk
+**/nbproject/Package-*.bash
+build/
+nbbuild/
+dist/
+nbdist/
+build/built-jar.properties
+
+# === OS Generated Files ===
+.DS_Store
+Thumbs.db
