@@ -17,6 +17,7 @@ nb-configuration.xml
 out/
 
 # === NetBeans Specific (Legacy/Ant cleanup) ===
+**/nbproject/
 **/nbproject/private/
 **/nbproject/Makefile-*.mk
 **/nbproject/Package-*.bash
