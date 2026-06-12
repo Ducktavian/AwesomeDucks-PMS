@@ -8,8 +8,8 @@ package com.motorph.model;
  *
  * @author Lenovo
  */
-public enum RequestStatus {
-    PENDING,
-    APPROVED,
-    DENIED
+public enum RequestType {
+    LEAVE,
+    OVERTIME,
+    UNDERTIME
 }
