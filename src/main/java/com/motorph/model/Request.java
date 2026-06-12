@@ -64,7 +64,7 @@ public class Request implements Requestable {
 
     @Override
     public void approve(String approverId) {
-       this.status = RequestStatus.APPROVED
+       this.status = RequestStatus.APPROVED;
     }
 
     @Override
@@ -73,12 +73,14 @@ public class Request implements Requestable {
     }
     
     
-    void setRequestStatus(RequestStatus status) {
-        
+    // HMMM??
+    
+    public void setRequestStatus(RequestStatus status) {
+        this.status = status;
     }
     
-    void setApprovedBy(String approverId) {
-        
+    public void setApprovedBy(String approverId) {
+        this.approverId = approverId;
     }
 
     public void setRequestId(String requestId) {
