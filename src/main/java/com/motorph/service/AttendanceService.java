@@ -9,7 +9,7 @@ import java.util.List;
 
 
 public class AttendanceService {
-    
+    /*
     private AttendanceDAO attendanceDAO;
     
     // Constructor
@@ -83,4 +83,5 @@ public class AttendanceService {
         boolean hasOpenSession = (attendanceRecord == null) ? false : true;
         return hasOpenSession;
     }
+    */
 }

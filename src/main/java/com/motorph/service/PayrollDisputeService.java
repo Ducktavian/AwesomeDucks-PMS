@@ -13,7 +13,7 @@ import java.util.UUID;
  * @author Lenovo
  */
 public class PayrollDisputeService {
-    
+    /*
     private List<PayrollDispute> disputes = new ArrayList<>();
     
     // FILE DISPUTE
@@ -75,4 +75,5 @@ public class PayrollDisputeService {
     public List<PayrollDispute> getAllDisputes() {
         return disputes;
     }
+*/
 }

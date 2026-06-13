@@ -1,7 +1,6 @@
 package com.motorph.service;
 
 import com.motorph.dao.PayslipDAO;
-import com.motorph.exception.UnauthorizedException;
 import com.motorph.model.AllowanceBreakdown;
 import com.motorph.model.DeductionBreakdown;
 import com.motorph.model.Employee;
@@ -15,7 +14,7 @@ import java.util.List;
 
 
 public class PayrollService {
-    
+    /*
     private AttendanceService attendanceService;
     private RateService rateService;
     private DeductionService deductionService;
@@ -233,4 +232,5 @@ public class PayrollService {
             cursor = cursor.plusMonths(1);
         }
     }
+*/
 }

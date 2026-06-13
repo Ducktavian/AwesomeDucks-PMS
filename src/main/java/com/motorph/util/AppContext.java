@@ -4,7 +4,7 @@ import com.motorph.dao.*;
 import com.motorph.service.*;
 
 public class AppContext {
-
+    /*
     // --- DAOs ---
     private static final AttendanceDAO attendanceDAO = new CsvAttendanceDAO();
     private static final EmployeeDAO employeeDAO = new CsvEmployeeDAO();
@@ -59,4 +59,5 @@ public class AppContext {
     public static UserManagementService getUserManagementService() {
         return userManagementService;
     }
+*/
 }

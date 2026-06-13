@@ -4,7 +4,7 @@
 
 package com.motorph.main;
 
-import com.motorph.ui.Login;
+import com.motorph.ui.*;
 import javax.swing.SwingUtilities;
 
 /**
@@ -17,7 +17,7 @@ public class Main {
         System.out.println("Hello World!");
         
         SwingUtilities.invokeLater(() -> {
-            new Login().setVisible(true);
+            new Reset().setVisible(true);
         });
     }
 }
