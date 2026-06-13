@@ -11,18 +11,20 @@ public class UndertimeRequest extends Request{
     
     private LocalDate undertimeDate;
     private double hours;
-    private String reason;
     
     public UndertimeRequest(String requestId,
                             String employeeId,
+                            RequestStatus status,
+                            String approverId,
+                            String reason,
                             LocalDate dateFiled,
+                            RequestType requestType,
                             LocalDate undertimeDate,
-                            double hours,
-                            String reason) {
-        super(requestId, employeeId, dateFiled);
+                            double hours
+    ) {
+        super(requestId, employeeId, status, approverId, reason, dateFiled, requestType);
         this.undertimeDate = undertimeDate;
         this.hours = hours;
-        this.reason = reason;
     }
     
     public LocalDate getUndertimeDate() {
@@ -37,7 +39,6 @@ public class UndertimeRequest extends Request{
         return reason;
     }
     
-    @Override
     public double calculateImpact(double hourlyRate) {
         // Negative: reduces salary
         return -(hours * hourlyRate);

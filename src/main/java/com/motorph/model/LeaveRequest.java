@@ -10,24 +10,25 @@ public class LeaveRequest extends Request {
     
     private LocalDate startDate;
     private LocalDate endDate;
-    private String reason;
     private LeaveType leaveType;
     
     // Status inherited
-    // approvedBy inherited
+    // approvedId inherited
     
     public LeaveRequest(String requestId,
-                        String employeeNumber,
+                        String employeeId,
+                        RequestStatus status,
+                        String approverId,
+                        String reason,
                         LocalDate dateFiled,
+                        RequestType requestType,
                         LocalDate startDate,
                         LocalDate endDate,
-                        LeaveType leaveType,
-                        String reason
+                        LeaveType leaveType
                         ) {
-        super(requestId, employeeNumber, dateFiled);
+        super(requestId, employeeId, status, approverId, reason, dateFiled, requestType);
         this.startDate = startDate;
         this.endDate = endDate;
-        this.reason = reason;
         this.leaveType = leaveType;
     }
     
@@ -37,10 +38,6 @@ public class LeaveRequest extends Request {
     
     public LocalDate getEndDate() {
         return endDate;
-    }
-    
-    public String getReason() {
-        return reason;
     }
     
     public LeaveType getLeaveType() {

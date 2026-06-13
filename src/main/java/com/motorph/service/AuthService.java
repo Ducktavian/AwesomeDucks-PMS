@@ -16,13 +16,13 @@ public class AuthService {
     
     public UserAccount login(String username, String password) throws Exception {
         
-        UserAccount user = userAccountDAO.findByUsername(username);
+        UserAccount user = userAccountDAO.findByEmployeeId(username);
         
         if (user == null) {
             throw new Exception("User not found.");
         }
         
-        // Checks passowrd
+        // Checks password
         if (!PasswordUtil.verifyPassword(password, user.getPasswordHash())) {
             throw new Exception("Invalid password.");
         }

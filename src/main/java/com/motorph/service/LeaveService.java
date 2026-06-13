@@ -2,7 +2,7 @@
 
 package com.motorph.service;
 
-import com.motorph.dao.LeaveDAO;
+import com.motorph.dao.RequestDAO;
 import com.motorph.model.LeaveRequest;
 import java.time.LocalDate;
 import java.util.List;
@@ -13,10 +13,10 @@ import java.util.List;
  */
 public class LeaveService {
     
-    private LeaveDAO leaveDAO;
+    private RequestDAO requestDAO;
     
-    public LeaveService(LeaveDAO leaveDAO) {
-        this.leaveDAO = leaveDAO;
+    public LeaveService(RequestDAO requestDAO) {
+        this.requestDAO = requestDAO;
     }
     
     public void approveLeave(LeaveRequest leave, String approverId) {

@@ -1,9 +1,8 @@
 package com.motorph.service;
 
 import com.motorph.dao.AttendanceDAO;
-import com.motorph.dao.CsvAttendanceDAO;
-import com.motorph.model.AttendanceRecord;
-
+import com.motorph.dao.JdbcAttendanceDAO;
+import com.motorph.model.Attendance;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
@@ -19,7 +18,7 @@ public class AttendanceService {
     }
     
     // Computes hours worked for a single attendance record ( helper function)
-    public double computeDailyHours(AttendanceRecord record) {
+    public double computeDailyHours(Attendance record) {
         Duration duration = Duration.between(
                 record.getLogIn(),
                 record.getLogOut()
@@ -31,12 +30,12 @@ public class AttendanceService {
     }
     
     // Computes total hours worked for an employee
-    public double computeTotalHours(String employeeNumber) {
-        List<AttendanceRecord> records = attendanceDAO.getAttendanceByEmployee(employeeNumber);
+    public double computeTotalHours(String employeeId) {
+        List<Attendance> records = attendanceDAO.findByEmployeeId(employeeId);
         
         double total = 0;
         
-        for (AttendanceRecord record : records) {
+        for (Attendance record : records) {
             total += computeDailyHours(record);
         }
         
@@ -46,10 +45,10 @@ public class AttendanceService {
     // Period computation
     public double computeTotalHours(String employeeNumber, LocalDate periodStart, LocalDate periodEnd) {
         
-        List<AttendanceRecord> records = attendanceDAO.getAttendanceByEmployee(employeeNumber);
+        List<Attendance> records = attendanceDAO.findByEmployeeId(employeeNumber);
         
         double total = 0;
-        for (AttendanceRecord record: records) {
+        for (Attendance record: records) {
             LocalDate date = record.getDate();
             boolean withinPeriod = (date.isEqual(periodStart) || date.isAfter(periodStart)) &&
                                     (date.isEqual(periodEnd) || date.isBefore(periodEnd));
@@ -62,13 +61,13 @@ public class AttendanceService {
     }
     
     // Get all attendances of all employess
-    public List<AttendanceRecord> getAllAttendance() {
-        return attendanceDAO.getAllAttendance();
+    public List<Attendance> getAllAttendance() {
+        return attendanceDAO.findAll();
     }
     
     // Get all attendances of an employee
-    public List<AttendanceRecord> getAllAttendance(String employeeNumber) {
-        return attendanceDAO.getAttendanceByEmployee(employeeNumber);
+    public List<Attendance> getAllAttendance(String employeeId) {
+        return attendanceDAO.findByEmployeeId(employeeId);
     }
     
     public void timeIn(String employeeNumber) {
@@ -80,7 +79,7 @@ public class AttendanceService {
     }
     
     public boolean hasOpenSession(String employeeNumber) {
-        AttendanceRecord attendanceRecord = attendanceDAO.getOpenSession(employeeNumber);
+        AttendanceattendanceRecord = attendanceDAO.getOpenSession(employeeNumber);
         boolean hasOpenSession = (attendanceRecord == null) ? false : true;
         return hasOpenSession;
     }
