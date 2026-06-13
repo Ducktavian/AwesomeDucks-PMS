@@ -5,6 +5,7 @@
     <artifactId>MotorPH</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
+    
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.release>17</maven.compiler.release>
@@ -12,4 +13,13 @@
         <maven.compiler.target>17</maven.compiler.target>   
         <exec.mainClass>com.motorph.motorph.MotorPH</exec.mainClass>
     </properties>
+    
+    <dependencies>
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <version>9.0.0</version>
+        </dependency>
+    </dependencies>
+    
 </project>

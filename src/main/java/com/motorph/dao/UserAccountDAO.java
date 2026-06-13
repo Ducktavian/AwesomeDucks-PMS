@@ -9,7 +9,7 @@ import java.util.List;
  */
 public interface UserAccountDAO extends BaseDAO {
     UserAccount findById(String userId);
-    List<UserAccount> findByEmployeeId(String employeeId);
+    UserAccount findByEmployeeId(String employeeId);
     List<UserAccount> findAll();
     void save(UserAccount user);
     void update(UserAccount user);

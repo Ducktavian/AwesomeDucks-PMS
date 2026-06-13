@@ -3,9 +3,6 @@ package com.motorph.service;
 import com.motorph.dao.EmployeeDAO;
 import com.motorph.exception.UnauthorizedException;
 import com.motorph.model.Employee;
-import com.motorph.model.Finance;
-import com.motorph.model.HR;
-import com.motorph.model.IT;
 import com.motorph.model.Role;
 import com.motorph.model.UserAccount;
 import com.motorph.util.Session;
@@ -147,34 +144,5 @@ public class EmployeeService {
             throw new IllegalArgumentException("Clothing Allowance must be greater than 0.");
         }
     }
-    
-    // Converts to EMPLOYEE type
-    private Employee convertToSpecificType(Employee draft) {
-        String pos = draft.getPosition().toLowerCase();
 
-        if (pos.contains("hr")) {
-            return new HR(draft.getEmployeeNumber(), draft.getLastName(), draft.getFirstName(), 
-                          draft.getBirthday(), draft.getAddress(), draft.getPhoneNumber(), 
-                          draft.getSSSNumber(), draft.getPhilhealthNumber(), draft.getTIN(), 
-                          draft.getPagIbigNumber(), draft.getStatus(), draft.getPosition(), 
-                          draft.getImmediateSupervisor(), draft.getBasicSalary(), 
-                          draft.getRiceSubsidy(), draft.getPhoneAllowance(), draft.getClothingAllowance());
-        } else if (pos.contains("it")) {
-            return new IT(draft.getEmployeeNumber(), draft.getLastName(), draft.getFirstName(), 
-                          draft.getBirthday(), draft.getAddress(), draft.getPhoneNumber(), 
-                          draft.getSSSNumber(), draft.getPhilhealthNumber(), draft.getTIN(), 
-                          draft.getPagIbigNumber(), draft.getStatus(), draft.getPosition(), 
-                          draft.getImmediateSupervisor(), draft.getBasicSalary(), 
-                          draft.getRiceSubsidy(), draft.getPhoneAllowance(), draft.getClothingAllowance());
-        } else if (pos.contains("finance") || pos.contains("account") || pos.contains("payroll")) {
-            return new Finance(draft.getEmployeeNumber(), draft.getLastName(), draft.getFirstName(), 
-                          draft.getBirthday(), draft.getAddress(), draft.getPhoneNumber(), 
-                          draft.getSSSNumber(), draft.getPhilhealthNumber(), draft.getTIN(), 
-                          draft.getPagIbigNumber(), draft.getStatus(), draft.getPosition(), 
-                          draft.getImmediateSupervisor(), draft.getBasicSalary(), 
-                          draft.getRiceSubsidy(), draft.getPhoneAllowance(), draft.getClothingAllowance());
-        } else {
-            return draft; // default RegularEmployee
-        }
-    }
 }

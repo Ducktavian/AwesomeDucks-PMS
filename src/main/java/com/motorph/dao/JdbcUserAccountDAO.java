@@ -15,7 +15,7 @@ public class JdbcUserAccountDAO implements UserAccountDAO {
     }
 
     @Override
-    public List<UserAccount> findByEmployeeId(String employeeId) {
+    public UserAccount findByEmployeeId(String employeeId) {
         throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
     }
 
