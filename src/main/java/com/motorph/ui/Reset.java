@@ -5,7 +5,6 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
-import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.GradientPaint;
@@ -15,8 +14,6 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.RenderingHints;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
 
@@ -27,22 +24,19 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.border.AbstractBorder;
 
-public class Login extends JFrame {
+public class Reset extends JFrame {
 
     // ── Field declarations ─────────────────────────────────────────────────────
-    private JTextField usernameField;
-    private JPasswordField passwordField;
-    private JButton loginButton;
-    private JLabel forgotPasswordLabel;
+    private JTextField emailField;
+    private JButton continueButton;
 
-    public Login() {
+    public Reset() {
         setTitle("MotorPH Payroll System");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(1280, 800);
@@ -64,86 +58,39 @@ public class Login extends JFrame {
         gbc.weightx = 1.0;
 
         // Title
-        JLabel titleLabel = new JLabel("MotorPH Payroll System", SwingConstants.CENTER);
-        titleLabel.setFont(new Font("SansSerif", Font.BOLD, 30));
+        JLabel titleLabel = new JLabel("Password Reset", SwingConstants.CENTER);
+        titleLabel.setFont(new Font("SansSerif", Font.BOLD, 36));
         titleLabel.setForeground(new Color(15, 15, 15));
         gbc.gridx = 0;
         gbc.gridy = 0;
-        gbc.insets = new Insets(50, 50, 30, 50);
+        gbc.insets = new Insets(50, 50, 40, 50);
         card.add(titleLabel, gbc);
 
-        // Username label
-        JLabel usernameLabel = new JLabel("Username");
-        usernameLabel.setFont(new Font("SansSerif", Font.PLAIN, 14));
-        usernameLabel.setForeground(new Color(30, 30, 30));
+        // Email address label
+        JLabel emailLabel = new JLabel("Email address");
+        emailLabel.setFont(new Font("SansSerif", Font.PLAIN, 14));
+        emailLabel.setForeground(new Color(30, 30, 30));
         gbc.gridy = 1;
         gbc.insets = new Insets(4, 50, 4, 50);
-        card.add(usernameLabel, gbc);
+        card.add(emailLabel, gbc);
 
-        // Username field
-        usernameField = new JTextField();
-        usernameField.setFont(new Font("SansSerif", Font.PLAIN, 15));
-        usernameField.setPreferredSize(new Dimension(500, 50));
-        usernameField.setBorder(BorderFactory.createCompoundBorder(
+        // Email field
+        emailField = new JTextField();
+        emailField.setFont(new Font("SansSerif", Font.PLAIN, 15));
+        emailField.setPreferredSize(new Dimension(500, 50));
+        emailField.setBorder(BorderFactory.createCompoundBorder(
             new RoundedBorder(6, new Color(180, 180, 180)),
             BorderFactory.createEmptyBorder(8, 14, 8, 14)
         ));
-        usernameField.setBackground(Color.WHITE);
+        emailField.setBackground(Color.WHITE);
+        emailField.setText("123456789@gmail.com");
+        emailField.setForeground(new Color(180, 180, 180));
         gbc.gridy = 2;
-        gbc.insets = new Insets(0, 50, 12, 50);
-        card.add(usernameField, gbc);
+        gbc.insets = new Insets(0, 50, 30, 50);
+        card.add(emailField, gbc);
 
-        // Password label
-        JLabel passwordLabel = new JLabel("Password");
-        passwordLabel.setFont(new Font("SansSerif", Font.PLAIN, 14));
-        passwordLabel.setForeground(new Color(30, 30, 30));
-        gbc.gridy = 3;
-        gbc.insets = new Insets(4, 50, 4, 50);
-        card.add(passwordLabel, gbc);
-
-        // Password field
-        passwordField = new JPasswordField();
-        passwordField.setFont(new Font("SansSerif", Font.PLAIN, 15));
-        passwordField.setPreferredSize(new Dimension(500, 50));
-        passwordField.setBorder(BorderFactory.createCompoundBorder(
-            new RoundedBorder(6, new Color(180, 180, 180)),
-            BorderFactory.createEmptyBorder(8, 14, 8, 14)
-        ));
-        passwordField.setBackground(Color.WHITE);
-        gbc.gridy = 4;
-        gbc.insets = new Insets(0, 50, 4, 50);
-        card.add(passwordField, gbc);
-
-        // Forgot password link
-        JPanel forgotPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
-        forgotPanel.setOpaque(false);
-        forgotPasswordLabel = new JLabel("<html><u>Forgot Password?</u></html>");
-        forgotPasswordLabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
-        forgotPasswordLabel.setForeground(new Color(100, 100, 120));
-        forgotPasswordLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        forgotPasswordLabel.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                JOptionPane.showMessageDialog(Login.this,   // FIXED: was MotorPHLogin.this
-                    "Please contact your administrator to reset your password.",
-                    "Forgot Password", JOptionPane.INFORMATION_MESSAGE);
-            }
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                forgotPasswordLabel.setForeground(new Color(60, 60, 180));
-            }
-            @Override
-            public void mouseExited(MouseEvent e) {
-                forgotPasswordLabel.setForeground(new Color(100, 100, 120));
-            }
-        });
-        forgotPanel.add(forgotPasswordLabel);
-        gbc.gridy = 5;
-        gbc.insets = new Insets(0, 50, 20, 50);
-        card.add(forgotPanel, gbc);
-
-        // Login button
-        loginButton = new JButton("Login") {
+        // Continue button
+        continueButton = new JButton("Continue") {
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
@@ -165,44 +112,37 @@ public class Login extends JFrame {
                 g2.dispose();
             }
         };
-        loginButton.setPreferredSize(new Dimension(500, 55));
-        loginButton.setBorderPainted(false);
-        loginButton.setContentAreaFilled(false);
-        loginButton.setFocusPainted(false);
-        loginButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        loginButton.addActionListener(e -> handleLogin());
+        continueButton.setPreferredSize(new Dimension(500, 55));
+        continueButton.setBorderPainted(false);
+        continueButton.setContentAreaFilled(false);
+        continueButton.setFocusPainted(false);
+        continueButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        continueButton.addActionListener(e -> handleReset());
 
-        gbc.gridy = 6;
+        gbc.gridy = 3;
         gbc.insets = new Insets(0, 50, 50, 50);
-        card.add(loginButton, gbc);
+        card.add(continueButton, gbc);
 
         backgroundPanel.add(card);
-        getRootPane().setDefaultButton(loginButton);
+        getRootPane().setDefaultButton(continueButton);
         setVisible(true);
     }
 
-    private void handleLogin() {
-        String username = usernameField.getText().trim();
-        String password = new String(passwordField.getPassword());
+    private void handleReset() {
+        String email = emailField.getText().trim();
 
-        if (username.isEmpty() || password.isEmpty()) {
+        if (email.isEmpty() || email.equals("123456789@gmail.com")) {
             JOptionPane.showMessageDialog(this,
-                "Please enter both username and password.",
-                "Login Error", JOptionPane.WARNING_MESSAGE);
+                "Please enter a valid email address.",
+                "Reset Error", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        if (username.equals("admin") && password.equals("admin123")) {
-            JOptionPane.showMessageDialog(this,
-                "Welcome, " + username + "! Login successful.",
-                "Success", JOptionPane.INFORMATION_MESSAGE);
-        } else {
-            JOptionPane.showMessageDialog(this,
-                "Invalid username or password. Please try again.",
-                "Login Failed", JOptionPane.ERROR_MESSAGE);
-            passwordField.setText("");
-            passwordField.requestFocus();
-        }
+        JOptionPane.showMessageDialog(this,
+            "Password reset link sent to " + email + ". Please check your email.",
+            "Success", JOptionPane.INFORMATION_MESSAGE);
+        emailField.setText("");
+        emailField.requestFocus();
     }
 
     // ── Inner classes ──────────────────────────────────────────────────────────
@@ -313,6 +253,6 @@ public class Login extends JFrame {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         } catch (Exception ignored) {}
 
-        SwingUtilities.invokeLater(Login::new);   // FIXED: was MotorPHLogin::new
+        SwingUtilities.invokeLater(Reset::new);
     }
 }
