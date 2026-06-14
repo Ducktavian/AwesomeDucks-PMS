@@ -9,5 +9,6 @@ package com.motorph.model;
  * @author Lenovo
  */
 public enum DisputeType {
-    
+    INFORMATION_DISPUTE,
+    PAYROLL_DISPUTE
 }

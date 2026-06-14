@@ -5,9 +5,12 @@ com\motorph\dao\JdbcDisputeDAO.class
 com\motorph\model\PayrollPeriod.class
 com\motorph\model\TaxDeduction.class
 com\motorph\model\Requestable.class
+com\motorph\model\InformationDispute.class
 com\motorph\dao\UserAccountDAO.class
 com\motorph\model\Request.class
 com\motorph\dao\JdbcEmployeeDAO.class
+com\motorph\model\Disputable.class
+com\motorph\model\DisputeType.class
 com\motorph\model\EmploymentStatus.class
 com\motorph\dao\DisputeDAO.class
 com\motorph\model\PagIbigDeduction.class

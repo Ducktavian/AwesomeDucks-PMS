@@ -18,10 +18,13 @@ C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\mo
 C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\motorph\model\Attendance.java
 C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\motorph\model\DeductionBreakdown.java
 C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\motorph\model\DeductionRule.java
+C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\motorph\model\Disputable.java
 C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\motorph\model\Dispute.java
 C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\motorph\model\DisputeStatus.java
+C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\motorph\model\DisputeType.java
 C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\motorph\model\Employee.java
 C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\motorph\model\EmploymentStatus.java
+C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\motorph\model\InformationDispute.java
 C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\motorph\model\LeaveRequest.java
 C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\motorph\model\LeaveType.java
 C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\motorph\model\OvertimeRequest.java
@@ -46,7 +49,6 @@ C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\mo
 C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\motorph\service\LeaveService.java
 C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\motorph\service\PayrollDisputeService.java
 C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\motorph\service\PayrollService.java
-C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\motorph\service\Placeholder.java
 C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\motorph\service\RateService.java
 C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\motorph\service\UserManagementService.java
 C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\motorph\ui\Login.java
@@ -55,5 +57,4 @@ C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\mo
 C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\motorph\util\AppContext.java
 C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\motorph\util\DateUtils.java
 C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\motorph\util\PasswordUtil.java
-C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\motorph\util\Placeholder.java
 C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\motorph\util\Session.java
