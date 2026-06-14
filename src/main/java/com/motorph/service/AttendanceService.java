@@ -77,11 +77,11 @@ public class AttendanceService {
     public void timeOut(String employeeNumber) {
         //attendanceDAO.timeOut(employeeNumber);
     }
-    
+    /*
     public boolean hasOpenSession(String employeeNumber) {
         Attendance attendanceRecord = attendanceDAO.getOpenSession(employeeNumber);
         boolean hasOpenSession = (attendanceRecord == null) ? false : true;
         return hasOpenSession;
     }
-    
+    */
 }
