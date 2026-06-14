@@ -8,22 +8,28 @@ package com.motorph.ui.Employees;
  *
  * @author Admin
  */
-import com.motorph.ui.Employees.AppFonts;
-import com.motorph.ui.Employees.ProfileBadge;
-import com.motorph.ui.Employees.AppColors;
-import com.motorph.ui.Employees.SidebarPanel;
-import com.motorph.ui.Employees.EmployeeTablePanel;
-import com.motorph.ui.Employees.SearchBox;
-import javax.swing.*;
-import java.awt.*;
+import java.awt.BasicStroke;
+import java.awt.Color;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.geom.Path2D;
-import java.awt.geom.RoundRectangle2D;
 import java.util.ArrayList;
 import java.util.List;
 
-public final class EMPLOYEES {
+import javax.swing.BorderFactory;
+import javax.swing.JComponent;
+import javax.swing.JFrame;
+import javax.swing.JPanel;
+import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
+
+public final class Employees {
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
             JFrame frame = new JFrame("MotorPH - Employees");
