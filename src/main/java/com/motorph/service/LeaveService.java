@@ -12,7 +12,7 @@ import java.util.List;
  * @author Lenovo
  */
 public class LeaveService {
-    
+    /*
     private RequestDAO requestDAO;
     
     public LeaveService(RequestDAO requestDAO) {
@@ -63,5 +63,5 @@ public class LeaveService {
         return leaveDAO.findById(requestId);
     }
     
-    
+    */
 }

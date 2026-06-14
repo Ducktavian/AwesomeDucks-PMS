@@ -115,21 +115,21 @@ public class PayrollService {
     
     public void savePayslip(Payslip payslip) throws Exception {
         // Write to CSV
-        payslipDAO.savePayslip(payslip);
+        payslipDAO.save(payslip);
         
     }
     
     
     public List<Payslip> findPayslipsByEmployee(String employeeNumber) {
-        return payslipDAO.findPayslipsByEmployee(employeeNumber);
+        return payslipDAO.findByEmployeeId(employeeNumber);
     }
     
     public Payslip findPayslipsById(String payslipId) {
-        return payslipDAO.findPayslipById(payslipId);
+        return payslipDAO.findById(payslipId);
     }
     
     public List<Payslip> getAllPayslips() {
-        return payslipDAO.getAllPayslips();
+        return payslipDAO.findAll();
     }
    
     
@@ -233,4 +233,5 @@ public class PayrollService {
             cursor = cursor.plusMonths(1);
         }
     }
+
 }

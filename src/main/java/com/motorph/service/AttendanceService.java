@@ -71,16 +71,17 @@ public class AttendanceService {
     }
     
     public void timeIn(String employeeNumber) {
-        attendanceDAO.timeIn(employeeNumber);
+        //attendanceDAO.timeIn(employeeNumber);
     }
     
     public void timeOut(String employeeNumber) {
-        attendanceDAO.timeOut(employeeNumber);
+        //attendanceDAO.timeOut(employeeNumber);
     }
-    
+    /*
     public boolean hasOpenSession(String employeeNumber) {
-        AttendanceattendanceRecord = attendanceDAO.getOpenSession(employeeNumber);
+        Attendance attendanceRecord = attendanceDAO.getOpenSession(employeeNumber);
         boolean hasOpenSession = (attendanceRecord == null) ? false : true;
         return hasOpenSession;
     }
+    */
 }
