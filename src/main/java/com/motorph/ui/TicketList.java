@@ -1,23 +1,61 @@
 package com.motorph.ui;
 
-import java.awt.*;
-import java.awt.event.*;
-import javax.swing.*;
-import javax.swing.table.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.awt.RenderingHints;
+import java.awt.Window;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseMotionAdapter;
 
-public class TicketList extends JFrame {
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JComponent;
+import javax.swing.JDialog;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.JTextField;
+import javax.swing.RowFilter;
+import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.JTableHeader;
+import javax.swing.table.TableCellRenderer;
+import javax.swing.table.TableRowSorter;
+public class TicketList extends JDialog {
 
     // ── Field declarations ─────────────────────────────────────────────────────
     private JTable ticketTable;
     private JTextField searchField;
     private int hoverRow = -1;
 
-    public TicketList() {
-        setTitle("MotorPH Payroll System - Ticket List");
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+    public TicketList(Window owner) {
+        super(owner, "MotorPH Payroll System - Ticket List", ModalityType.APPLICATION_MODAL);
         setSize(1400, 800);
-        setLocationRelativeTo(null);
+        setLocationRelativeTo(owner);
         setResizable(false);
+        setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
 
         // Main container - Sidebar on left, everything else on right
         JPanel mainPanel = new JPanel(new BorderLayout());
@@ -32,8 +70,6 @@ public class TicketList extends JFrame {
         // ── Right Panel: Content with search bar inside ────────────────────────
         JPanel contentPanel = createContentPanel();
         mainPanel.add(contentPanel, BorderLayout.CENTER);
-
-        setVisible(true);
     }
 
     // ── Create Sidebar ──────────────────────────────────────────────────────────
@@ -78,32 +114,34 @@ public class TicketList extends JFrame {
         return sidebar;
     }
 
-    private JLabel createMenuLabel(String text, String icon, boolean active) {
-        JLabel label = new JLabel(icon + "   " + text);
-        label.setFont(new Font("SansSerif", active ? Font.BOLD : Font.PLAIN, 14));
-        label.setForeground(Color.WHITE);
-        label.setBorder(BorderFactory.createEmptyBorder(12, 20, 12, 20));
-        label.setAlignmentX(Component.LEFT_ALIGNMENT);
-        label.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        if (active) {
-            label.setOpaque(true);
-            label.setBackground(new Color(25, 40, 140));
-        }
-        label.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                label.setBackground(new Color(25, 40, 140));
-                label.setOpaque(true);
-            }
-            @Override
-            public void mouseExited(MouseEvent e) {
-                if (!active) {
-                    label.setOpaque(false);
-                }
-            }
-        });
-        return label;
+   private JLabel createMenuLabel(String text, String icon, boolean active) {
+    JLabel label = new JLabel(icon + "   " + text);
+    label.setFont(new Font("SansSerif", active ? Font.BOLD : Font.PLAIN, 14));
+    label.setForeground(Color.WHITE);
+    label.setBorder(BorderFactory.createEmptyBorder(12, 20, 12, 20));
+    label.setHorizontalAlignment(SwingConstants.CENTER);
+    label.setAlignmentX(Component.CENTER_ALIGNMENT);
+    label.setMaximumSize(new Dimension(Integer.MAX_VALUE, label.getPreferredSize().height + 24));
+    label.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+    if (active) {
+        label.setOpaque(true);
+        label.setBackground(new Color(25, 40, 140));
     }
+    label.addMouseListener(new MouseAdapter() {
+        @Override
+        public void mouseEntered(MouseEvent e) {
+            label.setBackground(new Color(25, 40, 140));
+            label.setOpaque(true);
+        }
+        @Override
+        public void mouseExited(MouseEvent e) {
+            if (!active) {
+                label.setOpaque(false);
+            }
+        }
+    });
+    return label;
+}
 
     private JPanel createProfilePanel() {
         JPanel profilePanel = new JPanel();
@@ -314,19 +352,92 @@ public class TicketList extends JFrame {
         });
     }
 
-    private void updateTicket() {
-        int row = ticketTable.getSelectedRow();
-        if (row == -1) {
-            JOptionPane.showMessageDialog(this, "Please select a row to update.",
-                    "No Selection", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-        int modelRow = ticketTable.convertRowIndexToModel(row);
-        DefaultTableModel model = (DefaultTableModel) ticketTable.getModel();
-        String currentStatus = (String) model.getValueAt(modelRow, 5);
-        String newStatus = "Pending".equals(currentStatus) ? "Resolved" : "Pending";
-        model.setValueAt(newStatus, modelRow, 5);
+   private void updateTicket() {
+    int row = ticketTable.getSelectedRow();
+    if (row == -1) {
+        JOptionPane.showMessageDialog(this, "Please select a row to update.",
+                "No Selection", JOptionPane.WARNING_MESSAGE);
+        return;
     }
+    int modelRow = ticketTable.convertRowIndexToModel(row);
+    DefaultTableModel model = (DefaultTableModel) ticketTable.getModel();
+
+    Color navy = new Color(15, 28, 113);
+    Color lightGray = new Color(220, 220, 220);
+    Font labelFont = new Font("SansSerif", Font.BOLD, 13);
+    Font fieldFont = new Font("SansSerif", Font.PLAIN, 13);
+
+    JTextField idField     = new JTextField((String) model.getValueAt(modelRow, 0));
+    JTextField nameField   = new JTextField((String) model.getValueAt(modelRow, 1));
+    JTextField dateField   = new JTextField((String) model.getValueAt(modelRow, 2));
+    JTextField issueField  = new JTextField((String) model.getValueAt(modelRow, 3));
+    JTextField noteField   = new JTextField((String) model.getValueAt(modelRow, 4));
+    JComboBox<String> statusBox = new JComboBox<>(new String[]{"Pending", "Resolved"});
+    statusBox.setSelectedItem(model.getValueAt(modelRow, 5));
+
+    idField.setEditable(false);
+    idField.setBackground(new Color(245, 245, 245));
+
+    JTextField[] fields = {idField, nameField, dateField, issueField, noteField};
+    for (JTextField f : fields) {
+        f.setFont(fieldFont);
+        f.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(lightGray, 1),
+                BorderFactory.createEmptyBorder(6, 10, 6, 10)
+        ));
+    }
+    statusBox.setFont(fieldFont);
+    statusBox.setBackground(Color.WHITE);
+
+    JPanel panel = new JPanel(new GridBagLayout());
+    panel.setBackground(Color.WHITE);
+    panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+    GridBagConstraints gbc = new GridBagConstraints();
+    gbc.insets = new Insets(6, 6, 6, 6);
+    gbc.fill = GridBagConstraints.HORIZONTAL;
+
+    String[] labels = {"Ticket ID:", "Employee Name:", "Date:", "Issue:", "Note:", "Status:"};
+    JComponent[] inputs = {idField, nameField, dateField, issueField, noteField, statusBox};
+
+    for (int i = 0; i < labels.length; i++) {
+        gbc.gridx = 0; gbc.gridy = i; gbc.weightx = 0;
+        JLabel lbl = new JLabel(labels[i]);
+        lbl.setFont(labelFont);
+        lbl.setForeground(navy);
+        panel.add(lbl, gbc);
+
+        gbc.gridx = 1; gbc.weightx = 1;
+        inputs[i].setPreferredSize(new Dimension(220, 30));
+        panel.add(inputs[i], gbc);
+    }
+
+    JLabel titleLabel = new JLabel("Update Ticket");
+    titleLabel.setFont(new Font("SansSerif", Font.BOLD, 18));
+    titleLabel.setForeground(navy);
+    titleLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 12, 0));
+    titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
+
+    JPanel wrapper = new JPanel(new BorderLayout());
+    wrapper.setBackground(Color.WHITE);
+    wrapper.add(titleLabel, BorderLayout.NORTH);
+    wrapper.add(panel, BorderLayout.CENTER);
+
+    UIManager.put("OptionPane.background", Color.WHITE);
+    UIManager.put("Panel.background", Color.WHITE);
+    UIManager.put("OptionPane.messageForeground", navy);
+
+    int result = JOptionPane.showConfirmDialog(this, wrapper, "Update Ticket",
+            JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+
+    if (result == JOptionPane.OK_OPTION) {
+        model.setValueAt(nameField.getText(), modelRow, 1);
+        model.setValueAt(dateField.getText(), modelRow, 2);
+        model.setValueAt(issueField.getText(), modelRow, 3);
+        model.setValueAt(noteField.getText(), modelRow, 4);
+        model.setValueAt(statusBox.getSelectedItem(), modelRow, 5);
+    }
+}
 
     private void deleteTicket() {
         int row = ticketTable.getSelectedRow();
@@ -468,11 +579,15 @@ public class TicketList extends JFrame {
         }
     }
 
-    // ── Entry Point ─────────────────────────────────────────────────────────────
+    // ── Entry Point (for standalone testing) ────────────────────────────────────
     public static void main(String[] args) {
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         } catch (Exception ignored) {}
-        SwingUtilities.invokeLater(TicketList::new);
+        SwingUtilities.invokeLater(() -> {
+            JFrame dummyOwner = new JFrame();
+            TicketList dialog = new TicketList(dummyOwner);
+            dialog.setVisible(true);
+        });
     }
 }
