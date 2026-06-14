@@ -1,30 +1,39 @@
 package com.motorph.ui;
 
+import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
-import java.awt.GridLayout;
 import java.awt.Insets;
 import java.awt.RenderingHints;
 import java.awt.Window;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.font.TextAttribute;
+import java.awt.geom.Path2D;
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
+import javax.swing.Icon;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
@@ -36,11 +45,12 @@ import javax.swing.border.AbstractBorder;
 
 public class TicketDetails extends JDialog {
 
-    private static final Color NAVY = new Color(15, 28, 113);
-    private static final Color HOVER_NAVY = new Color(25, 40, 140);
+    // ── Colors ──────────────────────────────────────────────────────────────────
+    private static final Color NAVY        = new Color(2, 19, 98);
+    private static final Color HOVER_NAVY  = new Color(25, 40, 140);
     private static final Color FIELD_BORDER = new Color(140, 140, 140);
-    private static final Color FIELD_BG = new Color(225, 225, 230);
-    private static final Color LABEL_GRAY = new Color(60, 60, 60);
+    private static final Color FIELD_BG    = new Color(225, 225, 230);
+    private static final Color LABEL_GRAY  = new Color(60, 60, 60);
 
     public TicketDetails(Window owner) {
         super(owner, "MotorPH Payroll System - Ticket Details", ModalityType.APPLICATION_MODAL);
@@ -54,7 +64,7 @@ public class TicketDetails extends JDialog {
         setContentPane(mainPanel);
 
         JPanel sidebar = createSidebar();
-        sidebar.setPreferredSize(new Dimension(250, 800));
+        sidebar.setPreferredSize(new Dimension(257, 800));
         mainPanel.add(sidebar, BorderLayout.WEST);
 
         JPanel contentPanel = createContentPanel();
@@ -63,93 +73,53 @@ public class TicketDetails extends JDialog {
 
     // ── Sidebar ─────────────────────────────────────────────────────────────────
     private JPanel createSidebar() {
-        JPanel sidebar = new JPanel();
+        JPanel sidebar = new JPanel(null);
         sidebar.setBackground(NAVY);
-        sidebar.setLayout(new BoxLayout(sidebar, BoxLayout.Y_AXIS));
 
-        JLabel logoLabel = new JLabel("MotorPH");
-        logoLabel.setFont(new Font("SansSerif", Font.BOLD, 24));
-        logoLabel.setForeground(Color.WHITE);
-        logoLabel.setBorder(BorderFactory.createEmptyBorder(30, 20, 40, 20));
-        logoLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        logoLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        sidebar.add(logoLabel);
+        JLabel logo = new JLabel("MotorPH");
+        logo.setFont(new Font("Segoe UI", Font.BOLD, 28));
+        logo.setForeground(Color.WHITE);
+        logo.setBounds(48, 63, 160, 36);
+        sidebar.add(logo);
 
-        String[][] menuItems = {
-            {"Dashboard", "🏠"},
-            {"Employees", "👥"},
-            {"Payroll", "💼"},
-            {"Requests", "📩"},
-            {"Attendance", "⏰"}
-        };
-        for (String[] item : menuItems) {
-            boolean active = "Requests".equals(item[0]);
-            sidebar.add(createMenuLabel(item[0], item[1], active));
-        }
+        addNavItem(sidebar, "Dashboard",  TDLineIcon.Type.DASHBOARD,  158, false);
+        addNavItem(sidebar, "Employees",  TDLineIcon.Type.EMPLOYEES,  216, false);
+        addNavItem(sidebar, "Payroll",    TDLineIcon.Type.PAYROLL,    255, false);
+        addNavItem(sidebar, "Requests",   TDLineIcon.Type.REQUESTS,   300, true);
+        addNavItem(sidebar, "Attendance", TDLineIcon.Type.ATTENDANCE, 341, false);
 
-        sidebar.add(Box.createVerticalGlue());
-
-        sidebar.add(createMenuLabel("Help Center", "❓", false));
-        sidebar.add(createMenuLabel("Log Out", "↩", false));
-        sidebar.add(Box.createVerticalStrut(20));
+        addNavItem(sidebar, "Help Center", TDLineIcon.Type.HELP,   660, false);
+        addNavItem(sidebar, "Log Out",     TDLineIcon.Type.LOGOUT, 702, false);
 
         return sidebar;
     }
 
-    private JLabel createMenuLabel(String text, String icon, boolean active) {
-        JLabel label = new JLabel(icon + "   " + text);
-        label.setFont(new Font("SansSerif", active ? Font.BOLD : Font.PLAIN, 14));
-        label.setForeground(Color.WHITE);
-        label.setBorder(BorderFactory.createEmptyBorder(12, 20, 12, 20));
-        label.setHorizontalAlignment(SwingConstants.CENTER);
-        label.setAlignmentX(Component.CENTER_ALIGNMENT);
-        label.setMaximumSize(new Dimension(Integer.MAX_VALUE, label.getPreferredSize().height + 24));
-        label.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        if (active) {
-            label.setOpaque(true);
-            label.setBackground(HOVER_NAVY);
-        }
-        label.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                label.setBackground(HOVER_NAVY);
-                label.setOpaque(true);
-            }
-            @Override
-            public void mouseExited(MouseEvent e) {
-                if (!active) {
-                    label.setOpaque(false);
-                }
-            }
-        });
-        return label;
+    private void addNavItem(JPanel sidebar, String text, TDLineIcon.Type iconType, int y, boolean active) {
+        TDNavigationItem item = new TDNavigationItem(text, iconType, active);
+        item.setBounds(48, y, 170, 32);
+        sidebar.add(item);
     }
 
+    // ── Profile panel (top-right) ────────────────────────────────────────────────
     private JPanel createProfilePanel() {
-        JPanel profilePanel = new JPanel();
+        JPanel profilePanel = new JPanel(null);
         profilePanel.setOpaque(false);
-        profilePanel.setLayout(new BoxLayout(profilePanel, BoxLayout.X_AXIS));
+        profilePanel.setPreferredSize(new Dimension(123, 57));
 
-        JPanel namePanel = new JPanel();
-        namePanel.setOpaque(false);
-        namePanel.setLayout(new BoxLayout(namePanel, BoxLayout.Y_AXIS));
+        JLabel nameLabel = new JLabel("Name", SwingConstants.RIGHT);
+        nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        nameLabel.setForeground(new Color(0, 6, 67));
+        nameLabel.setBounds(0, 7, 58, 22);
+        profilePanel.add(nameLabel);
 
-        JLabel nameLabel = new JLabel("Name");
-        nameLabel.setFont(new Font("SansSerif", Font.BOLD, 16));
-        nameLabel.setForeground(NAVY);
+        JLabel roleLabel = new JLabel("Position", SwingConstants.RIGHT);
+        roleLabel.setFont(new Font("Open Sans", Font.PLAIN, 12));
+        roleLabel.setForeground(new Color(150, 150, 150));
+        roleLabel.setBounds(0, 30, 58, 22);
+        profilePanel.add(roleLabel);
 
-        JLabel roleLabel = new JLabel("Position");
-        roleLabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
-        roleLabel.setForeground(new Color(120, 120, 120));
-
-        namePanel.add(nameLabel);
-        namePanel.add(roleLabel);
-
-        CircleAvatar avatar = new CircleAvatar(52, NAVY, "N");
-        avatar.setPreferredSize(new Dimension(52, 52));
-
-        profilePanel.add(namePanel);
-        profilePanel.add(Box.createHorizontalStrut(18));
+        TDAvatarCircle avatar = new TDAvatarCircle();
+        avatar.setBounds(67, 0, 56, 56);
         profilePanel.add(avatar);
 
         return profilePanel;
@@ -161,45 +131,42 @@ public class TicketDetails extends JDialog {
         contentPanel.setBackground(Color.WHITE);
         contentPanel.setBorder(BorderFactory.createEmptyBorder(20, 40, 30, 40));
 
-        // ── Top: Profile (top-right) ───────────────────────────────────────────
+        // Top: profile (top-right)
         JPanel topRow = new JPanel(new BorderLayout());
         topRow.setOpaque(false);
         topRow.setBorder(BorderFactory.createEmptyBorder(0, 0, 20, 0));
         topRow.add(createProfilePanel(), BorderLayout.EAST);
         contentPanel.add(topRow, BorderLayout.NORTH);
 
-        // ── Center: Back link + Form ───────────────────────────────────────────
+        // Center: back link + form
         JPanel centerPanel = new JPanel();
         centerPanel.setOpaque(false);
         centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
 
+        // Back link
         JLabel backLabel = new JLabel("Back");
         backLabel.setForeground(Color.BLACK);
         Font baseFont = new Font("SansSerif", Font.PLAIN, 13);
-        java.util.Map<java.awt.font.TextAttribute, Object> attributes = new java.util.HashMap<>(baseFont.getAttributes());
-        attributes.put(java.awt.font.TextAttribute.UNDERLINE, java.awt.font.TextAttribute.UNDERLINE_ON);
-        Font underlineFont = baseFont.deriveFont(attributes);
-        backLabel.setFont(underlineFont);
+        Map<TextAttribute, Object> attrs = new HashMap<>(baseFont.getAttributes());
+        attrs.put(TextAttribute.UNDERLINE, TextAttribute.UNDERLINE_ON);
+        backLabel.setFont(baseFont.deriveFont(attrs));
         backLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         backLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         backLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 25, 0));
         backLabel.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                dispose();
-            }
+            @Override public void mouseClicked(MouseEvent e) { dispose(); }
         });
         centerPanel.add(backLabel);
 
-        // ── Form grid ───────────────────────────────────────────────────────────
+        // Form grid
         JPanel formPanel = new JPanel(new GridBagLayout());
         formPanel.setOpaque(false);
         formPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(0, 0, 25, 60);
-        gbc.fill = GridBagConstraints.BOTH;
-        gbc.anchor = GridBagConstraints.NORTHWEST;
+        gbc.insets  = new Insets(0, 0, 25, 60);
+        gbc.fill    = GridBagConstraints.BOTH;
+        gbc.anchor  = GridBagConstraints.NORTHWEST;
 
         // Row 0: Ticket ID | Department
         JTextField ticketIdField = createTextField("Enter ticket ID");
@@ -212,7 +179,7 @@ public class TicketDetails extends JDialog {
         gbc.gridx = 1; gbc.gridy = 0;
         formPanel.add(labeledField("Department", departmentBox), gbc);
 
-        // Row 1: Employee Name | Notes (spans 2 rows)
+        // Row 1: Employee Name | Notes (tall)
         JTextField employeeNameField = createTextField("Enter employee name");
         gbc.gridx = 0; gbc.gridy = 1; gbc.gridheight = 1; gbc.weighty = 0;
         formPanel.add(labeledField("Employee Name", employeeNameField), gbc);
@@ -224,25 +191,24 @@ public class TicketDetails extends JDialog {
         notesArea.setBackground(FIELD_BG);
         notesArea.setBorder(BorderFactory.createEmptyBorder(8, 10, 8, 10));
         JScrollPane notesScroll = new JScrollPane(notesArea);
-        notesScroll.setBorder(new RoundedBorder(FIELD_BORDER, 6));
+        notesScroll.setBorder(new TDRoundedBorder(FIELD_BORDER, 6));
         notesScroll.getViewport().setBackground(FIELD_BG);
         notesScroll.setPreferredSize(new Dimension(300, 150));
 
         gbc.gridx = 1; gbc.gridy = 1; gbc.gridheight = 1; gbc.weighty = 1;
         formPanel.add(labeledField("Notes", notesScroll), gbc);
 
-        // Row 2: (empty under Employee Name) | Status
+        // Row 2: (spacer) | Status
         gbc.gridx = 0; gbc.gridy = 2; gbc.weighty = 0;
         formPanel.add(Box.createVerticalStrut(0), gbc);
 
-        JComboBox<String> statusBox = createComboBox(new String[]{
-                "Select Status", "Pending", "Resolved"});
+        JComboBox<String> statusBox = createComboBox(new String[]{"Select Status", "Pending", "Resolved"});
         gbc.gridx = 1; gbc.gridy = 2;
         formPanel.add(labeledField("Status", statusBox), gbc);
 
         centerPanel.add(formPanel);
 
-        // ── Submit button ───────────────────────────────────────────────────────
+        // Submit button (right-aligned)
         JPanel submitWrapper = new JPanel(new BorderLayout());
         submitWrapper.setOpaque(false);
         submitWrapper.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -251,57 +217,48 @@ public class TicketDetails extends JDialog {
         JButton submitBtn = createSubmitButton("Submit");
         submitBtn.addActionListener(e -> onSubmit());
 
-        JPanel submitRow = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.RIGHT, 0, 0));
+        JPanel submitRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
         submitRow.setOpaque(false);
         submitRow.setPreferredSize(new Dimension(660, 50));
         submitRow.add(submitBtn);
         submitWrapper.add(submitRow, BorderLayout.EAST);
 
         centerPanel.add(submitWrapper);
-
         contentPanel.add(centerPanel, BorderLayout.CENTER);
         return contentPanel;
     }
 
-    // ── Helper: labeled field block ────────────────────────────────────────────
+    // ── Helpers ─────────────────────────────────────────────────────────────────
     private JPanel labeledField(String labelText, Component field) {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setOpaque(false);
-
         JLabel label = new JLabel(labelText);
         label.setFont(new Font("SansSerif", Font.PLAIN, 13));
         label.setForeground(LABEL_GRAY);
         label.setBorder(BorderFactory.createEmptyBorder(0, 0, 8, 0));
-
         panel.add(label, BorderLayout.NORTH);
         panel.add(field, BorderLayout.CENTER);
         return panel;
     }
 
-    // ── Helper: styled text field ──────────────────────────────────────────────
     private JTextField createTextField(String placeholder) {
         JTextField field = new JTextField();
         field.setFont(new Font("SansSerif", Font.PLAIN, 13));
-        field.setForeground(Color.BLACK);
         field.setBackground(FIELD_BG);
         field.setBorder(BorderFactory.createCompoundBorder(
-                new RoundedBorder(FIELD_BORDER, 6),
-                BorderFactory.createEmptyBorder(10, 12, 10, 12)
-        ));
+                new TDRoundedBorder(FIELD_BORDER, 6),
+                BorderFactory.createEmptyBorder(10, 12, 10, 12)));
         field.setPreferredSize(new Dimension(300, 45));
-
         field.setText(placeholder);
         field.setForeground(new Color(170, 170, 170));
-        field.addFocusListener(new java.awt.event.FocusAdapter() {
-            @Override
-            public void focusGained(java.awt.event.FocusEvent e) {
+        field.addFocusListener(new FocusAdapter() {
+            @Override public void focusGained(FocusEvent e) {
                 if (field.getText().equals(placeholder)) {
                     field.setText("");
                     field.setForeground(Color.BLACK);
                 }
             }
-            @Override
-            public void focusLost(java.awt.event.FocusEvent e) {
+            @Override public void focusLost(FocusEvent e) {
                 if (field.getText().isBlank()) {
                     field.setText(placeholder);
                     field.setForeground(new Color(170, 170, 170));
@@ -311,17 +268,15 @@ public class TicketDetails extends JDialog {
         return field;
     }
 
-    // ── Helper: styled combo box ───────────────────────────────────────────────
     private JComboBox<String> createComboBox(String[] items) {
         JComboBox<String> box = new JComboBox<>(items);
         box.setFont(new Font("SansSerif", Font.PLAIN, 13));
         box.setBackground(FIELD_BG);
-        box.setBorder(new RoundedBorder(FIELD_BORDER, 6));
+        box.setBorder(new TDRoundedBorder(FIELD_BORDER, 6));
         box.setPreferredSize(new Dimension(300, 45));
         return box;
     }
 
-    // ── Helper: submit button ──────────────────────────────────────────────────
     private JButton createSubmitButton(String text) {
         JButton btn = new JButton(text);
         btn.setFont(new Font("SansSerif", Font.BOLD, 13));
@@ -340,19 +295,90 @@ public class TicketDetails extends JDialog {
     }
 
     private void onSubmit() {
-        javax.swing.JOptionPane.showMessageDialog(this,
-                "Ticket details submitted.", "Success",
-                javax.swing.JOptionPane.INFORMATION_MESSAGE);
+        JOptionPane.showMessageDialog(this, "Ticket details submitted.", "Success",
+                JOptionPane.INFORMATION_MESSAGE);
         dispose();
     }
 
-    // ── Rounded Border ──────────────────────────────────────────────────────────
-    static class RoundedBorder extends AbstractBorder {
-        private final Color color;
-        private final int radius;
+    // ── Entry point ─────────────────────────────────────────────────────────────
+    public static void main(String[] args) {
+        try { UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName()); }
+        catch (Exception ignored) {}
+        SwingUtilities.invokeLater(() -> {
+            JFrame dummyOwner = new JFrame();
+            new TicketDetails(dummyOwner).setVisible(true);
+        });
+    }
 
-        RoundedBorder(Color color, int radius) {
-            this.color = color;
+    // ════════════════════════════════════════════════════════════════════════════
+    // Inner classes (self-contained so TicketDetails needs no external imports)
+    // ════════════════════════════════════════════════════════════════════════════
+
+    // ── Navigation item (icon + label row) ──────────────────────────────────────
+    static class TDNavigationItem extends JPanel {
+
+        TDNavigationItem(String text, TDLineIcon.Type iconType, boolean active) {
+            setLayout(null);
+            setOpaque(false);
+
+            JLabel icon = new JLabel(new TDLineIcon(iconType, 22, Color.WHITE));
+            icon.setBounds(0, 5, 22, 22);
+            add(icon);
+
+            JLabel label = new JLabel(text);
+            label.setFont(new Font("Open Sans", active ? Font.BOLD : Font.PLAIN, 15));
+            label.setForeground(Color.WHITE);
+            label.setBounds(32, 0, 138, 32);
+            add(label);
+
+            if (active) {
+                setOpaque(true);
+                setBackground(new Color(25, 40, 140));
+            }
+
+            addMouseListener(new MouseAdapter() {
+                @Override public void mouseEntered(MouseEvent e) {
+                    setOpaque(true);
+                    setBackground(new Color(25, 40, 140));
+                    repaint();
+                }
+                @Override public void mouseExited(MouseEvent e) {
+                    if (!active) {
+                        setOpaque(false);
+                        repaint();
+                    }
+                }
+            });
+        }
+    }
+
+    // ── Avatar circle ────────────────────────────────────────────────────────────
+    static class TDAvatarCircle extends JPanel {
+
+        TDAvatarCircle() {
+            setOpaque(false);
+            setPreferredSize(new Dimension(56, 56));
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setColor(new Color(2, 19, 98));
+            g2.fillOval(0, 0, 56, 56);
+            g2.dispose();
+        }
+    }
+
+    // ── Rounded border ───────────────────────────────────────────────────────────
+    static class TDRoundedBorder extends AbstractBorder {
+
+        private final Color color;
+        private final int   radius;
+
+        TDRoundedBorder(Color color, int radius) {
+            this.color  = color;
             this.radius = radius;
         }
 
@@ -366,46 +392,90 @@ public class TicketDetails extends JDialog {
         }
 
         @Override
-        public Insets getBorderInsets(Component c) {
-            return new Insets(4, 4, 4, 4);
-        }
+        public Insets getBorderInsets(Component c) { return new Insets(4, 4, 4, 4); }
     }
 
-    // ── Circle Avatar ───────────────────────────────────────────────────────────
-    static class CircleAvatar extends JPanel {
-        private final Color fillColor;
+    // ── Vector line icon ─────────────────────────────────────────────────────────
+    static class TDLineIcon implements Icon {
 
-        public CircleAvatar(int size, Color fillColor, String initials) {
-            this.fillColor = fillColor;
-            setPreferredSize(new Dimension(size, size));
-            setOpaque(false);
-            setLayout(new GridBagLayout());
-            JLabel label = new JLabel(initials);
-            label.setFont(new Font("SansSerif", Font.BOLD, 16));
-            label.setForeground(Color.WHITE);
-            add(label);
+        enum Type { DASHBOARD, EMPLOYEES, PAYROLL, REQUESTS, ATTENDANCE, HELP, LOGOUT }
+
+        private final Type  type;
+        private final int   size;
+        private final Color color;
+
+        TDLineIcon(Type type, int size, Color color) {
+            this.type  = type;
+            this.size  = size;
+            this.color = color;
         }
+
+        @Override public int getIconWidth()  { return size; }
+        @Override public int getIconHeight() { return size; }
 
         @Override
-        protected void paintComponent(Graphics g) {
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g2.setColor(fillColor);
-            g2.fillOval(0, 0, getWidth(), getHeight());
-            g2.dispose();
-            super.paintComponent(g);
-        }
-    }
+        public void paintIcon(Component c, Graphics graphics, int x, int y) {
+            Graphics2D g = (Graphics2D) graphics.create();
+            g.translate(x, y);
+            g.setColor(color);
+            g.setStroke(new BasicStroke(1.4f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-    // ── Entry Point (for standalone testing) ────────────────────────────────────
-    public static void main(String[] args) {
-        try {
-            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-        } catch (Exception ignored) {}
-        SwingUtilities.invokeLater(() -> {
-            JFrame dummyOwner = new JFrame();
-            TicketDetails dialog = new TicketDetails(dummyOwner);
-            dialog.setVisible(true);
-        });
+            switch (type) {
+                case DASHBOARD:
+                    g.drawRoundRect(1, 1, 8, 8, 2, 2);
+                    g.drawRoundRect(13, 1, 8, 8, 2, 2);
+                    g.drawRoundRect(1, 13, 8, 8, 2, 2);
+                    g.drawRoundRect(13, 13, 8, 8, 2, 2);
+                    break;
+                case EMPLOYEES:
+                    g.drawOval(3, 2, 8, 8);
+                    g.drawArc(1, 12, 13, 9, 0, 180);
+                    g.drawLine(16, 5, 22, 5);
+                    g.drawLine(16, 11, 22, 11);
+                    g.drawLine(16, 17, 22, 17);
+                    break;
+                case PAYROLL:
+                    g.drawRoundRect(2, 2, 18, 18, 2, 2);
+                    g.drawRect(6, 6, 4, 4);
+                    g.drawRect(13, 6, 4, 4);
+                    g.drawRect(6, 13, 4, 4);
+                    g.drawLine(13, 14, 17, 14);
+                    g.drawLine(13, 17, 17, 17);
+                    break;
+                case REQUESTS:
+                    g.drawRoundRect(2, 2, 18, 18, 1, 1);
+                    g.drawLine(6, 7, 16, 7);
+                    g.drawLine(6, 12, 16, 12);
+                    g.drawLine(6, 17, 12, 17);
+                    g.drawLine(5, 3, 5, 0);
+                    g.drawLine(17, 3, 17, 0);
+                    break;
+                case ATTENDANCE:
+                    g.drawRoundRect(2, 4, 18, 17, 1, 1);
+                    g.drawLine(2, 8, 20, 8);
+                    g.drawLine(6, 1, 6, 6);
+                    g.drawLine(16, 1, 16, 6);
+                    break;
+                case HELP:
+                    Path2D cloud = new Path2D.Double();
+                    cloud.moveTo(5, 17);
+                    cloud.curveTo(2, 17, 1, 15, 2, 13);
+                    cloud.curveTo(2, 10, 5, 9, 7, 10);
+                    cloud.curveTo(8, 6, 13, 5, 15, 9);
+                    cloud.curveTo(18, 9, 21, 11, 21, 14);
+                    cloud.curveTo(21, 16, 19, 17, 17, 17);
+                    cloud.closePath();
+                    g.draw(cloud);
+                    break;
+                case LOGOUT:
+                    g.drawRect(3, 2, 11, 18);
+                    g.drawLine(14, 11, 22, 11);
+                    g.drawLine(18, 7, 22, 11);
+                    g.drawLine(18, 15, 22, 11);
+                    break;
+            }
+            g.dispose();
+        }
     }
 }
