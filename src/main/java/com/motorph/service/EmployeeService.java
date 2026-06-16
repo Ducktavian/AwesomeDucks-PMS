@@ -8,14 +8,14 @@ import com.motorph.util.Session;
 import java.util.List;
 
 public class EmployeeService {
-    /*
+    
     private EmployeeDAO employeeDAO;
     
     public EmployeeService(EmployeeDAO employeeDAO) {
         this.employeeDAO = employeeDAO;
     }
     
-    
+    /*
     // Authorize HR
     private void authorizeHR() {
         UserAccount current = Session.getCurrentUser();
@@ -58,7 +58,7 @@ public class EmployeeService {
     public String generateNextEmployeeNumber() {
         return employeeDAO.generateNextEmployeeNumber();
     }
-    
+    */
     private void validateEmployee(Employee employee) {
         // Firstname
         if(employee.getFirstName() == null || employee.getFirstName().isBlank()){
@@ -143,5 +143,5 @@ public class EmployeeService {
             throw new IllegalArgumentException("Clothing Allowance must be greater than 0.");
         }
     }
-    */
+    
 }
