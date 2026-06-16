@@ -4,7 +4,10 @@
 
 package com.motorph.main;
 
-import javax.swing.SwingUtilities;
+import com.motorph.model.Employee;
+import com.motorph.service.EmployeeService;
+import com.motorph.util.AppContext;
+import java.util.List;
 
 /**
  *
@@ -13,9 +16,13 @@ import javax.swing.SwingUtilities;
 public class Main {
 
     public static void main(String[] args) {
-        System.out.println("Hello World!");
+        EmployeeService empService = AppContext.getEmployeeService();
+        List<Employee> list = empService.getAllEmployees();
         
-        SwingUtilities.invokeLater(() -> {
-        });
+        System.out.println("Start");
+        for (int i = 0; i < list.size(); i++ ) {
+            System.out.println(list.get(i).getEmployeeId());
+        }
+        System.out.println("End");
     }
 }

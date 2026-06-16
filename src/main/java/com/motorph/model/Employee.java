@@ -8,8 +8,8 @@ import java.time.LocalDate;
  */
 public class Employee {
 
-    // Attributes must be PROTECTED
-    protected String employeeNumber;
+    
+    protected String employeeId;
     protected String lastName;
     protected String firstName;
     protected LocalDate birthday;
@@ -55,7 +55,7 @@ public class Employee {
             double phoneAllowance,
             double clothingAllowance
     ) {
-        this.employeeNumber = employeeNumber;
+        this.employeeId = employeeNumber;
         this.lastName = lastName;
         this.firstName = firstName;
         this.birthday = birthday;
@@ -75,7 +75,7 @@ public class Employee {
     }
 
     // getters
-    public String getEmployeeNumber() { return employeeNumber; }
+    public String getEmployeeId() { return employeeId; }
 
     public String getLastName() {
         return lastName;

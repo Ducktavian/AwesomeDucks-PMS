@@ -1,6 +1,7 @@
 package com.motorph.service;
 
 import com.motorph.dao.EmployeeDAO;
+import com.motorph.exception.UnauthorizedException;
 import com.motorph.model.Employee;
 import com.motorph.model.Role;
 import com.motorph.model.UserAccount;
@@ -15,7 +16,7 @@ public class EmployeeService {
         this.employeeDAO = employeeDAO;
     }
     
-    /*
+    
     // Authorize HR
     private void authorizeHR() {
         UserAccount current = Session.getCurrentUser();
@@ -30,9 +31,9 @@ public class EmployeeService {
     }
     
     public List<Employee> getAllEmployees() {
-        return employeeDAO.getAllEmployees();
+        return employeeDAO.findAll();
     }
-    
+    /*
     public Employee findEmployee(String employeeNumber) {
         return employeeDAO.findEmployee(employeeNumber);
     }
