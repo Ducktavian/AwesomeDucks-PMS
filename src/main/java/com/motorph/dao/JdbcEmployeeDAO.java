@@ -30,7 +30,7 @@ public class JdbcEmployeeDAO implements EmployeeDAO {
                             e.email,
                             ep.position_name,
                             d.department_name,
-                            es.status_name            AS employment_status,
+                            es.status_type            AS employment_status,
                             c.basic_salary,
                             c.rice_subsidy,
                             c.phone_allowance,
@@ -63,7 +63,7 @@ public class JdbcEmployeeDAO implements EmployeeDAO {
                         GROUP BY
                             e.employee_id, e.first_name, e.last_name, e.birthdate,
                             e.phone_number, e.email, ep.position_name, d.department_name,
-                            es.status_name, c.basic_salary, c.rice_subsidy, c.phone_allowance,
+                            es.status_type, c.basic_salary, c.rice_subsidy, c.phone_allowance,
                             c.clothing_allowance, c.gross_semi_monthly_rate, c.hourly_rate,
                             c.effective_date, a.full_address,
                             sup.first_name, sup.last_name
