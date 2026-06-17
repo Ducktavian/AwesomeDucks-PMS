@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- */
-
 package com.motorph.main;
 
 import com.motorph.model.Employee;
@@ -11,7 +7,7 @@ import java.util.List;
 
 /**
  *
- * @author Lenovo
+ * @author Ducktavian
  */
 public class Main {
 
