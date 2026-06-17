@@ -1,4 +1,4 @@
-package com.motorph.ui;
+package com.motorph.ui.Login;
 
 import java.awt.BasicStroke;
 import java.awt.Color;
@@ -31,36 +31,37 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPasswordField;
-import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.border.AbstractBorder;
 
 /**
- * LoginDialog — Full-screen modal login form for MotorPH Payroll System.
+ * ResetCredentials — Full-screen modal "Reset Password" form for MotorPH Payroll System.
  *
  * Type    : JDialog (modal)
+ * Styling : matches Login.java (same BackgroundPanel / RoundedPanel / RoundedBorder
+ *           helper classes, same fonts, same navy button) so the two screens feel
+ *           like one continuous flow.
+ *
  * Background image loaded from:
  *   1. src/main/resources/com/motorph/img/MotorPHLogin.png  (classpath)
  *   2. motorPH-AOOP/src/main/java/com/motorph/img/MotorPHLogin.png  (file fallback)
  *   3. Gradient fallback if neither found
  *
- * Related classes:
- *   PasswordManager     — credential hashing & validation
- *   ResetCredentials    — forgot-password workflow
- *   MainDashboardFrame  — opened after successful login
+ * Typical usage (from Login.java):
+ *   forgotPasswordLabel.addMouseListener(... -> new ResetCredentials(this).setVisible(true) ...);
  */
-public class Login extends JDialog {
+public class ResetCredentials extends JDialog {
 
     // ── UI fields ──────────────────────────────────────────────────────────────
-    private JTextField     usernameField;
-    private JPasswordField passwordField;
-    private JButton        loginButton;
-    private JLabel         forgotPasswordLabel;
+    private JPasswordField newPasswordField;
+    private JPasswordField confirmPasswordField;
+    private JButton        setPasswordButton;
+    private JLabel         backLabel;
 
     // ── Constructor ────────────────────────────────────────────────────────────
-    public Login(Frame owner) {
+    public ResetCredentials(Frame owner) {
         super(owner, "MotorPH Payroll System", true); // modal = true
         setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
         setSize(1280, 800);
@@ -75,7 +76,7 @@ public class Login extends JDialog {
         // ── White card ──
         RoundedPanel card = new RoundedPanel(20, Color.WHITE);
         card.setLayout(new GridBagLayout());
-        card.setPreferredSize(new Dimension(650, 530));
+        card.setPreferredSize(new Dimension(550, 480));
         card.setOpaque(false);
 
         GridBagConstraints gbc = new GridBagConstraints();
@@ -83,87 +84,58 @@ public class Login extends JDialog {
         gbc.weightx = 1.0;
 
         // ── Title ──
-        JLabel titleLabel = new JLabel("MotorPH Payroll System", SwingConstants.CENTER);
-        titleLabel.setFont(new Font("SansSerif", Font.BOLD, 30));
+        JLabel titleLabel = new JLabel("Reset Password", SwingConstants.CENTER);
+        titleLabel.setFont(new Font("SansSerif", Font.BOLD, 28));
         titleLabel.setForeground(new Color(15, 15, 15));
         gbc.gridx  = 0;
         gbc.gridy  = 0;
         gbc.insets = new Insets(50, 50, 30, 50);
         card.add(titleLabel, gbc);
 
-        // ── Username label ──
-        JLabel usernameLabel = new JLabel("Username");
-        usernameLabel.setFont(new Font("SansSerif", Font.PLAIN, 14));
-        usernameLabel.setForeground(new Color(30, 30, 30));
+        // ── New Password label ──
+        JLabel newPasswordLabel = new JLabel("New Password*");
+        newPasswordLabel.setFont(new Font("SansSerif", Font.PLAIN, 14));
+        newPasswordLabel.setForeground(new Color(30, 30, 30));
         gbc.gridy  = 1;
         gbc.insets = new Insets(4, 50, 4, 50);
-        card.add(usernameLabel, gbc);
+        card.add(newPasswordLabel, gbc);
 
-        // ── Username field ──
-        usernameField = new JTextField();
-        usernameField.setFont(new Font("SansSerif", Font.PLAIN, 15));
-        usernameField.setPreferredSize(new Dimension(500, 50));
-        usernameField.setBorder(BorderFactory.createCompoundBorder(
+        // ── New Password field ──
+        newPasswordField = new JPasswordField();
+        newPasswordField.setFont(new Font("SansSerif", Font.PLAIN, 15));
+        newPasswordField.setPreferredSize(new Dimension(450, 50));
+        newPasswordField.setBorder(BorderFactory.createCompoundBorder(
             new RoundedBorder(6, new Color(180, 180, 180)),
             BorderFactory.createEmptyBorder(8, 14, 8, 14)
         ));
-        usernameField.setBackground(Color.WHITE);
+        newPasswordField.setBackground(Color.WHITE);
         gbc.gridy  = 2;
-        gbc.insets = new Insets(0, 50, 12, 50);
-        card.add(usernameField, gbc);
+        gbc.insets = new Insets(0, 50, 18, 50);
+        card.add(newPasswordField, gbc);
 
-        // ── Password label ──
-        JLabel passwordLabel = new JLabel("Password");
-        passwordLabel.setFont(new Font("SansSerif", Font.PLAIN, 14));
-        passwordLabel.setForeground(new Color(30, 30, 30));
+        // ── Confirm Password label ──
+        JLabel confirmPasswordLabel = new JLabel("Confirm Password*");
+        confirmPasswordLabel.setFont(new Font("SansSerif", Font.PLAIN, 14));
+        confirmPasswordLabel.setForeground(new Color(30, 30, 30));
         gbc.gridy  = 3;
         gbc.insets = new Insets(4, 50, 4, 50);
-        card.add(passwordLabel, gbc);
+        card.add(confirmPasswordLabel, gbc);
 
-        // ── Password field ──
-        passwordField = new JPasswordField();
-        passwordField.setFont(new Font("SansSerif", Font.PLAIN, 15));
-        passwordField.setPreferredSize(new Dimension(500, 50));
-        passwordField.setBorder(BorderFactory.createCompoundBorder(
+        // ── Confirm Password field ──
+        confirmPasswordField = new JPasswordField();
+        confirmPasswordField.setFont(new Font("SansSerif", Font.PLAIN, 15));
+        confirmPasswordField.setPreferredSize(new Dimension(450, 50));
+        confirmPasswordField.setBorder(BorderFactory.createCompoundBorder(
             new RoundedBorder(6, new Color(180, 180, 180)),
             BorderFactory.createEmptyBorder(8, 14, 8, 14)
         ));
-        passwordField.setBackground(Color.WHITE);
+        confirmPasswordField.setBackground(Color.WHITE);
         gbc.gridy  = 4;
-        gbc.insets = new Insets(0, 50, 4, 50);
-        card.add(passwordField, gbc);
+        gbc.insets = new Insets(0, 50, 30, 50);
+        card.add(confirmPasswordField, gbc);
 
-        // ── Forgot Password link ──
-        JPanel forgotPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
-        forgotPanel.setOpaque(false);
-        forgotPasswordLabel = new JLabel("<html><u>Forgot Password?</u></html>");
-        forgotPasswordLabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
-        forgotPasswordLabel.setForeground(new Color(100, 100, 120));
-        forgotPasswordLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        forgotPasswordLabel.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                // TODO: new ResetCredentials(LoginDialog.this).setVisible(true);
-                JOptionPane.showMessageDialog(Login.this,
-                    "Please contact your administrator to reset your password.",
-                    "Forgot Password", JOptionPane.INFORMATION_MESSAGE);
-            }
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                forgotPasswordLabel.setForeground(new Color(60, 60, 180));
-            }
-            @Override
-            public void mouseExited(MouseEvent e) {
-                forgotPasswordLabel.setForeground(new Color(100, 100, 120));
-            }
-        });
-        forgotPanel.add(forgotPasswordLabel);
-        gbc.gridy  = 5;
-        gbc.insets = new Insets(0, 50, 20, 50);
-        card.add(forgotPanel, gbc);
-
-        // ── Login button ──
-        loginButton = new JButton("Login") {
+        // ── Set new password button ──
+        setPasswordButton = new JButton("Set new password") {
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
@@ -186,43 +158,81 @@ public class Login extends JDialog {
                 g2.dispose();
             }
         };
-        loginButton.setPreferredSize(new Dimension(500, 55));
-        loginButton.setBorderPainted(false);
-        loginButton.setContentAreaFilled(false);
-        loginButton.setFocusPainted(false);
-        loginButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        loginButton.addActionListener(e -> handleLogin());
+        setPasswordButton.setPreferredSize(new Dimension(450, 55));
+        setPasswordButton.setBorderPainted(false);
+        setPasswordButton.setContentAreaFilled(false);
+        setPasswordButton.setFocusPainted(false);
+        setPasswordButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        setPasswordButton.addActionListener(e -> handleSetPassword());
+        gbc.gridy  = 5;
+        gbc.insets = new Insets(0, 50, 20, 50);
+        card.add(setPasswordButton, gbc);
+
+        // ── Back link ──
+        JPanel backPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+        backPanel.setOpaque(false);
+        backLabel = new JLabel("<html><u>Back</u></html>");
+        backLabel.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        backLabel.setForeground(new Color(80, 80, 80));
+        backLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        backLabel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                dispose();
+                // TODO: new Login(getOwner()).setVisible(true);
+            }
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                backLabel.setForeground(new Color(60, 60, 180));
+            }
+            @Override
+            public void mouseExited(MouseEvent e) {
+                backLabel.setForeground(new Color(80, 80, 80));
+            }
+        });
+        backPanel.add(backLabel);
         gbc.gridy  = 6;
-        gbc.insets = new Insets(0, 50, 50, 50);
-        card.add(loginButton, gbc);
+        gbc.insets = new Insets(0, 50, 40, 50);
+        card.add(backPanel, gbc);
 
         backgroundPanel.add(card);
-        getRootPane().setDefaultButton(loginButton);
+        getRootPane().setDefaultButton(setPasswordButton);
     }
 
-    // ── Login logic ────────────────────────────────────────────────────────────
-    private void handleLogin() {
-        String username = usernameField.getText().trim();
-        String password = new String(passwordField.getPassword());
+    // ── Reset-password logic ──────────────────────────────────────────────────
+    private void handleSetPassword() {
+        String newPassword     = new String(newPasswordField.getPassword());
+        String confirmPassword = new String(confirmPasswordField.getPassword());
 
-        if (username.isEmpty() || password.isEmpty()) {
+        if (newPassword.isEmpty() || confirmPassword.isEmpty()) {
             JOptionPane.showMessageDialog(this,
-                "Please enter both username and password.",
-                "Login Error", JOptionPane.WARNING_MESSAGE);
+                "Please fill in both password fields.",
+                "Reset Password", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        // TODO: replace with PasswordManager.validate(username, password)
-        if (username.equals("admin") && password.equals("admin123")) {
-            dispose();
-            // TODO: new MainDashboardFrame(username).setVisible(true);
-        } else {
+        if (newPassword.length() < 8) {
             JOptionPane.showMessageDialog(this,
-                "Invalid username or password. Please try again.",
-                "Login Failed", JOptionPane.ERROR_MESSAGE);
-            passwordField.setText("");
-            passwordField.requestFocus();
+                "Password must be at least 8 characters long.",
+                "Reset Password", JOptionPane.WARNING_MESSAGE);
+            return;
         }
+
+        if (!newPassword.equals(confirmPassword)) {
+            JOptionPane.showMessageDialog(this,
+                "Passwords do not match. Please try again.",
+                "Reset Password", JOptionPane.ERROR_MESSAGE);
+            confirmPasswordField.setText("");
+            confirmPasswordField.requestFocus();
+            return;
+        }
+
+        // TODO: replace with PasswordManager.updatePassword(username, newPassword);
+        JOptionPane.showMessageDialog(this,
+            "Your password has been reset successfully.",
+            "Success", JOptionPane.INFORMATION_MESSAGE);
+        dispose();
+        // TODO: new Login(getOwner()).setVisible(true);
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -366,14 +376,14 @@ public class Login extends JDialog {
         }
     }
 
-    // ── Entry point ────────────────────────────────────────────────────────────
+    // ── Entry point (standalone preview) ──────────────────────────────────────
     public static void main(String[] args) {
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         } catch (Exception ignored) {}
 
         SwingUtilities.invokeLater(() -> {
-            Login dialog = new Login(null);
+            ResetCredentials dialog = new ResetCredentials(null);
             dialog.setVisible(true);
         });
     }

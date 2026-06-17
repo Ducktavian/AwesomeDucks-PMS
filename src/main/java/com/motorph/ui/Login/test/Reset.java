@@ -1,4 +1,4 @@
-package com.motorph.ui;
+package com.motorph.ui.Login;
 
 import java.awt.BasicStroke;
 import java.awt.Color;
