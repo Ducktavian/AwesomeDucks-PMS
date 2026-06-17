@@ -44,7 +44,7 @@ public class DashboardPanel extends JPanel {
 
     // ── Palette  (static so the static inner class FinancialChart can use them)
     public static final Color NAVY       = new Color(13,  36,  89);
-    public static final Color CONTENT_BG = new Color(245, 247, 252);
+    public static final Color CONTENT_BG = Color.WHITE;
     public static final Color CARD_BG    = Color.WHITE;
     public static final Color MUTED      = new Color(120, 130, 150);
     public static final Color DIVIDER    = new Color(220, 225, 235);

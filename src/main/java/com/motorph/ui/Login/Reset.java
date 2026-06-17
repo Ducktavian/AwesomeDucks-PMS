@@ -15,6 +15,8 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.RenderingHints;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -39,6 +41,7 @@ public class Reset extends JDialog {
     // ── UI fields ──────────────────────────────────────────────────────────────
     private JTextField emailField;
     private JButton    continueButton;
+    private JLabel     backLabel;
 
     // ── Constructor ────────────────────────────────────────────────────────────
     public Reset(Frame owner) {
@@ -64,8 +67,8 @@ public class Reset extends JDialog {
         gbc.weightx = 1.0;
 
         // ── Title ──
-        JLabel titleLabel = new JLabel("Password Reset", SwingConstants.CENTER);
-        titleLabel.setFont(new Font("SansSerif", Font.BOLD, 36));
+        JLabel titleLabel = new JLabel("Request Password Reset", SwingConstants.CENTER);
+        titleLabel.setFont(new Font("SansSerif", Font.BOLD, 32));
         titleLabel.setForeground(new Color(15, 15, 15));
         gbc.gridx  = 0;
         gbc.gridy  = 0;
@@ -126,8 +129,35 @@ public class Reset extends JDialog {
         continueButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         continueButton.addActionListener(e -> handleReset());
         gbc.gridy  = 3;
-        gbc.insets = new Insets(0, 50, 50, 50);
+        gbc.insets = new Insets(0, 50, 20, 50);
         card.add(continueButton, gbc);
+
+        // ── Back link ──
+        backLabel = new JLabel("<html><u>Back</u></html>", SwingConstants.CENTER);
+        backLabel.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        backLabel.setForeground(new Color(110, 110, 110));
+        backLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        backLabel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                Frame owner = (Frame) getOwner();
+                dispose();
+                if (owner != null) {
+                    owner.setVisible(true);
+                }
+            }
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                backLabel.setForeground(new Color(60, 60, 60));
+            }
+            @Override
+            public void mouseExited(MouseEvent e) {
+                backLabel.setForeground(new Color(110, 110, 110));
+            }
+        });
+        gbc.gridy  = 4;
+        gbc.insets = new Insets(0, 50, 30, 50);
+        card.add(backLabel, gbc);
 
         backgroundPanel.add(card);
         getRootPane().setDefaultButton(continueButton);
