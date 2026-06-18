@@ -40,7 +40,7 @@ import javax.swing.border.MatteBorder;
  *      (a static inner class) can reference them without an
  *      outer-class instance.
  */
-public class DashboardPanel extends JPanel {
+public class ADMINdashboard extends JPanel {
 
     // ── Palette  (static so the static inner class FinancialChart can use them)
     public static final Color NAVY       = new Color(13,  36,  89);
@@ -54,7 +54,7 @@ public class DashboardPanel extends JPanel {
     // ─────────────────────────────────────────────
     // CONSTRUCTOR
     // ─────────────────────────────────────────────
-    public DashboardPanel() {
+    public ADMINdashboard() {
         setLayout(new BorderLayout());
         setBackground(CONTENT_BG);
 
@@ -89,7 +89,7 @@ public class DashboardPanel extends JPanel {
         ));
 
         JComboBox<String> roleBox = new JComboBox<>(
-            new String[]{"Role", "Admin", "HR", "Employee"}
+            new String[]{"Employee", "Finance", "HR", "IT"}
         );
         roleBox.setFont(new Font("SansSerif", Font.PLAIN, 12));
         roleBox.setForeground(new Color(60, 70, 90));
@@ -272,16 +272,16 @@ public class DashboardPanel extends JPanel {
             // Revenue (green)
             int[] rx = xPoints(left, cW, n);
             int[] ry = yPoints(top, cH, REVENUE, n);
-            drawFill(g2, rx, ry, n, top + cH, DashboardPanel.GREEN_LINE);
-            drawLine(g2, rx, ry, n, DashboardPanel.GREEN_LINE, 2.4f);
-            drawDots(g2, rx, ry, n, DashboardPanel.GREEN_LINE);
+            drawFill(g2, rx, ry, n, top + cH, ADMINdashboard.GREEN_LINE);
+            drawLine(g2, rx, ry, n, ADMINdashboard.GREEN_LINE, 2.4f);
+            drawDots(g2, rx, ry, n, ADMINdashboard.GREEN_LINE);
 
             // Expenses (red)
             int[] ex = xPoints(left, cW, n);
             int[] ey = yPoints(top, cH, EXPENSES, n);
-            drawFill(g2, ex, ey, n, top + cH, DashboardPanel.RED_LINE);
-            drawLine(g2, ex, ey, n, DashboardPanel.RED_LINE, 2.4f);
-            drawDots(g2, ex, ey, n, DashboardPanel.RED_LINE);
+            drawFill(g2, ex, ey, n, top + cH, ADMINdashboard.RED_LINE);
+            drawLine(g2, ex, ey, n, ADMINdashboard.RED_LINE, 2.4f);
+            drawDots(g2, ex, ey, n, ADMINdashboard.RED_LINE);
 
             g2.dispose();
         }
@@ -310,7 +310,7 @@ public class DashboardPanel extends JPanel {
                 int y = top + cH - (int)(val / Y_MAX * cH);
                 g2.setColor(new Color(225, 230, 240));
                 g2.drawLine(left, y, left + cW, y);
-                g2.setColor(DashboardPanel.MUTED);
+                g2.setColor(ADMINdashboard.MUTED);
                 String lbl = (i == 0) ? "0" : formatK((long) val);
                 FontMetrics fm = g2.getFontMetrics();
                 g2.drawString(lbl, left - fm.stringWidth(lbl) - 6, y + 4);
@@ -319,7 +319,7 @@ public class DashboardPanel extends JPanel {
 
         private void drawXLabels(Graphics2D g2, int left, int top,
                                   int cW, int cH, int n) {
-            g2.setColor(DashboardPanel.MUTED);
+            g2.setColor(ADMINdashboard.MUTED);
             g2.setFont(new Font("SansSerif", Font.PLAIN, 10));
             FontMetrics fm = g2.getFontMetrics();
             for (int i = 0; i < n; i++) {
@@ -332,13 +332,13 @@ public class DashboardPanel extends JPanel {
 
         private void drawLegend(Graphics2D g2, int x, int y) {
             g2.setFont(new Font("SansSerif", Font.PLAIN, 11));
-            g2.setColor(DashboardPanel.GREEN_LINE);
+            g2.setColor(ADMINdashboard.GREEN_LINE);
             g2.fillOval(x, y - 5, 9, 9);
-            g2.setColor(DashboardPanel.MUTED);
+            g2.setColor(ADMINdashboard.MUTED);
             g2.drawString("Revenue", x + 13, y + 4);
-            g2.setColor(DashboardPanel.RED_LINE);
+            g2.setColor(ADMINdashboard.RED_LINE);
             g2.fillOval(x + 80, y - 5, 9, 9);
-            g2.setColor(DashboardPanel.MUTED);
+            g2.setColor(ADMINdashboard.MUTED);
             g2.drawString("Total Expenses", x + 93, y + 4);
         }
 
