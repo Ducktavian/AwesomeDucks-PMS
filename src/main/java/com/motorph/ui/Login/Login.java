@@ -37,42 +37,26 @@ import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.border.AbstractBorder;
 
-/**
- * LoginDialog — Full-screen modal login form for MotorPH Payroll System.
- *
- * Type    : JDialog (modal)
- * Background image loaded from:
- *   1. src/main/resources/com/motorph/img/MotorPHLogin.png  (classpath)
- *   2. motorPH-AOOP/src/main/java/com/motorph/img/MotorPHLogin.png  (file fallback)
- *   3. Gradient fallback if neither found
- *
- * Related classes:
- *   PasswordManager     — credential hashing & validation
- *   ResetCredentials    — forgot-password workflow
- *   MainDashboardFrame  — opened after successful login
- */
+import com.motorph.ui.Settings.AccountSecurity;
+
 public class Login extends JDialog {
 
-    // ── UI fields ──────────────────────────────────────────────────────────────
     private JTextField     usernameField;
     private JPasswordField passwordField;
     private JButton        loginButton;
     private JLabel         forgotPasswordLabel;
 
-    // ── Constructor ────────────────────────────────────────────────────────────
     public Login(Frame owner) {
-        super(owner, "MotorPH Payroll System", true); // modal = true
+        super(owner, "MotorPH Payroll System", true);
         setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
         setSize(1280, 800);
         setLocationRelativeTo(null);
         setResizable(true);
 
-        // ── Background ──
         BackgroundPanel backgroundPanel = new BackgroundPanel();
         backgroundPanel.setLayout(new GridBagLayout());
         setContentPane(backgroundPanel);
 
-        // ── White card ──
         RoundedPanel card = new RoundedPanel(20, Color.WHITE);
         card.setLayout(new GridBagLayout());
         card.setPreferredSize(new Dimension(650, 530));
@@ -82,7 +66,6 @@ public class Login extends JDialog {
         gbc.fill    = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 1.0;
 
-        // ── Title ──
         JLabel titleLabel = new JLabel("MotorPH Payroll System", SwingConstants.CENTER);
         titleLabel.setFont(new Font("SansSerif", Font.BOLD, 30));
         titleLabel.setForeground(new Color(15, 15, 15));
@@ -91,7 +74,6 @@ public class Login extends JDialog {
         gbc.insets = new Insets(50, 50, 30, 50);
         card.add(titleLabel, gbc);
 
-        // ── Username label ──
         JLabel usernameLabel = new JLabel("Username");
         usernameLabel.setFont(new Font("SansSerif", Font.PLAIN, 14));
         usernameLabel.setForeground(new Color(30, 30, 30));
@@ -99,7 +81,6 @@ public class Login extends JDialog {
         gbc.insets = new Insets(4, 50, 4, 50);
         card.add(usernameLabel, gbc);
 
-        // ── Username field ──
         usernameField = new JTextField();
         usernameField.setFont(new Font("SansSerif", Font.PLAIN, 15));
         usernameField.setPreferredSize(new Dimension(500, 50));
@@ -112,7 +93,6 @@ public class Login extends JDialog {
         gbc.insets = new Insets(0, 50, 12, 50);
         card.add(usernameField, gbc);
 
-        // ── Password label ──
         JLabel passwordLabel = new JLabel("Password");
         passwordLabel.setFont(new Font("SansSerif", Font.PLAIN, 14));
         passwordLabel.setForeground(new Color(30, 30, 30));
@@ -120,7 +100,6 @@ public class Login extends JDialog {
         gbc.insets = new Insets(4, 50, 4, 50);
         card.add(passwordLabel, gbc);
 
-        // ── Password field ──
         passwordField = new JPasswordField();
         passwordField.setFont(new Font("SansSerif", Font.PLAIN, 15));
         passwordField.setPreferredSize(new Dimension(500, 50));
@@ -133,7 +112,6 @@ public class Login extends JDialog {
         gbc.insets = new Insets(0, 50, 4, 50);
         card.add(passwordField, gbc);
 
-        // ── Forgot Password link ──
         JPanel forgotPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
         forgotPanel.setOpaque(false);
         forgotPasswordLabel = new JLabel("<html><u>Forgot Password?</u></html>");
@@ -143,7 +121,6 @@ public class Login extends JDialog {
         forgotPasswordLabel.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                // TODO: new ResetCredentials(LoginDialog.this).setVisible(true);
                 JOptionPane.showMessageDialog(Login.this,
                     "Please contact your administrator to reset your password.",
                     "Forgot Password", JOptionPane.INFORMATION_MESSAGE);
@@ -162,7 +139,6 @@ public class Login extends JDialog {
         gbc.insets = new Insets(0, 50, 20, 50);
         card.add(forgotPanel, gbc);
 
-        // ── Login button ──
         loginButton = new JButton("Login") {
             @Override
             protected void paintComponent(Graphics g) {
@@ -200,7 +176,6 @@ public class Login extends JDialog {
         getRootPane().setDefaultButton(loginButton);
     }
 
-    // ── Login logic ────────────────────────────────────────────────────────────
     private void handleLogin() {
         String username = usernameField.getText().trim();
         String password = new String(passwordField.getPassword());
@@ -212,10 +187,9 @@ public class Login extends JDialog {
             return;
         }
 
-        // TODO: replace with PasswordManager.validate(username, password)
         if (username.equals("admin") && password.equals("admin123")) {
             dispose();
-            // TODO: new MainDashboardFrame(username).setVisible(true);
+            new AccountSecurity(null).setVisible(true);
         } else {
             JOptionPane.showMessageDialog(this,
                 "Invalid username or password. Please try again.",
@@ -225,9 +199,6 @@ public class Login extends JDialog {
         }
     }
 
-    // ═══════════════════════════════════════════════════════════════════════════
-    // BackgroundPanel — paints MotorPHLogin.png; falls back to gradient
-    // ═══════════════════════════════════════════════════════════════════════════
     static class BackgroundPanel extends JPanel {
         private BufferedImage backgroundImage;
 
@@ -236,7 +207,6 @@ public class Login extends JDialog {
         }
 
         private void loadBackgroundImage() {
-            // 1. Classpath resource (works after Maven build)
             try (InputStream is = getClass().getResourceAsStream(
                     "/com/motorph/img/MotorPHLogin.png")) {
                 if (is != null) {
@@ -247,7 +217,6 @@ public class Login extends JDialog {
                 System.err.println("Classpath image load failed: " + e.getMessage());
             }
 
-            // 2. File path fallback (dev convenience)
             try {
                 File f = new File(
                     "C:\\Users\\MSI\\Downloads\\Work_S\\MMDC\\AOOP\\motorPH-AOOP\\src\\main\\java\\com\\motorph\\img\\MotorPHLogin.png");
@@ -281,14 +250,12 @@ public class Login extends JDialog {
                 g2.drawImage(backgroundImage,
                     (w - iw) / 2, (h - ih) / 2, iw, ih, this);
             } else {
-                // Sky gradient fallback
                 g2.setPaint(new GradientPaint(
                     0, 0,     new Color(185, 218, 240),
                     0, h / 2, new Color(210, 232, 248)
                 ));
                 g2.fillRect(0, 0, w, h);
 
-                // Road
                 g2.setPaint(new GradientPaint(
                     0, h / 2, new Color(130, 135, 142),
                     0, h,     new Color(95,  98,  105)
@@ -299,9 +266,6 @@ public class Login extends JDialog {
         }
     }
 
-    // ═══════════════════════════════════════════════════════════════════════════
-    // RoundedPanel — white card with soft drop shadow
-    // ═══════════════════════════════════════════════════════════════════════════
     static class RoundedPanel extends JPanel {
         private final int   radius;
         private final Color bg;
@@ -335,9 +299,6 @@ public class Login extends JDialog {
         }
     }
 
-    // ═══════════════════════════════════════════════════════════════════════════
-    // RoundedBorder — rounded outline for text fields
-    // ═══════════════════════════════════════════════════════════════════════════
     static class RoundedBorder extends AbstractBorder {
         private final int   radius;
         private final Color color;
@@ -366,7 +327,6 @@ public class Login extends JDialog {
         }
     }
 
-    // ── Entry point ────────────────────────────────────────────────────────────
     public static void main(String[] args) {
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());

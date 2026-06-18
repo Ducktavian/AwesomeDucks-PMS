@@ -40,7 +40,7 @@ import javax.swing.border.MatteBorder;
  *      (a static inner class) can reference them without an
  *      outer-class instance.
  */
-public class ADMINdashboard extends JPanel {
+public class Admindashboard extends JPanel {
 
     // ── Palette  (static so the static inner class FinancialChart can use them)
     public static final Color NAVY       = new Color(13,  36,  89);
@@ -54,7 +54,7 @@ public class ADMINdashboard extends JPanel {
     // ─────────────────────────────────────────────
     // CONSTRUCTOR
     // ─────────────────────────────────────────────
-    public ADMINdashboard() {
+    public Admindashboard() {
         setLayout(new BorderLayout());
         setBackground(CONTENT_BG);
 
@@ -272,16 +272,16 @@ public class ADMINdashboard extends JPanel {
             // Revenue (green)
             int[] rx = xPoints(left, cW, n);
             int[] ry = yPoints(top, cH, REVENUE, n);
-            drawFill(g2, rx, ry, n, top + cH, ADMINdashboard.GREEN_LINE);
-            drawLine(g2, rx, ry, n, ADMINdashboard.GREEN_LINE, 2.4f);
-            drawDots(g2, rx, ry, n, ADMINdashboard.GREEN_LINE);
+            drawFill(g2, rx, ry, n, top + cH, Admindashboard.GREEN_LINE);
+            drawLine(g2, rx, ry, n, Admindashboard.GREEN_LINE, 2.4f);
+            drawDots(g2, rx, ry, n, Admindashboard.GREEN_LINE);
 
             // Expenses (red)
             int[] ex = xPoints(left, cW, n);
             int[] ey = yPoints(top, cH, EXPENSES, n);
-            drawFill(g2, ex, ey, n, top + cH, ADMINdashboard.RED_LINE);
-            drawLine(g2, ex, ey, n, ADMINdashboard.RED_LINE, 2.4f);
-            drawDots(g2, ex, ey, n, ADMINdashboard.RED_LINE);
+            drawFill(g2, ex, ey, n, top + cH, Admindashboard.RED_LINE);
+            drawLine(g2, ex, ey, n, Admindashboard.RED_LINE, 2.4f);
+            drawDots(g2, ex, ey, n, Admindashboard.RED_LINE);
 
             g2.dispose();
         }
@@ -310,7 +310,7 @@ public class ADMINdashboard extends JPanel {
                 int y = top + cH - (int)(val / Y_MAX * cH);
                 g2.setColor(new Color(225, 230, 240));
                 g2.drawLine(left, y, left + cW, y);
-                g2.setColor(ADMINdashboard.MUTED);
+                g2.setColor(Admindashboard.MUTED);
                 String lbl = (i == 0) ? "0" : formatK((long) val);
                 FontMetrics fm = g2.getFontMetrics();
                 g2.drawString(lbl, left - fm.stringWidth(lbl) - 6, y + 4);
@@ -319,7 +319,7 @@ public class ADMINdashboard extends JPanel {
 
         private void drawXLabels(Graphics2D g2, int left, int top,
                                   int cW, int cH, int n) {
-            g2.setColor(ADMINdashboard.MUTED);
+            g2.setColor(Admindashboard.MUTED);
             g2.setFont(new Font("SansSerif", Font.PLAIN, 10));
             FontMetrics fm = g2.getFontMetrics();
             for (int i = 0; i < n; i++) {
@@ -332,13 +332,13 @@ public class ADMINdashboard extends JPanel {
 
         private void drawLegend(Graphics2D g2, int x, int y) {
             g2.setFont(new Font("SansSerif", Font.PLAIN, 11));
-            g2.setColor(ADMINdashboard.GREEN_LINE);
+            g2.setColor(Admindashboard.GREEN_LINE);
             g2.fillOval(x, y - 5, 9, 9);
-            g2.setColor(ADMINdashboard.MUTED);
+            g2.setColor(Admindashboard.MUTED);
             g2.drawString("Revenue", x + 13, y + 4);
-            g2.setColor(ADMINdashboard.RED_LINE);
+            g2.setColor(Admindashboard.RED_LINE);
             g2.fillOval(x + 80, y - 5, 9, 9);
-            g2.setColor(ADMINdashboard.MUTED);
+            g2.setColor(Admindashboard.MUTED);
             g2.drawString("Total Expenses", x + 93, y + 4);
         }
 

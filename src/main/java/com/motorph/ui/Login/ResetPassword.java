@@ -52,7 +52,7 @@ import javax.swing.border.AbstractBorder;
  * Typical usage (from Login.java):
  *   forgotPasswordLabel.addMouseListener(... -> new ResetCredentials(this).setVisible(true) ...);
  */
-public class ResetCredentials extends JDialog {
+public class ResetPassword extends JDialog {
 
     // ── UI fields ──────────────────────────────────────────────────────────────
     private JPasswordField newPasswordField;
@@ -61,7 +61,7 @@ public class ResetCredentials extends JDialog {
     private JLabel         backLabel;
 
     // ── Constructor ────────────────────────────────────────────────────────────
-    public ResetCredentials(Frame owner) {
+    public ResetPassword(Frame owner) {
         super(owner, "MotorPH Payroll System", true); // modal = true
         setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
         setSize(1280, 800);
@@ -383,7 +383,7 @@ public class ResetCredentials extends JDialog {
         } catch (Exception ignored) {}
 
         SwingUtilities.invokeLater(() -> {
-            ResetCredentials dialog = new ResetCredentials(null);
+            ResetPassword dialog = new ResetPassword(null);
             dialog.setVisible(true);
         });
     }
