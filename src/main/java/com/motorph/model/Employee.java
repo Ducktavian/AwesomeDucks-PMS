@@ -15,6 +15,7 @@ public class Employee {
     protected LocalDate birthday;
     protected String address;
     protected String phoneNumber;
+    protected String email;
     
     protected String SSSNumber;
     protected String philhealthNumber;
@@ -29,6 +30,11 @@ public class Employee {
     protected double riceSubsidy;
     protected double phoneAllowance;
     protected double clothingAllowance;
+    
+    // Added through database design
+    protected Integer positionId;
+    protected Integer immediateSupervisorId;
+    protected Integer employmentStatusId;
     
     // Empty parameters constructor
     public Employee () {
@@ -53,7 +59,8 @@ public class Employee {
             double basicSalary,
             double riceSubsidy,
             double phoneAllowance,
-            double clothingAllowance
+            double clothingAllowance,
+            String email
     ) {
         this.employeeId = employeeNumber;
         this.lastName = lastName;
@@ -72,6 +79,7 @@ public class Employee {
         this.riceSubsidy = riceSubsidy;
         this.phoneAllowance = phoneAllowance;
         this.clothingAllowance = clothingAllowance;
+        this.email = email;
     }
 
     // getters
@@ -141,6 +149,9 @@ public class Employee {
         return clothingAllowance;
     }
     
+    public String getEmail() {
+        return email;
+    }    
 
     
     public String getFullName() { 
@@ -163,6 +174,33 @@ public class Employee {
     public double getTotalAllowances() {
         return riceSubsidy + clothingAllowance + phoneAllowance;
     }
+
+    public Integer getPositionId() {
+        return positionId;
+    }
+
+    public Integer getImmediateSupervisorId() {
+        return immediateSupervisorId;
+    }
+
+    public Integer getEmploymentStatusId() {
+        return employmentStatusId;
+    }
+    
+    
+    public void setPositionId(Integer positionId) {
+        this.positionId = positionId;
+    }
+
+    public void setImmediateSupervisorId(Integer immediateSupervisorId) {
+        this.immediateSupervisorId = immediateSupervisorId;
+    }
+
+    public void setEmploymentStatusId(Integer employmentStatusId) {
+        this.employmentStatusId = employmentStatusId;
+    }
+
+    
  
     
 }
