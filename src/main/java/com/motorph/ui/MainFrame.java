@@ -30,8 +30,8 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.border.MatteBorder;
 
 import com.motorph.ui.Admin.Admindashboard;
-import com.motorph.ui.IT.ITDisputeList;
 import com.motorph.ui.IT.ITDashboard;
+import com.motorph.ui.IT.ITDisputeList;
 import com.motorph.ui.IT.ITUserAccountList;
 import com.motorph.ui.Settings.AccountSecurity;
 
@@ -51,14 +51,14 @@ public class MainFrame extends JFrame {
 
     private static final String[][] MAIN_NAV = {
         { "Dashboard",  "Dashboard-Icon.png"  },
-        { "Employees",  "Employee-Icon.png"   },
+        { "Employees",  "Employees-Icon.png"   },
         { "Payroll",    "Payroll-Icon.png"    },
-        { "Requests",   "Request-icon.png"    },
+        { "Requests",   "Requests-icon.png"    },
         { "Attendance", "Attendance-Icon.png" },
-        { "Users",      "Employee-Icon.png"   },
+        { "Users",      "Users-Icon.png"   },
     };
     private static final String[][] BOTTOM_NAV = {
-        { "Settings",    "Dashboard-Icon.png"  },
+        { "Settings",    "Settings-Icon.png"  },
         { "Help Center", "HelpCenter-Icon.png" },
         { "Log Out",     "Logout-icon.png"     },
     };

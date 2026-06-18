@@ -66,11 +66,19 @@ public class ITDisputeList extends JPanel {
     private JComboBox<String> departmentFilter;
     private final List<DisputeEntry> allDisputes = new ArrayList<>();
 
+    // Navigation between list and detail
+    private java.awt.CardLayout rootCard;
+    private ITDisputeDetail     detailPanel;
+
     public ITDisputeList() {
-        setLayout(new BorderLayout());
+        rootCard = new java.awt.CardLayout();
+        setLayout(rootCard);
         setBackground(Color.WHITE);
 
-        add(buildTopBar(), BorderLayout.NORTH);
+        // ── List card ────────────────────────────────────────────────────────
+        JPanel listCard = new JPanel(new BorderLayout());
+        listCard.setBackground(Color.WHITE);
+        listCard.add(buildTopBar(), BorderLayout.NORTH);
 
         JPanel body = new JPanel();
         body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
@@ -83,8 +91,57 @@ public class ITDisputeList extends JPanel {
         body.add(Box.createVerticalStrut(16));
         body.add(buildTablePanel());
 
-        add(body, BorderLayout.CENTER);
+        listCard.add(body, BorderLayout.CENTER);
+
+        // ── Detail card ──────────────────────────────────────────────────────
+        detailPanel = new ITDisputeDetail(() -> rootCard.show(ITDisputeList.this, "list"));
+
+        add(listCard,    "list");
+        add(detailPanel, "detail");
+        rootCard.show(this, "list");
+
         loadSampleData();
+        wireRowClick();
+    }
+
+    /** Open the detail view for the selected row. */
+    private void openDetail(int viewRow) {
+        // Map view row → model row (handles sorted/filtered state)
+        int modelRow = disputeTable.convertRowIndexToModel(viewRow);
+        // Find the matching DisputeEntry using the Ticket ID in column 0
+        String ticketId = (String) tableModel.getValueAt(modelRow, 0);
+        for (DisputeEntry entry : allDisputes) {
+            if (entry.ticketId.equals(ticketId)) {
+                detailPanel.load(entry);
+                rootCard.show(this, "detail");
+                return;
+            }
+        }
+    }
+
+    /** Register mouse listener for double-click on any table row. */
+    private void wireRowClick() {
+        disputeTable.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    int row = disputeTable.rowAtPoint(e.getPoint());
+                    if (row >= 0) {
+                        openDetail(row);
+                    }
+                }
+            }
+        });
+        // Also show hand cursor when hovering over rows
+        disputeTable.addMouseMotionListener(new java.awt.event.MouseMotionAdapter() {
+            @Override
+            public void mouseMoved(java.awt.event.MouseEvent e) {
+                int row = disputeTable.rowAtPoint(e.getPoint());
+                disputeTable.setCursor(row >= 0
+                    ? java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)
+                    : java.awt.Cursor.getDefaultCursor());
+            }
+        });
     }
 
     private JPanel buildTopBar() {
