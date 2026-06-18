@@ -1,9 +1,5 @@
 package com.motorph.model;
 
-/**
- * Maps to the user_role table (role_id 1-5).
- * The integer value matches the primary key in the database.
- */
 public enum Role {
 
     SYSTEM_ADMINISTRATOR(1, "System Administrator"),
@@ -39,10 +35,10 @@ public enum Role {
         return EMPLOYEE;
     }
 
-    /**
-     * Look up a Role by the role_name stored in user_role.role_name.
-     * Comparison is case-insensitive.
-     */
+    
+     //Look up a Role by the role_name stored in user_role.role_name.
+     //Comparison is case-insensitive.
+     
     public static Role fromName(String name) {
         if (name == null) return EMPLOYEE;
         for (Role r : values()) {
