@@ -3,6 +3,7 @@ package com.motorph.ui;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
@@ -10,21 +11,28 @@ import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
+import java.awt.RenderingHints;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
 
 import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
+import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
+import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
+import javax.swing.border.MatteBorder;
 
 import com.motorph.ui.Admin.Admindashboard;
+import com.motorph.ui.IT.ITDisputeList;
+import com.motorph.ui.IT.ITDashboard;
+import com.motorph.ui.IT.ITUserAccountList;
 import com.motorph.ui.Settings.AccountSecurity;
 
 public class MainFrame extends JFrame {
@@ -33,6 +41,13 @@ public class MainFrame extends JFrame {
     public static final Color ACCENT_W   = Color.WHITE;
     public static final Color TEXT_MUTED = new Color(180, 190, 210);
     public static final Color CONTENT_BG = new Color(245, 247, 252);
+    private static final Color NAVY      = new Color(13,  36,  89);
+    private static final Color MUTED     = new Color(120, 130, 150);
+    private static final Color DIVIDER   = new Color(220, 225, 235);
+
+    private static final String[] ROLES = {
+        "Employee", "Finance", "HR", "IT", "Admin"
+    };
 
     private static final String[][] MAIN_NAV = {
         { "Dashboard",  "Dashboard-Icon.png"  },
@@ -95,20 +110,104 @@ public class MainFrame extends JFrame {
         contentCards = new JPanel(cardLayout);
         contentCards.setBackground(Color.WHITE);
 
-        contentCards.add(new Admindashboard(),            "Dashboard");
+        contentCards.add(buildDashboardPanel(),           "Dashboard");
         contentCards.add(placeholderPanel("Employees"),   "Employees");
         contentCards.add(placeholderPanel("Payroll"),     "Payroll");
         contentCards.add(placeholderPanel("Requests"),    "Requests");
         contentCards.add(placeholderPanel("Attendance"),  "Attendance");
-        contentCards.add(placeholderPanel("Users"),       "Users");
+        contentCards.add(new ITUserAccountList(),          "Users");
         contentCards.add(new AccountSecurity(),           "Settings");
-        contentCards.add(placeholderPanel("Help Center"), "Help Center");
+        contentCards.add(new ITDisputeList(),             "Help Center");
         contentCards.add(placeholderPanel("Log Out"),     "Log Out");
 
         mainArea.add(contentCards, BorderLayout.CENTER);
         cardLayout.show(contentCards, "Dashboard");
 
         setVisible(true);
+    }
+
+    private JPanel buildDashboardPanel() {
+        JPanel dashboard = new JPanel(new BorderLayout());
+        dashboard.setBackground(Color.WHITE);
+
+        CardLayout roleLayout = new CardLayout();
+        JPanel roleCards = new JPanel(roleLayout);
+        roleCards.setBackground(Color.WHITE);
+
+        roleCards.add(placeholderPanel("Employee"), "Employee");
+        roleCards.add(placeholderPanel("Finance"),  "Finance");
+        roleCards.add(placeholderPanel("HR"),       "HR");
+        roleCards.add(new ITDashboard(),            "IT");
+        roleCards.add(new Admindashboard(),         "Admin");
+
+        JComboBox<String> roleBox = new JComboBox<>(ROLES);
+        roleBox.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        roleBox.setForeground(new Color(60, 70, 90));
+        roleBox.setBackground(Color.WHITE);
+        roleBox.setPreferredSize(new Dimension(110, 30));
+        roleBox.setSelectedItem("Admin");
+        roleLayout.show(roleCards, "Admin");
+
+        roleBox.addActionListener(e -> {
+            String role = (String) roleBox.getSelectedItem();
+            if (role != null) {
+                roleLayout.show(roleCards, role);
+            }
+        });
+
+        dashboard.add(buildDashboardTopBar(roleBox), BorderLayout.NORTH);
+        dashboard.add(roleCards, BorderLayout.CENTER);
+        return dashboard;
+    }
+
+    private JPanel buildDashboardTopBar(JComboBox<String> roleBox) {
+        JPanel bar = new JPanel(new BorderLayout());
+        bar.setBackground(Color.WHITE);
+        bar.setBorder(new CompoundBorder(
+            new MatteBorder(0, 0, 1, 0, DIVIDER),
+            new EmptyBorder(10, 24, 10, 24)
+        ));
+
+        JPanel userChip = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        userChip.setOpaque(false);
+
+        JPanel nameBlock = new JPanel();
+        nameBlock.setLayout(new BoxLayout(nameBlock, BoxLayout.Y_AXIS));
+        nameBlock.setOpaque(false);
+
+        JLabel nameLbl = new JLabel("Name");
+        nameLbl.setFont(new Font("SansSerif", Font.BOLD, 13));
+        nameLbl.setForeground(NAVY);
+        nameLbl.setAlignmentX(Component.RIGHT_ALIGNMENT);
+
+        JLabel posLbl = new JLabel("Position");
+        posLbl.setFont(new Font("SansSerif", Font.PLAIN, 11));
+        posLbl.setForeground(MUTED);
+        posLbl.setAlignmentX(Component.RIGHT_ALIGNMENT);
+
+        nameBlock.add(nameLbl);
+        nameBlock.add(posLbl);
+
+        JPanel avatar = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+                                    RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(NAVY);
+                g2.fillOval(0, 0, getWidth(), getHeight());
+                g2.dispose();
+            }
+        };
+        avatar.setPreferredSize(new Dimension(40, 40));
+        avatar.setOpaque(false);
+
+        userChip.add(nameBlock);
+        userChip.add(avatar);
+
+        bar.add(roleBox,  BorderLayout.WEST);
+        bar.add(userChip, BorderLayout.EAST);
+        return bar;
     }
 
     // ── Sidebar ───────────────────────────────────────────────────────────────

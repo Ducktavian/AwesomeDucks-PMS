@@ -145,26 +145,26 @@ public class AccountSecurity extends JPanel {
         strengthBar.setScore(score);
 
         switch (score) {
-            case STRENGTH_WEAK -> {
+            case STRENGTH_WEAK:
                 strengthLabel.setText("Weak");
                 strengthLabel.setForeground(new Color(231, 76, 60));
-            }
-            case STRENGTH_FAIR -> {
+                break;
+            case STRENGTH_FAIR:
                 strengthLabel.setText("Fair");
                 strengthLabel.setForeground(new Color(230, 126, 34));
-            }
-            case STRENGTH_GOOD -> {
+                break;
+            case STRENGTH_GOOD:
                 strengthLabel.setText("Good");
                 strengthLabel.setForeground(new Color(52, 152, 219));
-            }
-            case STRENGTH_STRONG -> {
+                break;
+            case STRENGTH_STRONG:
                 strengthLabel.setText("Strong");
                 strengthLabel.setForeground(new Color(39, 174, 96));
-            }
-            default -> {
+                break;
+            default:
                 strengthLabel.setText("  ");
                 strengthLabel.setForeground(Color.GRAY);
-            }
+                break;
         }
     }
 

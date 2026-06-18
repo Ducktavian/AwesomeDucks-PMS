@@ -19,14 +19,12 @@ import java.awt.RenderingHints;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
-import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
-import javax.swing.border.MatteBorder;
 
 /**
  * DashboardPanel
@@ -58,8 +56,6 @@ public class Admindashboard extends JPanel {
         setLayout(new BorderLayout());
         setBackground(CONTENT_BG);
 
-        add(buildSubTopBar(), BorderLayout.NORTH);
-
         JPanel body = new JPanel();
         body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
         body.setBackground(CONTENT_BG);
@@ -75,69 +71,6 @@ public class Admindashboard extends JPanel {
         scroll.setBackground(CONTENT_BG);
         scroll.getViewport().setBackground(CONTENT_BG);
         add(scroll, BorderLayout.CENTER);
-    }
-
-    // ─────────────────────────────────────────────
-    // SUB TOP BAR  —  Role dropdown | Name + Position + Avatar
-    // ─────────────────────────────────────────────
-    private JPanel buildSubTopBar() {
-        JPanel bar = new JPanel(new BorderLayout());
-        bar.setBackground(CARD_BG);
-        bar.setBorder(new CompoundBorder(
-            new MatteBorder(0, 0, 1, 0, DIVIDER),
-            new EmptyBorder(10, 24, 10, 24)
-        ));
-
-        JComboBox<String> roleBox = new JComboBox<>(
-            new String[]{"Employee", "Finance", "HR", "IT"}
-        );
-        roleBox.setFont(new Font("SansSerif", Font.PLAIN, 12));
-        roleBox.setForeground(new Color(60, 70, 90));
-        roleBox.setBackground(Color.WHITE);
-        roleBox.setPreferredSize(new Dimension(110, 30));
-
-        // User chip
-        JPanel userChip = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
-        userChip.setOpaque(false);
-
-        JPanel nameBlock = new JPanel();
-        nameBlock.setLayout(new BoxLayout(nameBlock, BoxLayout.Y_AXIS));
-        nameBlock.setOpaque(false);
-
-        JLabel nameLbl = new JLabel("Name");
-        nameLbl.setFont(new Font("SansSerif", Font.BOLD, 13));
-        nameLbl.setForeground(NAVY);
-        nameLbl.setAlignmentX(Component.RIGHT_ALIGNMENT);
-
-        JLabel posLbl = new JLabel("Position");
-        posLbl.setFont(new Font("SansSerif", Font.PLAIN, 11));
-        posLbl.setForeground(MUTED);
-        posLbl.setAlignmentX(Component.RIGHT_ALIGNMENT);
-
-        nameBlock.add(nameLbl);
-        nameBlock.add(posLbl);
-
-        // Navy avatar circle
-        JPanel avatar = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
-                                    RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(NAVY);
-                g2.fillOval(0, 0, getWidth(), getHeight());
-                g2.dispose();
-            }
-        };
-        avatar.setPreferredSize(new Dimension(40, 40));
-        avatar.setOpaque(false);
-
-        userChip.add(nameBlock);
-        userChip.add(avatar);
-
-        bar.add(roleBox,  BorderLayout.WEST);
-        bar.add(userChip, BorderLayout.EAST);
-        return bar;
     }
 
     // ─────────────────────────────────────────────

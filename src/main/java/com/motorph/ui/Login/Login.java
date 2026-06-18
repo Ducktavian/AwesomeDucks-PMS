@@ -37,7 +37,7 @@ import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.border.AbstractBorder;
 
-import com.motorph.ui.Settings.AccountSecurity;
+import com.motorph.ui.MainFrame;
 
 public class Login extends JDialog {
 
@@ -189,7 +189,7 @@ public class Login extends JDialog {
 
         if (username.equals("admin") && password.equals("admin123")) {
             dispose();
-            new AccountSecurity(null).setVisible(true);
+            SwingUtilities.invokeLater(MainFrame::new);
         } else {
             JOptionPane.showMessageDialog(this,
                 "Invalid username or password. Please try again.",
