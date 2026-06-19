@@ -1,14 +1,16 @@
 package com.motorph.service;
 
+import java.util.List;
+
 import com.motorph.dao.EmployeeDAO;
+import com.motorph.exception.UnauthorizedException;
 import com.motorph.model.Employee;
 import com.motorph.model.Role;
 import com.motorph.model.UserAccount;
 import com.motorph.util.Session;
-import java.util.List;
 
 public class EmployeeService {
-    /*
+    
     private EmployeeDAO employeeDAO;
     
     public EmployeeService(EmployeeDAO employeeDAO) {
@@ -30,9 +32,9 @@ public class EmployeeService {
     }
     
     public List<Employee> getAllEmployees() {
-        return employeeDAO.getAllEmployees();
+        return employeeDAO.findAll();
     }
-    
+    /*
     public Employee findEmployee(String employeeNumber) {
         return employeeDAO.findEmployee(employeeNumber);
     }
@@ -58,7 +60,7 @@ public class EmployeeService {
     public String generateNextEmployeeNumber() {
         return employeeDAO.generateNextEmployeeNumber();
     }
-    
+    */
     private void validateEmployee(Employee employee) {
         // Firstname
         if(employee.getFirstName() == null || employee.getFirstName().isBlank()){
@@ -143,5 +145,5 @@ public class EmployeeService {
             throw new IllegalArgumentException("Clothing Allowance must be greater than 0.");
         }
     }
-    */
+    
 }

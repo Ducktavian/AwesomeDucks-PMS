@@ -1,11 +1,11 @@
 package com.motorph.service;
 
-import com.motorph.dao.AttendanceDAO;
-import com.motorph.dao.JdbcAttendanceDAO;
-import com.motorph.model.Attendance;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
+
+import com.motorph.dao.AttendanceDAO;
+import com.motorph.model.Attendance;
 
 
 public class AttendanceService {

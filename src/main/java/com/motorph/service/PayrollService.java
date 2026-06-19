@@ -53,7 +53,7 @@ public class PayrollService {
         processPayroll();
         
         // get cutoffHours (Hours workded)
-        double cutoffHours = attendanceService.computeTotalHours(employee.getEmployeeNumber(), periodStart, periodEnd);
+        double cutoffHours = attendanceService.computeTotalHours(employee.getEmployeeId(), periodStart, periodEnd);
         // get hourly rate
         double hourlyRate = rateService.computeHourlyRate(employee);
         // derive gross pay
@@ -77,7 +77,7 @@ public class PayrollService {
             // Compute MONTHLY gross for deductions
             LocalDate monthStart = periodStart.withDayOfMonth(1);
             LocalDate monthEnd = periodStart.withDayOfMonth(periodStart.lengthOfMonth());
-            double monthlyHours = attendanceService.computeTotalHours(employee.getEmployeeNumber(), monthStart, monthEnd);
+            double monthlyHours = attendanceService.computeTotalHours(employee.getEmployeeId(), monthStart, monthEnd);
             double monthlyGross = round(monthlyHours * hourlyRate);
             
             deductionBreakdown = computeMonthlyDeductions(employee, monthlyGross);
@@ -91,12 +91,12 @@ public class PayrollService {
         double netPay = round(totalGross - totalDeductions);
         
         //Generate payslipId
-        String payslipId = generatePayslipId(employee.getEmployeeNumber(), periodEnd);
+        String payslipId = generatePayslipId(employee.getEmployeeId(), periodEnd);
                 
         // Create Payslip object
         Payslip payslip = new Payslip(
                 payslipId,
-                employee.getEmployeeNumber(),
+                employee.getEmployeeId(),
                 employee.getFullName(),
                 employee.getPosition(),
                 periodStart,
@@ -221,11 +221,11 @@ public class PayrollService {
             for (Employee emp: employees) {
                 
                 // Generate only if employee has attendance
-                if (attendanceService.computeTotalHours(emp.getEmployeeNumber(), c1Start, c1End) > 0) {
+                if (attendanceService.computeTotalHours(emp.getEmployeeId(), c1Start, c1End) > 0) {
                     generatePayslip(emp, c1Start, c1End);
                 }
                 
-                if (attendanceService.computeTotalHours(emp.getEmployeeNumber(), c2Start, c2End) > 0) {
+                if (attendanceService.computeTotalHours(emp.getEmployeeId(), c2Start, c2End) > 0) {
                     generatePayslip(emp, c2Start, c2End);
                 }
             }
