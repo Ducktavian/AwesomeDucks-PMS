@@ -21,7 +21,6 @@
             <version>9.0.0</version>
         </dependency>
     </dependencies>
-<<<<<<< HEAD
 
     <build>
         <sourceDirectory>src/main/java</sourceDirectory>
@@ -44,7 +43,5 @@
             </plugin>
         </plugins>
     </build>
-=======
->>>>>>> main
     
 </project>
