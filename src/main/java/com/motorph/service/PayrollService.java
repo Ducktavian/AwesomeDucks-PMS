@@ -40,12 +40,6 @@ public class PayrollService {
         this.payslipDAO = payslipDAO;
     }
 
-    /**
-     * Computes payroll for one employee/cutoff, persists payroll + its
-     * benefit/deduction lines, then persists and returns the Payslip for it.
-     * If payroll for this employee/period already exists, it is reused
-     * instead of recomputed (payroll has a UNIQUE KEY on employee+period).
-     */
     public Payslip processPayslip(Employee employee, LocalDate periodStart, LocalDate periodEnd) {
         int employeeId = Integer.parseInt(employee.getEmployeeId());
 
@@ -97,7 +91,7 @@ public class PayrollService {
             payrollId = payrollDAO.save(payroll, allowanceBreakdown, deductionBreakdown);
         } else {
             // Payroll already exists - just recompute the figures for the Payslip DTO
-            // without writing duplicate rows. (Cheap enough; avoids a fifth DAO method
+            // without writing duplicate rows.
             // just to re-read payroll/benefit/deduction rows back out.)
             cutoffHours = attendanceService.computeTotalHours(employee.getEmployeeId(), periodStart, periodEnd);
             hourlyRate = rateService.computeHourlyRate(employee);

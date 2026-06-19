@@ -47,6 +47,7 @@ com\motorph\service\DeductionService.class
 com\motorph\service\RateService.class
 com\motorph\model\EmploymentStatus.class
 com\motorph\model\PagIbigDeduction.class
+com\motorph\dao\JdbcRequestDAO$StatementPreparer.class
 com\motorph\model\AllowanceBreakdown.class
 com\motorph\model\Payroll.class
 com\motorph\model\OvertimeRequest.class

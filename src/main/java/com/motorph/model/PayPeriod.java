@@ -3,8 +3,8 @@ package com.motorph.model;
 import java.time.LocalDate;
 
 /**
- * Mirrors the `pay_period` table. One row per cutoff (e.g. Jan 1-15),
- * shared by every employee's payroll for that cutoff.
+ *
+ * @author Ducktavian
  */
 public class PayPeriod {
 
