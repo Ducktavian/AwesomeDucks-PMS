@@ -5,15 +5,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
 
-/**
- * Maps to work_time_request where request_type = 'undertime'.
- *
- * DB alignment notes:
- *  - Same table as OvertimeRequest (work_time_request), differentiated by
- *    request_type = 'undertime'.
- *  - start_time / end_time represent the period the employee left early.
- *    getHours() computes the undertime duration from those fields.
- */
+
 public class UndertimeRequest extends Request {
 
     private final LocalDate undertimeDate;  // work_time_request.request_date
@@ -39,13 +31,13 @@ public class UndertimeRequest extends Request {
     public LocalTime getStartTime()     { return startTime; }
     public LocalTime getEndTime()       { return endTime; }
 
-    /** Derived: duration in fractional hours. */
+    // Derived: duration in fractional hours. 
     public double getHours() {
         long minutes = ChronoUnit.MINUTES.between(startTime, endTime);
         return minutes / 60.0;
     }
 
-    /** Undertime reduces salary — returns a negative value. */
+    // Undertime reduces salary - returns a negative value. 
     public double calculateImpact(double hourlyRate) {
         return -(getHours() * hourlyRate);
     }

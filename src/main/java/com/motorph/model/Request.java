@@ -1,16 +1,10 @@
 package com.motorph.model;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
- * Base class for all employee requests (leave, overtime, undertime).
  *
- * DB alignment notes:
- *  - requestId / employeeId / approverId are int to match INT PKs in DB.
- *  - dateFiled maps to created_at (neither leave_request nor work_time_request
- *    has a dedicated date_filed column).
- *  - reason maps to leave_request.description / work_time_request.reason.
+ * @author Ducktavian
  */
 public abstract class Request implements Requestable {
 
@@ -39,21 +33,39 @@ public abstract class Request implements Requestable {
     }
     
     @Override
-    public int getRequestId()           { return requestId; }
+    public int getRequestId() {
+        return requestId; 
+    }
     @Override
-    public int getEmployeeId()          { return employeeId; }
+    public int getEmployeeId() {
+        return employeeId; 
+    }
     @Override
-    public RequestStatus getStatus()    { return status; }
+    public RequestStatus getStatus() {
+        return status; 
+    }
     @Override
-    public Integer getApproverId()      { return approverId; }
+    public Integer getApproverId() {
+        return approverId; 
+    }
     @Override
-    public String getReason()           { return reason; }
+    public String getReason(){ 
+        return reason; 
+    }
     @Override
-    public LocalDateTime getDateFiled() { return dateFiled; }
+    public LocalDateTime getDateFiled() {
+        return dateFiled; 
+    }
     @Override
-    public RequestType getRequestType() { return requestType; }
+    public RequestType getRequestType() {
+        return requestType; 
+    }
     @Override
-    public void setStatus(RequestStatus status)     { this.status = status; }
+    public void setStatus(RequestStatus status) { 
+        this.status = status; 
+    }
     @Override
-    public void setApproverId(Integer approverId)   { this.approverId = approverId; }
+    public void setApproverId(Integer approverId){ 
+        this.approverId = approverId; 
+    }
 }

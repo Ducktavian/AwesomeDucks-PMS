@@ -1,7 +1,8 @@
 package com.motorph.model;
 
 /**
- * Maps to request_status.request_status_type values in the DB.
+ *
+ * @author Ducktavian
  */
 public enum RequestStatus {
     PENDING,
@@ -9,11 +10,6 @@ public enum RequestStatus {
     REJECTED,
     CANCELLED;
 
-    /**
-     * Convert from the DB string (e.g. "Pending" → PENDING).
-     * Only the four statuses relevant to requests are included;
-     * "Open" / "Resolved" belong to help_center_ticket, not requests.
-     */
     public static RequestStatus fromDbValue(String dbValue) {
         return switch (dbValue) {
             case "Pending"   -> PENDING;
@@ -24,7 +20,7 @@ public enum RequestStatus {
         };
     }
 
-    // Returns the capitalised string stored in request_status. */
+    // Returns the capitalised string stored in request_status.
     public String toDbValue() {
         String lower = name().toLowerCase();
         return Character.toUpperCase(lower.charAt(0)) + lower.substring(1);

@@ -4,6 +4,6 @@ package com.motorph.service;
  *
  * @author Ducktavian
  */
-public class OvertimeService {
+public class RequestService {
 
 }
