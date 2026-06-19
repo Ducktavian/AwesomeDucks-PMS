@@ -6,27 +6,12 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * JDBC implementation of EmployeeDAO.
- *
- * save()   — inserts into: employee → address → employee_address
- *                          → employee_government_id (x4) → compensation
- * update() — updates the same tables in place (compensation adds a new row
- *            to preserve salary history)
- * delete() — soft-delete: sets user_account.is_active = FALSE
- * findBy() — finds one employee by employee_id
- * findAll()— returns all employees with full profile
- *
- * All reads go through v_full_employee_profile so no manual joins
- * are needed here.
- */
+
 public class JdbcEmployeeDAO implements EmployeeDAO {
 
     // The view already handles all joins, pivots, and GROUP BY.
     private static final String SELECT_FROM_VIEW =
             "SELECT * FROM v_full_employee_profile";
-
-    // ── findBy ───────────────────────────────────────────────────────────────
 
     @Override
     public Employee findBy(String employeeId) {
@@ -48,8 +33,6 @@ public class JdbcEmployeeDAO implements EmployeeDAO {
         return null;
     }
 
-    // ── findAll ──────────────────────────────────────────────────────────────
-
     @Override
     public List<Employee> findAll() {
         String sql = SELECT_FROM_VIEW + " ORDER BY employee_id ASC";
@@ -68,17 +51,7 @@ public class JdbcEmployeeDAO implements EmployeeDAO {
         return list;
     }
 
-    // ── save ─────────────────────────────────────────────────────────────────
-    //
-    // Insert order matters because of foreign keys:
-    //   1. employee          (core record, no auto-increment — ID is supplied)
-    //   2. address           (get generated address_id)
-    //   3. employee_address  (link employee ↔ address)
-    //   4. employee_government_id (up to 4 rows: SSS, PhilHealth, TIN, Pag-IBIG)
-    //   5. compensation      (salary record — effective today)
-    //
-    // Everything runs inside one transaction so a mid-way failure rolls
-    // back all inserts and leaves no orphaned rows.
+    
 
     @Override
     public void save(Employee employee) {
@@ -131,7 +104,7 @@ public class JdbcEmployeeDAO implements EmployeeDAO {
                 }
             }
 
-            // 3. Link employee ↔ address
+            // 3. Link employee â†” address
             String insertEmployeeAddress = """
                     INSERT INTO employee_address (employee_id, address_id, address_type)
                     VALUES (?, ?, 'current')
@@ -195,13 +168,6 @@ public class JdbcEmployeeDAO implements EmployeeDAO {
             resetAndClose(conn);
         }
     }
-
-    // ── update ───────────────────────────────────────────────────────────────
-    //
-    // Compensation is NOT edited in place — a new row is inserted with today
-    // as effective_date. The view's subquery always picks the latest row, so
-    // reads automatically reflect the new salary. Old rows are preserved as
-    // salary history.
 
     @Override
     public void update(Employee employee) {
@@ -322,8 +288,6 @@ public class JdbcEmployeeDAO implements EmployeeDAO {
         }
     }
 
-    // ── delete (soft) ────────────────────────────────────────────────────────
-    //
     // The employee row stays intact; only the login is disabled.
 
     @Override
@@ -345,8 +309,7 @@ public class JdbcEmployeeDAO implements EmployeeDAO {
         }
     }
 
-    // ── DAO interface bridge methods ─────────────────────────────────────────
-
+  
     @Override
     public Object findById(String id) { return findBy(id); }
 
@@ -356,11 +319,7 @@ public class JdbcEmployeeDAO implements EmployeeDAO {
     @Override
     public void update(Object entity) { update((Employee) entity); }
 
-    // ── mapRow ───────────────────────────────────────────────────────────────
-    //
-    // Converts one ResultSet row (from the view) into an Employee object.
-    // Column aliases must match the CREATE VIEW definition exactly.
-
+   
     private Employee mapRow(ResultSet rs) throws SQLException {
         Employee emp = new Employee(
                 rs.getString("employee_id"),
@@ -397,8 +356,7 @@ public class JdbcEmployeeDAO implements EmployeeDAO {
         return emp;
     }
 
-    // ── Transaction helpers ──────────────────────────────────────────────────
-
+    
     private void rollback(Connection conn) {
         if (conn != null) {
             try { conn.rollback(); } catch (SQLException ex) { ex.printStackTrace(); }
