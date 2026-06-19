@@ -6,9 +6,13 @@ C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\mo
 C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\motorph\dao\JdbcAttendanceDAO.java
 C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\motorph\dao\JdbcDisputeDAO.java
 C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\motorph\dao\JdbcEmployeeDAO.java
+C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\motorph\dao\JdbcPayPeriodDAO.java
+C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\motorph\dao\JdbcPayrollDAO.java
 C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\motorph\dao\JdbcPayslipDAO.java
 C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\motorph\dao\JdbcRequestDAO.java
 C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\motorph\dao\JdbcUserAccountDAO.java
+C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\motorph\dao\PayPeriodDAO.java
+C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\motorph\dao\PayrollDAO.java
 C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\motorph\dao\PayslipDAO.java
 C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\motorph\dao\RequestDAO.java
 C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\motorph\dao\UserAccountDAO.java
@@ -29,6 +33,8 @@ C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\mo
 C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\motorph\model\LeaveType.java
 C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\motorph\model\OvertimeRequest.java
 C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\motorph\model\PagIbigDeduction.java
+C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\motorph\model\PayPeriod.java
+C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\motorph\model\Payroll.java
 C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\motorph\model\PayrollDispute.java
 C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\motorph\model\PayrollPeriod.java
 C:\Users\Lenovo\OneDrive\Documents\NetBeansProjects\MotorPH\src\main\java\com\motorph\model\Payslip.java
