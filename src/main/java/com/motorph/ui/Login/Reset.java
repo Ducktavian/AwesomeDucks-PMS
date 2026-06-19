@@ -204,8 +204,7 @@ public class Reset extends JDialog {
 
             // 2. File path fallback (dev convenience)
             try {
-                File f = new File(
-                    "motorPH-AOOP/src/main/java/com/motorph/img/MotorPHLogin.png");
+                File f = new File("../src/main/java/com/motorph/img/MotorPHLogin.png");
                 if (f.exists()) {
                     backgroundImage = ImageIO.read(f);
                     return;

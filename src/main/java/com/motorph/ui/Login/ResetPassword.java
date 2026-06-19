@@ -36,54 +36,33 @@ import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.border.AbstractBorder;
 
-/**
- * ResetCredentials — Full-screen modal "Reset Password" form for MotorPH Payroll System.
- *
- * Type    : JDialog (modal)
- * Styling : matches Login.java (same BackgroundPanel / RoundedPanel / RoundedBorder
- *           helper classes, same fonts, same navy button) so the two screens feel
- *           like one continuous flow.
- *
- * Background image loaded from:
- *   1. src/main/resources/com/motorph/img/MotorPHLogin.png  (classpath)
- *   2. motorPH-AOOP/src/main/java/com/motorph/img/MotorPHLogin.png  (file fallback)
- *   3. Gradient fallback if neither found
- *
- * Typical usage (from Login.java):
- *   forgotPasswordLabel.addMouseListener(... -> new ResetCredentials(this).setVisible(true) ...);
- */
 public class ResetPassword extends JDialog {
 
-    // ── UI fields ──────────────────────────────────────────────────────────────
     private JPasswordField newPasswordField;
     private JPasswordField confirmPasswordField;
     private JButton        setPasswordButton;
     private JLabel         backLabel;
 
-    // ── Constructor ────────────────────────────────────────────────────────────
     public ResetPassword(Frame owner) {
-        super(owner, "MotorPH Payroll System", true); // modal = true
+        super(owner, "MotorPH Payroll System", true);
         setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
         setSize(1280, 800);
         setLocationRelativeTo(null);
         setResizable(true);
 
-        // ── Background ──
         BackgroundPanel backgroundPanel = new BackgroundPanel();
         backgroundPanel.setLayout(new GridBagLayout());
         setContentPane(backgroundPanel);
 
-        // ── White card ──
         RoundedPanel card = new RoundedPanel(20, Color.WHITE);
         card.setLayout(new GridBagLayout());
-        card.setPreferredSize(new Dimension(550, 480));
+        card.setPreferredSize(new Dimension(650, 560)); // ← was 480
         card.setOpaque(false);
 
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.fill    = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 1.0;
 
-        // ── Title ──
         JLabel titleLabel = new JLabel("Reset Password", SwingConstants.CENTER);
         titleLabel.setFont(new Font("SansSerif", Font.BOLD, 28));
         titleLabel.setForeground(new Color(15, 15, 15));
@@ -92,7 +71,6 @@ public class ResetPassword extends JDialog {
         gbc.insets = new Insets(50, 50, 30, 50);
         card.add(titleLabel, gbc);
 
-        // ── New Password label ──
         JLabel newPasswordLabel = new JLabel("New Password*");
         newPasswordLabel.setFont(new Font("SansSerif", Font.PLAIN, 14));
         newPasswordLabel.setForeground(new Color(30, 30, 30));
@@ -100,7 +78,6 @@ public class ResetPassword extends JDialog {
         gbc.insets = new Insets(4, 50, 4, 50);
         card.add(newPasswordLabel, gbc);
 
-        // ── New Password field ──
         newPasswordField = new JPasswordField();
         newPasswordField.setFont(new Font("SansSerif", Font.PLAIN, 15));
         newPasswordField.setPreferredSize(new Dimension(450, 50));
@@ -113,7 +90,6 @@ public class ResetPassword extends JDialog {
         gbc.insets = new Insets(0, 50, 18, 50);
         card.add(newPasswordField, gbc);
 
-        // ── Confirm Password label ──
         JLabel confirmPasswordLabel = new JLabel("Confirm Password*");
         confirmPasswordLabel.setFont(new Font("SansSerif", Font.PLAIN, 14));
         confirmPasswordLabel.setForeground(new Color(30, 30, 30));
@@ -121,7 +97,6 @@ public class ResetPassword extends JDialog {
         gbc.insets = new Insets(4, 50, 4, 50);
         card.add(confirmPasswordLabel, gbc);
 
-        // ── Confirm Password field ──
         confirmPasswordField = new JPasswordField();
         confirmPasswordField.setFont(new Font("SansSerif", Font.PLAIN, 15));
         confirmPasswordField.setPreferredSize(new Dimension(450, 50));
@@ -134,7 +109,6 @@ public class ResetPassword extends JDialog {
         gbc.insets = new Insets(0, 50, 30, 50);
         card.add(confirmPasswordField, gbc);
 
-        // ── Set new password button ──
         setPasswordButton = new JButton("Set new password") {
             @Override
             protected void paintComponent(Graphics g) {
@@ -158,7 +132,7 @@ public class ResetPassword extends JDialog {
                 g2.dispose();
             }
         };
-        setPasswordButton.setPreferredSize(new Dimension(450, 55));
+        setPasswordButton.setPreferredSize(new Dimension(500, 55));
         setPasswordButton.setBorderPainted(false);
         setPasswordButton.setContentAreaFilled(false);
         setPasswordButton.setFocusPainted(false);
@@ -168,7 +142,6 @@ public class ResetPassword extends JDialog {
         gbc.insets = new Insets(0, 50, 20, 50);
         card.add(setPasswordButton, gbc);
 
-        // ── Back link ──
         JPanel backPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
         backPanel.setOpaque(false);
         backLabel = new JLabel("<html><u>Back</u></html>");
@@ -199,7 +172,6 @@ public class ResetPassword extends JDialog {
         getRootPane().setDefaultButton(setPasswordButton);
     }
 
-    // ── Reset-password logic ──────────────────────────────────────────────────
     private void handleSetPassword() {
         String newPassword     = new String(newPasswordField.getPassword());
         String confirmPassword = new String(confirmPasswordField.getPassword());
@@ -227,7 +199,6 @@ public class ResetPassword extends JDialog {
             return;
         }
 
-        // TODO: replace with PasswordManager.updatePassword(username, newPassword);
         JOptionPane.showMessageDialog(this,
             "Your password has been reset successfully.",
             "Success", JOptionPane.INFORMATION_MESSAGE);
@@ -235,9 +206,6 @@ public class ResetPassword extends JDialog {
         // TODO: new Login(getOwner()).setVisible(true);
     }
 
-    // ═══════════════════════════════════════════════════════════════════════════
-    // BackgroundPanel — paints MotorPHLogin.png; falls back to gradient
-    // ═══════════════════════════════════════════════════════════════════════════
     static class BackgroundPanel extends JPanel {
         private BufferedImage backgroundImage;
 
@@ -246,7 +214,6 @@ public class ResetPassword extends JDialog {
         }
 
         private void loadBackgroundImage() {
-            // 1. Classpath resource (works after Maven build)
             try (InputStream is = getClass().getResourceAsStream(
                     "/com/motorph/img/MotorPHLogin.png")) {
                 if (is != null) {
@@ -257,10 +224,8 @@ public class ResetPassword extends JDialog {
                 System.err.println("Classpath image load failed: " + e.getMessage());
             }
 
-            // 2. File path fallback (dev convenience)
             try {
-                File f = new File(
-                    "C:\\Users\\MSI\\Downloads\\Work_S\\MMDC\\AOOP\\motorPH-AOOP\\src\\main\\java\\com\\motorph\\img\\MotorPHLogin.png");
+                File f = new File("../src/main/java/com/motorph/img/MotorPHLogin.png");
                 if (f.exists()) {
                     backgroundImage = ImageIO.read(f);
                     return;
@@ -291,14 +256,12 @@ public class ResetPassword extends JDialog {
                 g2.drawImage(backgroundImage,
                     (w - iw) / 2, (h - ih) / 2, iw, ih, this);
             } else {
-                // Sky gradient fallback
                 g2.setPaint(new GradientPaint(
                     0, 0,     new Color(185, 218, 240),
                     0, h / 2, new Color(210, 232, 248)
                 ));
                 g2.fillRect(0, 0, w, h);
 
-                // Road
                 g2.setPaint(new GradientPaint(
                     0, h / 2, new Color(130, 135, 142),
                     0, h,     new Color(95,  98,  105)
@@ -309,9 +272,6 @@ public class ResetPassword extends JDialog {
         }
     }
 
-    // ═══════════════════════════════════════════════════════════════════════════
-    // RoundedPanel — white card with soft drop shadow
-    // ═══════════════════════════════════════════════════════════════════════════
     static class RoundedPanel extends JPanel {
         private final int   radius;
         private final Color bg;
@@ -345,9 +305,6 @@ public class ResetPassword extends JDialog {
         }
     }
 
-    // ═══════════════════════════════════════════════════════════════════════════
-    // RoundedBorder — rounded outline for text fields
-    // ═══════════════════════════════════════════════════════════════════════════
     static class RoundedBorder extends AbstractBorder {
         private final int   radius;
         private final Color color;
@@ -376,7 +333,6 @@ public class ResetPassword extends JDialog {
         }
     }
 
-    // ── Entry point (standalone preview) ──────────────────────────────────────
     public static void main(String[] args) {
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
