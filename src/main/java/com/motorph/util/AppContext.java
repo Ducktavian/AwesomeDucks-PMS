@@ -10,6 +10,8 @@ public class AppContext {
     private static final EmployeeDAO employeeDAO = new JdbcEmployeeDAO();
     //private static final LeaveDAO leaveDAO = new CsvLeaveDAO();
     private static final PayslipDAO payslipDAO = new JdbcPayslipDAO();
+    private static final PayPeriodDAO payPeriodDAO = new JdbcPayPeriodDAO();
+    private static final PayrollDAO payrollDAO = new JdbcPayrollDAO();
     private static final UserAccountDAO userAccountDAO = new JdbcUserAccountDAO();
 
     // --- Services ---
@@ -27,7 +29,7 @@ public class AppContext {
     private static final DeductionService deductionService = new DeductionService();
 
     private static final PayrollService payrollService =
-            new PayrollService(attendanceService, rateService, deductionService, payslipDAO);
+            new PayrollService(attendanceService, rateService, deductionService, payPeriodDAO, payrollDAO, payslipDAO);
 
     private static final AuthService authService =
             new AuthService(userAccountDAO);

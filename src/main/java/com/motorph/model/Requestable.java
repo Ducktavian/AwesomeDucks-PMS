@@ -1,19 +1,20 @@
 package com.motorph.model;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 /**
  *
  * @author Ducktavian
  */
 public interface Requestable {
-    String getRequestId();
+    int getRequestId();
     RequestType getRequestType();
-    String getEmployeeId();
-    LocalDate getDateFiled();
+    int getEmployeeId();
+    LocalDateTime getDateFiled();
     RequestStatus getStatus();
     String getReason();
-    String getApprovedBy();
-    void approve(String approverId);
-    void deny(String approverId);
+    Integer getApproverId();
+    
+    void setStatus(RequestStatus status);
+    void setApproverId(Integer approverId);
 }

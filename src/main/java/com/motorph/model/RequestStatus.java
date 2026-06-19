@@ -1,15 +1,28 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Enum.java to edit this template
- */
 package com.motorph.model;
 
 /**
  *
- * @author Lenovo
+ * @author Ducktavian
  */
 public enum RequestStatus {
     PENDING,
     APPROVED,
-    DENIED
+    REJECTED,
+    CANCELLED;
+
+    public static RequestStatus fromDbValue(String dbValue) {
+        return switch (dbValue) {
+            case "Pending"   -> PENDING;
+            case "Approved"  -> APPROVED;
+            case "Rejected"  -> REJECTED;
+            case "Cancelled" -> CANCELLED;
+            default -> throw new IllegalArgumentException("Unknown request status: " + dbValue);
+        };
+    }
+
+    // Returns the capitalised string stored in request_status.
+    public String toDbValue() {
+        String lower = name().toLowerCase();
+        return Character.toUpperCase(lower.charAt(0)) + lower.substring(1);
+    }
 }

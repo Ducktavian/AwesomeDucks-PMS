@@ -18,4 +18,8 @@ public class RateService {
         
         return Math.round(hourlyRate * 100.0) / 100.0;
     }
+    
+    public double computeBasicSalary(Employee employee) {
+        return 0.0; // TEPMPORARY
+    }
 }

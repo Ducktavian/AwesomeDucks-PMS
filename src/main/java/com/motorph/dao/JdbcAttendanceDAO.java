@@ -1,5 +1,6 @@
 package com.motorph.dao;
 
+import com.motorph.config.DatabaseConnection;
 import com.motorph.model.Attendance;
 import java.util.List;
 

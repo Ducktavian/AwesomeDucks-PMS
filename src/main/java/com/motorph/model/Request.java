@@ -1,92 +1,71 @@
 package com.motorph.model;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 /**
  *
  * @author Ducktavian
  */
-public class Request implements Requestable {
-    protected String requestId;
-    protected String employeeId;
+public abstract class Request implements Requestable {
+
+    protected int requestId;
+    protected int employeeId;
     protected RequestStatus status;
-    protected String approverId;
+    protected Integer approverId;   // nullable — not yet approved
     protected String reason;
-    protected LocalDate dateFiled;
+    protected LocalDateTime dateFiled; // maps to created_at
     protected RequestType requestType;
-    
-    public Request(String requestId, String employeeId, RequestStatus status, String approverId, String reason, LocalDate dateFiled, RequestType requestType) {
-        this.requestId = requestId;
-        this.employeeId = employeeId;
-        this.status = status;
-        this.approverId = approverId;
-        this.reason = reason;
-        this.dateFiled = dateFiled;
+
+    protected Request(int requestId,
+                      int employeeId,
+                      RequestStatus status,
+                      Integer approverId,
+                      String reason,
+                      LocalDateTime dateFiled,
+                      RequestType requestType) {
+        this.requestId   = requestId;
+        this.employeeId  = employeeId;
+        this.status      = status;
+        this.approverId  = approverId;
+        this.reason      = reason;
+        this.dateFiled   = dateFiled;
         this.requestType = requestType;
     }
     
-    //Overide
-
     @Override
-    public String getRequestId() {
-        return requestId;
+    public int getRequestId() {
+        return requestId; 
     }
-
     @Override
-    public RequestType getRequestType() {
-        return requestType;
+    public int getEmployeeId() {
+        return employeeId; 
     }
-
-    @Override
-    public String getEmployeeId() {
-        return employeeId;
-    }
-
-    @Override
-    public LocalDate getDateFiled() {
-        return dateFiled;
-    }
-
     @Override
     public RequestStatus getStatus() {
-        return status;
+        return status; 
     }
-
     @Override
-    public String getReason() {
-        return reason;
+    public Integer getApproverId() {
+        return approverId; 
     }
-
     @Override
-    public String getApprovedBy() {
-        return approverId;
+    public String getReason(){ 
+        return reason; 
     }
-
     @Override
-    public void approve(String approverId) {
-       this.status = RequestStatus.APPROVED;
+    public LocalDateTime getDateFiled() {
+        return dateFiled; 
     }
-
     @Override
-    public void deny(String approverId) {
-        this.status = RequestStatus.DENIED;
+    public RequestType getRequestType() {
+        return requestType; 
     }
-    
-    
-    // HMMM??
-    
-    public void setRequestStatus(RequestStatus status) {
-        this.status = status;
+    @Override
+    public void setStatus(RequestStatus status) { 
+        this.status = status; 
     }
-    
-    public void setApprovedBy(String approverId) {
-        this.approverId = approverId;
+    @Override
+    public void setApproverId(Integer approverId){ 
+        this.approverId = approverId; 
     }
-
-    public void setRequestId(String requestId) {
-        this.requestId = requestId;
-    }
-    
-    
-    
 }

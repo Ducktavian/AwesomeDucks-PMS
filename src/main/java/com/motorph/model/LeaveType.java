@@ -1,21 +1,23 @@
-
 package com.motorph.model;
 
 
-public enum LeaveType {
+/**
+ *
+ * @author Ducktavian
+ */
+public class LeaveType {
 
-    SICK("Sick Leave"),
-    VACATION("Vacation Leave"),
-    MATERNITY("Maternity Leave");
+    private final int leaveTypeId;
+    private final String leaveTypeName;
 
-    private final String label;
-
-    LeaveType(String label) {
-        this.label = label;
+    public LeaveType(int leaveTypeId, String leaveTypeName) {
+        this.leaveTypeId   = leaveTypeId;
+        this.leaveTypeName = leaveTypeName;
     }
+
+    public int getLeaveTypeId()       { return leaveTypeId; }
+    public String getLeaveTypeName()  { return leaveTypeName; }
 
     @Override
-    public String toString() {
-        return label;
-    }
+    public String toString() { return leaveTypeName; }
 }

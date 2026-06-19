@@ -1,30 +1,32 @@
 package com.motorph.model;
 
-/**
- *
- * @author Ducktavian
- */
 public class UserAccount {
-    
-    private int userId;
-    private String username;
-    private String passwordHash;
-    private Role role;
-    private String employeeNumber;
-    private boolean active;
-    
-    public UserAccount(int userId, String employeeNumber, String username, String passwordHash, Role role, boolean active) {
-        this.userId = userId;
-        this.username = username;
+
+    private int userId;             // user_account.user_account_id
+    private int employeeId;         // user_account.employee_id  (was String employeeNumber)
+    private String username;        // user_account.username
+    private String passwordHash;    // user_account.password_hash
+    private Role role;              // resolved from account_role + user_role
+    private boolean active;         // user_account.is_active
+
+    public UserAccount(int userId, int employeeId, String username,
+                       String passwordHash, Role role, boolean active) {
+        this.userId       = userId;
+        this.employeeId   = employeeId;
+        this.username     = username;
         this.passwordHash = passwordHash;
-        this.role = role;
-        this.employeeNumber = employeeNumber;
-        this.active = active;
+        this.role         = role;
+        this.active       = active;
     }
+
     
-    // GETTERS  
+    // Getters
     public int getUserId() {
         return userId;
+    }
+
+    public int getEmployeeId() {
+        return employeeId;
     }
 
     public String getUsername() {
@@ -39,16 +41,11 @@ public class UserAccount {
         return role;
     }
 
-    public String getEmployeeNumber() {
-        return employeeNumber;
-    }
-    
     public boolean isActive() {
         return active;
     }
-    
-    // SETTERS
 
+    // Setters (only mutable fields)
     public void setPasswordHash(String passwordHash) {
         this.passwordHash = passwordHash;
     }
@@ -60,5 +57,13 @@ public class UserAccount {
     public void setActive(boolean active) {
         this.active = active;
     }
-    
+
+    @Override
+    public String toString() {
+        return "UserAccount{userId=" + userId
+                + ", employeeId=" + employeeId
+                + ", username='" + username + '\''
+                + ", role=" + role
+                + ", active=" + active + '}';
+    }
 }

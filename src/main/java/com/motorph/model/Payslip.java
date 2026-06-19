@@ -7,33 +7,36 @@ import java.time.LocalDate;
  * @author Ducktavian
  */
 public class Payslip {
-    
-    private String payslipId = "PLACEHOLDER";
-    
+
+    private String payslipId;
+
+    private int payrollId;
+
     // Employee Info
     private String employeeNumber;
     private String employeeName;
     private String position;
-    
+
     // Payroll Period
     private LocalDate periodStart;
     private LocalDate periodEnd;
-    
-    
+
     // Earnings
     private double totalHours;
     private double hourlyRate;
+
     private double grossPay;
     private AllowanceBreakdown allowanceBreakdown;
-    
+
     // Deductions
     private DeductionBreakdown deductionBreakdown;
-    
+
     // Final Pay
     private double netPay;
-    
+
     public Payslip(
                    String payslipId,
+                   int payrollId,
                    String employeeNumber,
                    String employeeName,
                    String position,
@@ -46,6 +49,7 @@ public class Payslip {
                    DeductionBreakdown deductionBreakdown,
                    double netPay) {
         this.payslipId = payslipId;
+        this.payrollId = payrollId;
         this.employeeNumber = employeeNumber;
         this.employeeName = employeeName;
         this.position = position;
@@ -58,36 +62,38 @@ public class Payslip {
         this.deductionBreakdown = deductionBreakdown;
         this.netPay = netPay;
     }
-    
-    
+
+
     public String getPayslipId() {
         return payslipId;
     }
-    
+
+    public void setPayslipId(String payslipId) {
+        this.payslipId = payslipId;
+    }
+
+    public int getPayrollId() {
+        return payrollId;
+    }
+
     public String getEmployeeNumber() {
         return employeeNumber;
     }
-
     public String getEmployeeName() {
         return employeeName;
     }
-
     public String getPosition() {
         return position;
     }
-
     public LocalDate getPeriodStart() {
         return periodStart;
     }
-
     public LocalDate getPeriodEnd() {
         return periodEnd;
     }
-
     public double getTotalHours() {
         return totalHours;
     }
-
     public double getHourlyRate() {
         return hourlyRate;
     }
@@ -95,27 +101,17 @@ public class Payslip {
     public double getGrossPay() {
         return grossPay;
     }
-    
-    public double getGrossPay(AllowanceBreakdown breakdown) {
-        if (breakdown == null) {
-            return grossPay;
-        } else {
-            return grossPay + breakdown.getRiceSubsidy() + breakdown.getPhoneAllowance() + breakdown.getClothingAllowance();
-        }
-    }
-    
+
     public AllowanceBreakdown getAllowanceBreakdown() {
         return allowanceBreakdown;
     }
-
     public double getAllowances() {
         return allowanceBreakdown.getTotal();
     }
-    
+
     public DeductionBreakdown getDeductionBreakdown() {
         return deductionBreakdown;
     }
-
     public double getTotalDeductions() {
         return deductionBreakdown.getTotal();
     }
@@ -123,15 +119,7 @@ public class Payslip {
     public double getNetPay() {
         return netPay;
     }
-    
-    public double getNetPay(AllowanceBreakdown breakdown) {
-        if (breakdown == null) {
-            return netPay;
-        } else {
-            return netPay + breakdown.getRiceSubsidy() + breakdown.getPhoneAllowance() + breakdown.getClothingAllowance();
-        }
-    }
-    
+
     public PayrollPeriod getPayrollPeriod() {
         if (periodStart.getDayOfMonth() < 15) {
             return PayrollPeriod.FIRST_PERIOD;
@@ -139,6 +127,5 @@ public class Payslip {
             return PayrollPeriod.SECOND_PERIOD;
         }
     }
-    
-    
+
 }
