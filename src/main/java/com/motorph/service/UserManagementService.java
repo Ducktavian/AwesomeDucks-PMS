@@ -2,7 +2,6 @@
 package com.motorph.service;
 
 import com.motorph.dao.UserAccountDAO;
-import com.motorph.exception.UnauthorizedException;
 import com.motorph.model.Role;
 import com.motorph.model.UserAccount;
 import com.motorph.util.PasswordUtil;
@@ -12,7 +11,7 @@ import java.util.List;
 
 
 public class UserManagementService {
-    
+    /*
     private UserAccountDAO userDAO;
     
     // :)
@@ -143,5 +142,5 @@ public class UserManagementService {
         authorizeIT();
         return userDAO.findById(id);
     }
-    
+    */
 }

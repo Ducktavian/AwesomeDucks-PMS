@@ -1,11 +1,11 @@
 package com.motorph.service;
 
-import com.motorph.dao.AttendanceDAO;
-import com.motorph.dao.JdbcAttendanceDAO;
-import com.motorph.model.Attendance;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
+
+import com.motorph.dao.AttendanceDAO;
+import com.motorph.model.Attendance;
 
 
 public class AttendanceService {
@@ -71,16 +71,17 @@ public class AttendanceService {
     }
     
     public void timeIn(String employeeNumber) {
-        attendanceDAO.timeIn(employeeNumber);
+        //attendanceDAO.timeIn(employeeNumber);
     }
     
     public void timeOut(String employeeNumber) {
-        attendanceDAO.timeOut(employeeNumber);
+        //attendanceDAO.timeOut(employeeNumber);
     }
-    
+    /*
     public boolean hasOpenSession(String employeeNumber) {
-        AttendanceattendanceRecord = attendanceDAO.getOpenSession(employeeNumber);
+        Attendance attendanceRecord = attendanceDAO.getOpenSession(employeeNumber);
         boolean hasOpenSession = (attendanceRecord == null) ? false : true;
         return hasOpenSession;
     }
+    */
 }
