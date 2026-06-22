@@ -8,6 +8,7 @@ import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.Frame;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
@@ -15,7 +16,6 @@ import java.awt.RenderingHints;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.io.File;
-import java.awt.Frame;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -482,7 +482,7 @@ public class ITUserAccountList extends JPanel {
         btn.setBorderPainted(false);
         btn.setContentAreaFilled(false);
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        btn.setPreferredSize(new Dimension(96, 34));
+        btn.setPreferredSize(new Dimension(110, 34));
         btn.setHorizontalTextPosition(SwingConstants.RIGHT);
         btn.setIconTextGap(6);
         btn.addActionListener(e -> action.run());

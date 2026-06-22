@@ -218,8 +218,7 @@ public class Login extends JDialog {
             }
 
             try {
-                File f = new File(
-                    "C:\\Users\\MSI\\Downloads\\Work_S\\MMDC\\AOOP\\motorPH-AOOP\\src\\main\\java\\com\\motorph\\img\\MotorPHLogin.png");
+                File f = new File("../src/main/java/com/motorph/img/MotorPHLogin.png");
                 if (f.exists()) {
                     backgroundImage = ImageIO.read(f);
                     return;
