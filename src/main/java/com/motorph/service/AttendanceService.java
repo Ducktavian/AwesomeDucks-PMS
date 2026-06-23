@@ -70,18 +70,4 @@ public class AttendanceService {
         return attendanceDAO.findByEmployeeId(employeeId);
     }
     
-    public void timeIn(String employeeNumber) {
-        //attendanceDAO.timeIn(employeeNumber);
-    }
-    
-    public void timeOut(String employeeNumber) {
-        //attendanceDAO.timeOut(employeeNumber);
-    }
-    /*
-    public boolean hasOpenSession(String employeeNumber) {
-        Attendance attendanceRecord = attendanceDAO.getOpenSession(employeeNumber);
-        boolean hasOpenSession = (attendanceRecord == null) ? false : true;
-        return hasOpenSession;
-    }
-    */
 }

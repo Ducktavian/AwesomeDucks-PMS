@@ -164,4 +164,23 @@ public class Employee {
     public double getTotalAllowances() {
         return riceSubsidy + clothingAllowance + phoneAllowance;
     }
+    
+    
+    
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Employee{");
+        sb.append("id='").append(employeeId).append('\'');
+        sb.append(", name='").append(getFullName()).append('\'');
+        sb.append(", email='").append(email).append('\'');
+        sb.append(", position='").append(position).append('\'');
+        sb.append(", status='").append(status).append('\'');
+        sb.append(", supervisor='").append(immediateSupervisor).append('\'');
+        sb.append(", basicSalary=").append(basicSalary);
+        sb.append(", hourlyRate=").append(getHourlyRate());
+        sb.append(", totalAllowances=").append(getTotalAllowances());
+        sb.append('}');
+        return sb.toString();
+    }
 }

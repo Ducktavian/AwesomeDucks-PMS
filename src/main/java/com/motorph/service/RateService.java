@@ -20,6 +20,6 @@ public class RateService {
     }
     
     public double computeBasicSalary(Employee employee) {
-        return 0.0; // TEPMPORARY
+        return employee.getBasicSalary();
     }
 }

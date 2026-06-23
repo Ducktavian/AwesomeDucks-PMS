@@ -90,16 +90,23 @@ public class PayrollService {
 
             payrollId = payrollDAO.save(payroll, allowanceBreakdown, deductionBreakdown);
         } else {
-            // Payroll already exists - just recompute the figures for the Payslip DTO
-            // without writing duplicate rows.
-            // just to re-read payroll/benefit/deduction rows back out.)
+            // Payroll already exists — recompute figures for the Payslip DTO only,
+            // no duplicate rows written.
             cutoffHours = attendanceService.computeTotalHours(employee.getEmployeeId(), periodStart, periodEnd);
             hourlyRate = rateService.computeHourlyRate(employee);
             allowanceBreakdown = computeAllowances(employee);
             totalGross = round(cutoffHours * hourlyRate + allowanceBreakdown.getTotal());
-            deductionBreakdown = isSecondCutoff(periodEnd)
-                    ? computeMonthlyDeductions(employee, totalGross)
-                    : computeMonthlyDeductions();
+
+            if (isSecondCutoff(periodEnd)) {
+                LocalDate monthStart = periodStart.withDayOfMonth(1);
+                LocalDate monthEnd = periodStart.withDayOfMonth(periodStart.lengthOfMonth());
+                double monthlyHours = attendanceService.computeTotalHours(employee.getEmployeeId(), monthStart, monthEnd);
+                double monthlyGross = round(monthlyHours * hourlyRate);
+                deductionBreakdown = computeMonthlyDeductions(employee, monthlyGross);
+            } else {
+                deductionBreakdown = computeMonthlyDeductions();
+            }
+
             netPay = round(totalGross - deductionBreakdown.getTotal());
         }
 

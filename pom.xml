@@ -72,8 +72,6 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.2.5</version>
             </plugin>
-
-            I
         </plugins>
     </build>
     
