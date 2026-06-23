@@ -161,6 +161,24 @@ public class JdbcAttendanceDAO implements AttendanceDAO {
         }
     }
 
+    // Uses v_attendance_summary — aggregate total hours for one employee in a given month.
+    @Override
+    public double computeMonthlyHours(String employeeId, int year, int month) {
+        String sql = "SELECT total_hours_worked FROM v_attendance_summary " +
+                     "WHERE employee_id = ? AND work_year = ? AND work_month = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, Integer.parseInt(employeeId));
+            ps.setInt(2, year);
+            ps.setInt(3, month);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getDouble("total_hours_worked") : 0.0;
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("computeMonthlyHours failed for employeeId=" + employeeId, e);
+        }
+    }
+
     // BaseDAO generic overloads
     @Override
     public void save(Object entity) {

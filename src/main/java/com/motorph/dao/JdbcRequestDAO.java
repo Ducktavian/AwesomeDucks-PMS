@@ -388,8 +388,38 @@ public class JdbcRequestDAO implements RequestDAO {
         }
     }
 
+    // Uses v_pending_requests — UNION of all pending leave + work-time in one query.
+    @Override
+    public List<Request> findAllPending() {
+        String sql = """
+                SELECT request_category, request_id, employee_id,
+                       request_type, request_date, start_time, end_time, reason
+                FROM v_pending_requests
+                ORDER BY request_date ASC
+                """;
+        List<Request> results = new ArrayList<>();
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                String category = rs.getString("request_category");
+                int id = rs.getInt("request_id");
+                if ("leave".equals(category)) {
+                    // Fetch the full leave record from v_leave_requests for the complete model.
+                    LeaveRequest full = findLeaveById(id);
+                    if (full != null) results.add(full);
+                } else {
+                    Request full = findWorkTimeById(id);
+                    if (full != null) results.add(full);
+                }
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("findAllPending failed", e);
+        }
+        return results;
+    }
+
     // Utility
-    // Functional interface to prepare a PreparedStatement without checked exceptions leaking.
     @FunctionalInterface
     private interface StatementPreparer {
         void prepare(PreparedStatement ps) throws SQLException;

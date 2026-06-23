@@ -16,11 +16,8 @@ public class RequestService {
         this.requestDAO = requestDAO;
     }
 
-    // -----------------------------------------------------------------------
-    // Submit
-    // -----------------------------------------------------------------------
 
-   
+    // Submit
   
     // Works for LeaveRequest, OvertimeRequest, and UndertimeRequest.
     // @throws IllegalArgumentException if the request fails validation
@@ -72,9 +69,8 @@ public class RequestService {
         return requestDAO.findByStatus(status);
     }
 
-    /** All pending requests — convenience method for approval dashboards. */
     public List<Request> findAllPending() {
-        return requestDAO.findByStatus(RequestStatus.PENDING);
+        return requestDAO.findAllPending();
     }
 
     /** All requests of any type or status. */

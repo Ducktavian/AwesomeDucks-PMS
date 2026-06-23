@@ -4,11 +4,12 @@ import com.motorph.model.AllowanceBreakdown;
 import com.motorph.model.DeductionBreakdown;
 import com.motorph.model.Payroll;
 
-/**
- *
- * @author Ducktavian
- */
+import java.util.List;
+
 public interface PayrollDAO {
     int save(Payroll payroll, AllowanceBreakdown allowances, DeductionBreakdown deductions);
     int findPayrollId(int employeeId, int payPeriodId);
+
+    // Uses v_employee_payroll_summary — returns all payroll runs for an employee.
+    List<Payroll> findByEmployee(int employeeId);
 }

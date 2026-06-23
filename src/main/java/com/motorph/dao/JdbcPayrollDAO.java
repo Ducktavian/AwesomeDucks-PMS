@@ -6,6 +6,8 @@ import com.motorph.model.DeductionBreakdown;
 import com.motorph.model.Payroll;
 
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  *
@@ -91,6 +93,43 @@ public class JdbcPayrollDAO implements PayrollDAO {
                 }
             }
         }
+    }
+
+    // Uses v_employee_payroll_summary for reading payroll history by employee.
+    @Override
+    public List<Payroll> findByEmployee(int employeeId) {
+        String sql = "SELECT payroll_id, pay_period_id, payroll_status_id, basic_salary, " +
+                     "hourly_rate, hours_worked, basic_pay, overtime_pay, gross_pay, " +
+                     "total_benefits, total_deductions, net_pay " +
+                     "FROM v_employee_payroll_summary WHERE employee_id = ? " +
+                     "ORDER BY period_start_date DESC";
+        List<Payroll> list = new ArrayList<>();
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, employeeId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    Payroll p = new Payroll(
+                            employeeId,
+                            rs.getInt("pay_period_id"),
+                            rs.getInt("payroll_status_id"),
+                            rs.getDouble("basic_salary"),
+                            rs.getDouble("hourly_rate"),
+                            rs.getDouble("hours_worked"),
+                            rs.getDouble("basic_pay"),
+                            rs.getDouble("overtime_pay"),
+                            rs.getDouble("gross_pay"),
+                            rs.getDouble("total_benefits"),
+                            rs.getDouble("total_deductions"),
+                            rs.getDouble("net_pay"));
+                    p.setPayrollId(rs.getInt("payroll_id"));
+                    list.add(p);
+                }
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("findByEmployee failed for employeeId=" + employeeId, e);
+        }
+        return list;
     }
 
     @Override

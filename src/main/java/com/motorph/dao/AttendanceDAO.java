@@ -11,9 +11,8 @@ public interface AttendanceDAO extends BaseDAO {
     void update(Attendance attendance);
     void delete(String attendanceId);
 
-    /**
-     * Returns the open (not yet timed-out) attendance record for the employee
-     * on today's date, or null if none exists.
-     */
     Attendance findOpenSession(String employeeId);
+
+    // Uses v_attendance_summary — returns total hours for a specific month.
+    double computeMonthlyHours(String employeeId, int year, int month);
 }
