@@ -15,6 +15,6 @@ public interface RequestDAO {
     void update(Request request);
     void delete(int requestId, RequestType type);
 
-    // Uses v_pending_requests — returns all pending leave and work-time requests combined.
+    // Uses v_pending_requests - returns all pending leave and work-time requests combined.
     List<Request> findAllPending();
 }

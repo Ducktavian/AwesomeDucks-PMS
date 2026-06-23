@@ -10,6 +10,6 @@ public interface PayrollDAO {
     int save(Payroll payroll, AllowanceBreakdown allowances, DeductionBreakdown deductions);
     int findPayrollId(int employeeId, int payPeriodId);
 
-    // Uses v_employee_payroll_summary — returns all payroll runs for an employee.
+    // Uses v_employee_payroll_summary - returns all payroll runs for an employee.
     List<Payroll> findByEmployee(int employeeId);
 }

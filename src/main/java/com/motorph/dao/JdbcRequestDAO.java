@@ -14,7 +14,7 @@ import java.util.List;
 public class JdbcRequestDAO implements RequestDAO {
 
 
-    // SQL — leave_request (reads via v_leave_requests)
+    // SQL - leave_request (reads via v_leave_requests)
     private static final String SELECT_LEAVE_VIEW = """
             SELECT leave_request_id, employee_id, request_status_type,
                    approved_by, description, created_at,
