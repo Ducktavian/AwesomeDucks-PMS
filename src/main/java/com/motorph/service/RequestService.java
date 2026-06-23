@@ -20,49 +20,33 @@ public class RequestService {
     // Submit
     // -----------------------------------------------------------------------
 
-    /**
-     * Validate and persist a new request.
-     * Works for LeaveRequest, OvertimeRequest, and UndertimeRequest.
-     *
-     * @throws IllegalArgumentException if the request fails validation
-     */
+   
+  
+    // Works for LeaveRequest, OvertimeRequest, and UndertimeRequest.
+    // @throws IllegalArgumentException if the request fails validation
     public void submit(Request request) {
         validate(request);
         requestDAO.save(request);
     }
 
-    // -----------------------------------------------------------------------
-    // Approve / Reject
-    // -----------------------------------------------------------------------
 
-    /**
-     * Approve a request. Sets status to APPROVED and records the approver.
-     *
-     * @param request    the request to approve (any subtype)
-     * @param approverId employee ID of the person approving
-     */
+    // Approve / Reject
     public void approve(Request request, int approverId) {
         request.setStatus(RequestStatus.APPROVED);
         request.setApproverId(approverId);
         requestDAO.update(request);
     }
 
-    /**
-     * Reject a request. Sets status to REJECTED and records the approver.
-     *
-     * @param request    the request to reject (any subtype)
-     * @param approverId employee ID of the person rejecting
-     */
+
+    // Reject a request. Sets status to REJECTED and records the approver.
     public void reject(Request request, int approverId) {
         request.setStatus(RequestStatus.REJECTED);
         request.setApproverId(approverId);
         requestDAO.update(request);
     }
 
-    /**
-     * Cancel a request. Only the employee who filed it should be able to do
-     * this — enforce that access check at the controller/UI layer.
-     */
+ 
+     //Cancel a request. Only the employee who filed it should be able to do this - enforce that access check at the controller/UI layer.
     public void cancel(Request request) {
         if (request.getStatus() != RequestStatus.PENDING) {
             throw new IllegalStateException(
@@ -72,14 +56,8 @@ public class RequestService {
         requestDAO.update(request);
     }
 
-    // -----------------------------------------------------------------------
+    
     // Retrieval
-    // -----------------------------------------------------------------------
-
-    /**
-     * Find a single request by ID and type.
-     * Returns null if not found.
-     */
     public Request findById(int requestId, RequestType type) {
         return requestDAO.findById(requestId, type);
     }
@@ -104,10 +82,8 @@ public class RequestService {
         return requestDAO.findAll();
     }
 
-    // -----------------------------------------------------------------------
-    // Typed retrieval — when callers need a specific subtype list
-    // -----------------------------------------------------------------------
 
+    // Typed retrieval — when callers need a specific subtype list
     /** All leave requests for one employee. */
     public List<LeaveRequest> findLeaveByEmployee(int employeeId) {
         return requestDAO.findByEmployeeId(employeeId).stream()
@@ -132,27 +108,14 @@ public class RequestService {
                 .collect(Collectors.toList());
     }
 
-    // -----------------------------------------------------------------------
-    // Delete
-    // -----------------------------------------------------------------------
 
-    /**
-     * Permanently delete a request.
-     * In most payroll systems you'd cancel instead — use this only for
-     * administrative corrections.
-     */
+    // Delete
     public void delete(int requestId, RequestType type) {
         requestDAO.delete(requestId, type);
     }
 
-    // -----------------------------------------------------------------------
-    // Validation
-    // -----------------------------------------------------------------------
 
-    /**
-     * Dispatches to the correct validation method based on subtype.
-     * All validation throws IllegalArgumentException with a clear message.
-     */
+    // Validation
     private void validate(Request request) {
         if (request instanceof LeaveRequest leave) {
             validateLeave(leave);

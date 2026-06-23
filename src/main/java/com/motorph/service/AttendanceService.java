@@ -55,10 +55,8 @@ public class AttendanceService {
         return open;
     }
 
-    // -----------------------------------------------------------------------
-    // Hours computation
-    // -----------------------------------------------------------------------
 
+    // Hours computation
     /** Computes hours worked for a single attendance record. */
     public double computeDailyHours(Attendance record) {
         if (record.getLogIn() == null || record.getLogOut() == null) {
@@ -91,10 +89,8 @@ public class AttendanceService {
         return Math.round(total * 100.0) / 100.0;
     }
 
-    // -----------------------------------------------------------------------
-    // Retrieval
-    // -----------------------------------------------------------------------
 
+    // Retrieval
     public List<Attendance> getAllAttendance() {
         return attendanceDAO.findAll();
     }

@@ -16,11 +16,10 @@ public class InformationDisputeService {
         this.disputeDAO = disputeDAO;
     }
 
-    /**
-     * Files a new information dispute on behalf of the currently logged-in employee.
-     * category  — e.g. "Personal Info", "Government ID"
-     * targetField — the specific field being disputed, e.g. "philhealth_number"
-     */
+    
+    //Files a new information dispute on behalf of the currently logged-in employee.
+    // category  — e.g. "Personal Info", "Government ID"
+    // targetField — the specific field being disputed, e.g. "philhealth_number"
     public InformationDispute fileDispute(String reason, String category, String targetField) {
         UserAccount current = Session.getCurrentUser();
         if (current == null) {
@@ -51,9 +50,8 @@ public class InformationDisputeService {
         return dispute;
     }
 
-    /**
-     * Marks a dispute as resolved. Only HR_MANAGER or SYSTEM_ADMINISTRATOR may do this.
-     */
+   
+    // Marks a dispute as resolved. Only HR_MANAGER or SYSTEM_ADMINISTRATOR may do this.
     public void resolveDispute(InformationDispute dispute) {
         UserAccount reviewer = Session.getCurrentUser();
         if (reviewer == null) {
@@ -73,10 +71,8 @@ public class InformationDisputeService {
         disputeDAO.update(dispute);
     }
 
-    // -----------------------------------------------------------------------
-    // Retrieval
-    // -----------------------------------------------------------------------
 
+    // Retrieval
     public List<InformationDispute> findAll() {
         return disputeDAO.findAll().stream()
                 .filter(d -> d instanceof InformationDispute)

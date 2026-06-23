@@ -17,10 +17,10 @@ public class JdbcDisputeDAO implements DisputeDAO {
             "       category, target_field, payslip_number " +
             "FROM v_dispute ";
 
-    private static final String SELECT_ALL         = BASE_SELECT + "ORDER BY date_filed DESC";
-    private static final String SELECT_BY_ID       = BASE_SELECT + "WHERE dispute_id = ?";
+    private static final String SELECT_ALL = BASE_SELECT + "ORDER BY date_filed DESC";
+    private static final String SELECT_BY_ID = BASE_SELECT + "WHERE dispute_id = ?";
     private static final String SELECT_BY_EMPLOYEE = BASE_SELECT + "WHERE employee_id = ? ORDER BY date_filed DESC";
-    private static final String SELECT_BY_STATUS   = BASE_SELECT + "WHERE dispute_status = ? ORDER BY date_filed DESC";
+    private static final String SELECT_BY_STATUS = BASE_SELECT + "WHERE dispute_status = ? ORDER BY date_filed DESC";
 
     private static final String INSERT =
             "INSERT INTO dispute (employee_id, dispute_type, reason, dispute_status, " +
@@ -186,22 +186,22 @@ public class JdbcDisputeDAO implements DisputeDAO {
     // -----------------------------------------------------------------------
 
     private Dispute mapRow(ResultSet rs) throws SQLException {
-        int         disputeId   = rs.getInt("dispute_id");
-        String      employeeId  = String.valueOf(rs.getInt("employee_id"));
-        String      type        = rs.getString("dispute_type");
-        String      reason      = rs.getString("reason");
-        DisputeStatus status    = DisputeStatus.fromDbValue(rs.getString("dispute_status"));
+        int disputeId = rs.getInt("dispute_id");
+        String employeeId = String.valueOf(rs.getInt("employee_id"));
+        String type = rs.getString("dispute_type");
+        String reason = rs.getString("reason");
+        DisputeStatus status = DisputeStatus.fromDbValue(rs.getString("dispute_status"));
 
-        int     reviewedByRaw   = rs.getInt("reviewed_by_id");
-        Integer reviewedById    = rs.wasNull() ? null : reviewedByRaw;
+        int     reviewedByRaw = rs.getInt("reviewed_by_id");
+        Integer reviewedById = rs.wasNull() ? null : reviewedByRaw;
 
-        Date    filedDate       = rs.getDate("date_filed");
-        Date    reviewedDate    = rs.getDate("date_reviewed");
-        LocalDate dateFiled     = filedDate    != null ? filedDate.toLocalDate()    : LocalDate.now();
-        LocalDate dateReviewed  = reviewedDate != null ? reviewedDate.toLocalDate() : null;
+        Date filedDate = rs.getDate("date_filed");
+        Date reviewedDate = rs.getDate("date_reviewed");
+        LocalDate dateFiled = filedDate != null ? filedDate.toLocalDate() : LocalDate.now();
+        LocalDate dateReviewed = reviewedDate != null ? reviewedDate.toLocalDate() : null;
 
         if ("INFORMATION_DISPUTE".equals(type)) {
-            String category    = rs.getString("category");
+            String category = rs.getString("category");
             String targetField = rs.getString("target_field");
             return new InformationDispute(
                     disputeId, employeeId, reason, status, reviewedById,

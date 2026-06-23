@@ -3,31 +3,22 @@ package com.motorph.model;
 public enum Role {
 
     SYSTEM_ADMINISTRATOR(1, "System Administrator"),
-    HR_MANAGER          (2, "HR Manager"),
-    PAYROLL_MANAGER     (3, "Payroll Manager"),
-    DEPARTMENT_HEAD     (4, "Department Head"),
-    EMPLOYEE            (5, "Employee");
+    HR_MANAGER(2, "HR Manager"),
+    PAYROLL_MANAGER(3, "Payroll Manager"),
+    DEPARTMENT_HEAD(4, "Department Head"),
+    EMPLOYEE(5, "Employee");
 
-    private final int    roleId;
+    private final int roleId;
     private final String roleName;
 
     Role(int roleId, String roleName) {
-        this.roleId   = roleId;
+        this.roleId = roleId;
         this.roleName = roleName;
     }
 
-    public int getRoleId() {
-        return roleId;
-    }
+    public int getRoleId() { return roleId; }
+    public String getRoleName() { return roleName; }
 
-    public String getRoleName() {
-        return roleName;
-    }
-
-    /**
-     * Look up a Role by its database primary key.
-     * Returns EMPLOYEE as a safe default if the id is unrecognised.
-     */
     public static Role fromId(int id) {
         for (Role r : values()) {
             if (r.roleId == id) return r;
@@ -35,10 +26,6 @@ public enum Role {
         return EMPLOYEE;
     }
 
-    
-     //Look up a Role by the role_name stored in user_role.role_name.
-     //Comparison is case-insensitive.
-     
     public static Role fromName(String name) {
         if (name == null) return EMPLOYEE;
         for (Role r : values()) {

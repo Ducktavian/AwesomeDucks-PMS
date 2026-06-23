@@ -1,16 +1,12 @@
-
 package com.motorph.model;
 
-import java.util.TreeMap;
 import java.util.Map;
-/**
- *
- * @author Lenovo
- */
+import java.util.TreeMap;
+
 public class SSSDeduction implements DeductionRule {
-    
+
     private static final TreeMap<Double, Double> SSS_TABLE = new TreeMap<>();
-    
+
     static {
         SSS_TABLE.put(0.0, 135.00);
         SSS_TABLE.put(3250.0, 157.50);
@@ -58,17 +54,10 @@ public class SSSDeduction implements DeductionRule {
         SSS_TABLE.put(24250.0, 1102.50);
         SSS_TABLE.put(24750.0, 1125.00);
     }
-    
-    public SSSDeduction() {
-        
-    }
-    
+
     @Override
     public double calculate(double grossPay) {
-        
         Map.Entry<Double, Double> entry = SSS_TABLE.floorEntry(grossPay);
-        
         return (entry != null) ? entry.getValue() : 135.00;
     }
-       
 }

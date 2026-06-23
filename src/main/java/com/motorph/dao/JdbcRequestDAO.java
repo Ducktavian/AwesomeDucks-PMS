@@ -323,19 +323,19 @@ public class JdbcRequestDAO implements RequestDAO {
     }
 
     private Request mapWorkTime(ResultSet rs) throws SQLException {
-        int requestId   = rs.getInt("work_time_request_id");
-        int employeeId  = rs.getInt("employee_id");
+        int requestId = rs.getInt("work_time_request_id");
+        int employeeId = rs.getInt("employee_id");
         RequestStatus status = RequestStatus.fromDbValue(rs.getString("request_status_type"));
-        Integer approverId   = rs.getObject("approved_by") != null ? rs.getInt("approved_by") : null;
-        String  reason       = rs.getString("reason");
+        Integer approverId = rs.getObject("approved_by") != null ? rs.getInt("approved_by") : null;
+        String  reason = rs.getString("reason");
 
         Timestamp createdAt  = rs.getTimestamp("created_at");
         LocalDateTime dateFiled = createdAt != null ? createdAt.toLocalDateTime() : null;
 
-        RequestType type     = RequestType.fromDbValue(rs.getString("request_type"));
-        LocalDate   reqDate  = rs.getDate("request_date").toLocalDate();
-        LocalTime   start    = rs.getTime("start_time").toLocalTime();
-        LocalTime   end      = rs.getTime("end_time").toLocalTime();
+        RequestType type = RequestType.fromDbValue(rs.getString("request_type"));
+        LocalDate reqDate = rs.getDate("request_date").toLocalDate();
+        LocalTime start = rs.getTime("start_time").toLocalTime();
+        LocalTime end = rs.getTime("end_time").toLocalTime();
 
         if (type == RequestType.OVERTIME) {
             return new OvertimeRequest(requestId, employeeId, status, approverId,

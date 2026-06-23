@@ -16,10 +16,9 @@ public class PayrollDisputeService {
         this.disputeDAO = disputeDAO;
     }
 
-    /**
-     * Files a payroll dispute for a specific payslip.
-     * The logged-in employee may only dispute their own payslip.
-     */
+    
+    // Files a payroll dispute for a specific payslip.
+    // The logged-in employee may only dispute their own payslip.
     public PayrollDispute fileDispute(Payslip payslip, String reason) {
         UserAccount current = Session.getCurrentUser();
         if (current == null) {
@@ -46,10 +45,9 @@ public class PayrollDisputeService {
         return dispute;
     }
 
-    /**
-     * Marks a payroll dispute as resolved.
-     * Only PAYROLL_MANAGER, HR_MANAGER, or SYSTEM_ADMINISTRATOR may do this.
-     */
+    
+    // Marks a payroll dispute as resolved.
+    // Only PAYROLL_MANAGER, HR_MANAGER, or SYSTEM_ADMINISTRATOR may do this.
     public void resolveDispute(PayrollDispute dispute) {
         UserAccount reviewer = Session.getCurrentUser();
         if (reviewer == null) {
@@ -72,10 +70,8 @@ public class PayrollDisputeService {
         disputeDAO.update(dispute);
     }
 
-    // -----------------------------------------------------------------------
-    // Retrieval
-    // -----------------------------------------------------------------------
 
+    // Retrieval
     public List<PayrollDispute> findAll() {
         return disputeDAO.findAll().stream()
                 .filter(d -> d instanceof PayrollDispute)

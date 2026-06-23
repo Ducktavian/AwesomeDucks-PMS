@@ -105,7 +105,7 @@ public class JdbcAttendanceDAO implements AttendanceDAO {
 
     /**
      * Inserts a new time-in record. The DB UNIQUE KEY on (employee_id, attendance_date)
-     * will reject a duplicate — the service layer checks first to give a friendlier error.
+     * will reject a duplicate - the service layer checks first to give a friendlier error.
      */
     @Override
     public void save(Attendance attendance) {
@@ -177,15 +177,15 @@ public class JdbcAttendanceDAO implements AttendanceDAO {
     // -----------------------------------------------------------------------
 
     private Attendance mapRow(ResultSet rs) throws SQLException {
-        int         attendanceId       = rs.getInt("attendance_id");
-        String      employeeId         = String.valueOf(rs.getInt("employee_id"));
-        String      lastName           = rs.getString("last_name");
-        String      firstName          = rs.getString("first_name");
-        LocalDate   date               = rs.getDate("attendance_date").toLocalDate();
-        java.sql.Time timeInSql        = rs.getTime("time_in");
-        java.sql.Time timeOutSql       = rs.getTime("time_out");
-        int         statusId           = rs.getInt("attendance_status_id");
-        Integer     attendanceStatusId = rs.wasNull() ? null : statusId;
+        int attendanceId = rs.getInt("attendance_id");
+        String employeeId = String.valueOf(rs.getInt("employee_id"));
+        String lastName = rs.getString("last_name");
+        String firstName = rs.getString("first_name");
+        LocalDate date  = rs.getDate("attendance_date").toLocalDate();
+        java.sql.Time timeInSql = rs.getTime("time_in");
+        java.sql.Time timeOutSql = rs.getTime("time_out");
+        int statusId = rs.getInt("attendance_status_id");
+        Integer attendanceStatusId = rs.wasNull() ? null : statusId;
 
         return new Attendance(
                 attendanceId,

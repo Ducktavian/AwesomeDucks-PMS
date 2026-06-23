@@ -2,10 +2,6 @@ package com.motorph.model;
 
 import java.time.LocalDateTime;
 
-/**
- *
- * @author Ducktavian
- */
 public interface Requestable {
     int getRequestId();
     RequestType getRequestType();
@@ -14,7 +10,7 @@ public interface Requestable {
     RequestStatus getStatus();
     String getReason();
     Integer getApproverId();
-    
+
     void setStatus(RequestStatus status);
     void setApproverId(Integer approverId);
 }
