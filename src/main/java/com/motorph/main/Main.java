@@ -3,9 +3,7 @@ package com.motorph.main;
 import com.motorph.model.*;
 import com.motorph.service.*;
 import com.motorph.util.AppContext;
-import static com.motorph.util.PasswordUtil.hashPassword;
 import com.motorph.util.Session;
-import static com.motorph.util.Util.print;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -19,9 +17,6 @@ public class Main {
 
     public static void main(String[] args) throws Exception {
         
-        print(hashPassword("test123"));
-        print(hashPassword("test123"));
-        print(hashPassword("test123"));
         
         System.out.println("====================================");
         System.out.println("     MotorPH Terminal Tester");
