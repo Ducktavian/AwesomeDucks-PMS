@@ -39,6 +39,7 @@ public abstract class Dispute implements Disputable {
     @Override public DisputeType  getDisputeType() { return disputeType; }
 
     // Setters for fields that change during the review lifecycle
+    public void setDisputeId(int disputeId)              { this.disputeId = disputeId; }
     public void setStatus(DisputeStatus status)          { this.status = status; }
     public void setReviewedById(Integer reviewedById)    { this.reviewedById = reviewedById; }
     public void setDateReviewed(LocalDate dateReviewed)  { this.dateReviewed = dateReviewed; }

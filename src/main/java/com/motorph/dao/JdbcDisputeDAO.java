@@ -130,6 +130,9 @@ public class JdbcDisputeDAO implements DisputeDAO {
             }
 
             ps.executeUpdate();
+            try (ResultSet keys = ps.getGeneratedKeys()) {
+                if (keys.next()) dispute.setDisputeId(keys.getInt(1));
+            }
         } catch (SQLException e) {
             throw new RuntimeException("save(Dispute) failed", e);
         }
