@@ -2,68 +2,44 @@ package com.motorph.model;
 
 import java.time.LocalDate;
 
-/**
- *
- * @author Ducktavian
- */
 public abstract class Dispute implements Disputable {
-    protected String disputeId;
-    protected String employeeId;
-    protected String reason;
-    protected DisputeStatus status;
-    protected String reviewedById;
-    protected LocalDate dateFiled;
-    protected LocalDate dateReviewed;
-    protected DisputeType disputeType;
 
-    public Dispute(String disputeId, String employeeId, String reason, DisputeStatus status, String reviewedById, LocalDate dateFiled, LocalDate dateReviewed, DisputeType disputeType) {
-        this.disputeId = disputeId;
-        this.employeeId = employeeId;
-        this.reason = reason;
-        this.status = status;
+    protected int          disputeId;    // dispute.dispute_id  (DB auto-increment PK)
+    protected String       employeeId;   // dispute.employee_id
+    protected String       reason;       // dispute.reason
+    protected DisputeStatus status;      // dispute.dispute_status
+    protected Integer      reviewedById; // dispute.reviewed_by_id (nullable FK → employee)
+    protected LocalDate    dateFiled;    // dispute.date_filed
+    protected LocalDate    dateReviewed; // dispute.date_reviewed  (null until resolved)
+    protected DisputeType  disputeType;  // dispute.dispute_type discriminator
+
+    public Dispute(int disputeId, String employeeId, String reason,
+                   DisputeStatus status, Integer reviewedById,
+                   LocalDate dateFiled, LocalDate dateReviewed,
+                   DisputeType disputeType) {
+        this.disputeId    = disputeId;
+        this.employeeId   = employeeId;
+        this.reason       = reason;
+        this.status       = status;
         this.reviewedById = reviewedById;
-        this.dateFiled = dateFiled;
+        this.dateFiled    = dateFiled;
         this.dateReviewed = dateReviewed;
-        this.disputeType = disputeType;
+        this.disputeType  = disputeType;
     }
 
-    @Override
-    public String getDisputeId() {
-        return disputeId;
-    }
+    // Getters
+    @Override public String       getDisputeId()   { return String.valueOf(disputeId); }
+    public       int              getDisputeIntId() { return disputeId; }
+    @Override public String       getEmployeeId()  { return employeeId; }
+    @Override public String       getReason()      { return reason; }
+    @Override public DisputeStatus getStatus()     { return status; }
+    @Override public Integer      getReviewedById(){ return reviewedById; }
+    @Override public LocalDate    getDateFiled()   { return dateFiled; }
+    public       LocalDate        getDateReviewed(){ return dateReviewed; }
+    @Override public DisputeType  getDisputeType() { return disputeType; }
 
-    public String getEmployeeId() {
-        return employeeId;
-    }
-
-    public String getReason() {
-        return reason;
-    }
-    
-    @Override
-    public DisputeStatus getStatus() {
-        return status;
-    }
-    
-    @Override
-    public String getReviewedById() {
-        return reviewedById;
-    }
-    
-    @Override
-    public LocalDate getDateFiled() {
-        return dateFiled;
-    }
-
-    public LocalDate getDateReviewed() {
-        return dateReviewed;
-    }
-    
-    @Override
-    public DisputeType getDisputeType() {
-        return disputeType;
-    }
-    
-    
-    
+    // Setters for fields that change during the review lifecycle
+    public void setStatus(DisputeStatus status)          { this.status = status; }
+    public void setReviewedById(Integer reviewedById)    { this.reviewedById = reviewedById; }
+    public void setDateReviewed(LocalDate dateReviewed)  { this.dateReviewed = dateReviewed; }
 }

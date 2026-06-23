@@ -1,79 +1,103 @@
-
 package com.motorph.service;
 
+import com.motorph.dao.DisputeDAO;
 import com.motorph.model.*;
+import com.motorph.util.Session;
+
 import java.time.LocalDate;
-
-import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
+import java.util.stream.Collectors;
 
-/**
- *
- * @author Lenovo
- */
 public class PayrollDisputeService {
-    /*
-    private List<PayrollDispute> disputes = new ArrayList<>();
-    
-    // FILE DISPUTE
-    public PayrollDispute fileDispute(UserAccount user, Payslip payslip, String reason) {
-        
-        if (!payslip.getEmployeeNumber().equals(user.getEmployeeNumber())) {
+
+    private final DisputeDAO disputeDAO;
+
+    public PayrollDisputeService(DisputeDAO disputeDAO) {
+        this.disputeDAO = disputeDAO;
+    }
+
+    /**
+     * Files a payroll dispute for a specific payslip.
+     * The logged-in employee may only dispute their own payslip.
+     */
+    public PayrollDispute fileDispute(Payslip payslip, String reason) {
+        UserAccount current = Session.getCurrentUser();
+        if (current == null) {
+            throw new IllegalStateException("No active session.");
+        }
+        if (!payslip.getEmployeeNumber().equals(String.valueOf(current.getEmployeeId()))) {
             throw new IllegalArgumentException("You can only dispute your own payslip.");
         }
-        
-        String disputeId = UUID.randomUUID().toString();
-        
+        if (reason == null || reason.isBlank()) {
+            throw new IllegalArgumentException("Reason is required.");
+        }
+
         PayrollDispute dispute = new PayrollDispute(
-                disputeId, 
-                user.getEmployeeNumber(),
-                payslip.getPayslipId(),
-                reason       
-        ); 
-        
-        disputes.add(dispute);
-        
+                0, // DB assigns the ID on INSERT
+                String.valueOf(current.getEmployeeId()),
+                reason,
+                DisputeStatus.UNRESOLVED,
+                null,
+                LocalDate.now(),
+                null,
+                payslip.getPayslipId()
+        );
+        disputeDAO.save(dispute);
         return dispute;
     }
-    
-    // APPROVE DISPUTE
-    public void approveDispute(PayrollDispute dispute, UserAccount user) {
-        
-        if (!(user.getRole() == Role.HR || user.getRole() == Role.FINANCE)) {
-            throw new SecurityException("Only HR or Finance can approve disputes.");
-            
+
+    /**
+     * Marks a payroll dispute as resolved.
+     * Only PAYROLL_MANAGER, HR_MANAGER, or SYSTEM_ADMINISTRATOR may do this.
+     */
+    public void resolveDispute(PayrollDispute dispute) {
+        UserAccount reviewer = Session.getCurrentUser();
+        if (reviewer == null) {
+            throw new IllegalStateException("No active session.");
         }
-        
-        if (dispute.getStatus() != DisputeStatus.PENDING) {
-            throw new IllegalStateException("Dispute already reviewed.");
+        Role role = reviewer.getRole();
+        if (role != Role.PAYROLL_MANAGER
+                && role != Role.HR_MANAGER
+                && role != Role.SYSTEM_ADMINISTRATOR) {
+            throw new SecurityException(
+                    "Only Payroll Manager, HR Manager, or System Administrator can resolve payroll disputes.");
         }
-        
-        dispute.setStatus(DisputeStatus.APPROVED);
-        dispute.setReviewedBy(user.getEmployeeNumber());
+        if (dispute.getStatus() == DisputeStatus.RESOLVED) {
+            throw new IllegalStateException("Dispute is already resolved.");
+        }
+
+        dispute.setStatus(DisputeStatus.RESOLVED);
+        dispute.setReviewedById(reviewer.getEmployeeId());
         dispute.setDateReviewed(LocalDate.now());
+        disputeDAO.update(dispute);
     }
-    
-    // REJECT DISPUTE
-    public void rejectDispute(PayrollDispute dispute, UserAccount user) {
-        
-        if (!(user.getRole() == Role.HR || user.getRole() == Role.FINANCE)) {
-            throw new SecurityException("Only HR or Finance can reject disputes.");
-            
-        }
-        
-        if (dispute.getStatus() != DisputeStatus.PENDING) {
-            throw new IllegalStateException("Dispute already reviewed.");
-        }
-        
-        dispute.setStatus(DisputeStatus.DENIED);
-        dispute.setReviewedBy(user.getEmployeeNumber());
-        dispute.setDateReviewed(LocalDate.now());
+
+    // -----------------------------------------------------------------------
+    // Retrieval
+    // -----------------------------------------------------------------------
+
+    public List<PayrollDispute> findAll() {
+        return disputeDAO.findAll().stream()
+                .filter(d -> d instanceof PayrollDispute)
+                .map(d -> (PayrollDispute) d)
+                .collect(Collectors.toList());
     }
-    
-    // VIEW ALL DISPUTES
-    public List<PayrollDispute> getAllDisputes() {
-        return disputes;
+
+    public List<PayrollDispute> findByEmployee(String employeeId) {
+        return disputeDAO.findByEmployeeId(employeeId).stream()
+                .filter(d -> d instanceof PayrollDispute)
+                .map(d -> (PayrollDispute) d)
+                .collect(Collectors.toList());
     }
-*/
+
+    public List<PayrollDispute> findUnresolved() {
+        return disputeDAO.findByStatus(DisputeStatus.UNRESOLVED).stream()
+                .filter(d -> d instanceof PayrollDispute)
+                .map(d -> (PayrollDispute) d)
+                .collect(Collectors.toList());
+    }
+
+    public Dispute findById(String disputeId) {
+        return disputeDAO.findById(disputeId);
+    }
 }

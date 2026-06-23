@@ -12,6 +12,6 @@ public interface Disputable {
     LocalDate getDateFiled();
     DisputeStatus getStatus();
     String getReason();
-    String getReviewedById();
+    Integer getReviewedById();
     DisputeType getDisputeType();
 }
