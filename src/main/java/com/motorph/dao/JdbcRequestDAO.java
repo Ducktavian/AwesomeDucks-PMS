@@ -10,81 +10,29 @@ import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * JDBC implementation of RequestDAO.
- *
- * Table routing:
- *   LEAVE     → leave_request
- *   OVERTIME  → work_time_request (request_type = 'overtime')
- *   UNDERTIME → work_time_request (request_type = 'undertime')
- *
- * Status resolution:
- *   Both tables store request_status_id (FK to request_status).
- *   We JOIN request_status to get the text value for the enum.
- *
- * LeaveType resolution:
- *   leave_request.leave_type_id is JOINed with leave_type to populate
- *   the LeaveType object (id + name).
- */
+
 public class JdbcRequestDAO implements RequestDAO {
 
-    // -----------------------------------------------------------------------
-    // SQL — leave_request
-    // -----------------------------------------------------------------------
 
-    private static final String SQL_FIND_LEAVE_BY_ID = """
-            SELECT lr.leave_request_id, lr.employee_id,
-                   rs.request_status_type,
-                   lr.approved_by, lr.description,
-                   lr.created_at,
-                   lr.start_date, lr.end_date,
-                   lt.leave_type_id, lt.leave_type_name
-            FROM leave_request lr
-            JOIN request_status rs ON lr.request_status_id = rs.request_status_id
-            JOIN leave_type     lt ON lr.leave_type_id     = lt.leave_type_id
-            WHERE lr.leave_request_id = ?
+    // SQL — leave_request (reads via v_leave_requests)
+    private static final String SELECT_LEAVE_VIEW = """
+            SELECT leave_request_id, employee_id, request_status_type,
+                   approved_by, description, created_at,
+                   start_date, end_date, leave_type_id, leave_type_name
+            FROM v_leave_requests
             """;
 
-    private static final String SQL_FIND_LEAVE_BY_EMPLOYEE = """
-            SELECT lr.leave_request_id, lr.employee_id,
-                   rs.request_status_type,
-                   lr.approved_by, lr.description,
-                   lr.created_at,
-                   lr.start_date, lr.end_date,
-                   lt.leave_type_id, lt.leave_type_name
-            FROM leave_request lr
-            JOIN request_status rs ON lr.request_status_id = rs.request_status_id
-            JOIN leave_type     lt ON lr.leave_type_id     = lt.leave_type_id
-            WHERE lr.employee_id = ?
-            ORDER BY lr.created_at DESC
-            """;
+    private static final String SQL_FIND_LEAVE_BY_ID =
+            SELECT_LEAVE_VIEW + " WHERE leave_request_id = ?";
 
-    private static final String SQL_FIND_LEAVE_BY_STATUS = """
-            SELECT lr.leave_request_id, lr.employee_id,
-                   rs.request_status_type,
-                   lr.approved_by, lr.description,
-                   lr.created_at,
-                   lr.start_date, lr.end_date,
-                   lt.leave_type_id, lt.leave_type_name
-            FROM leave_request lr
-            JOIN request_status rs ON lr.request_status_id = rs.request_status_id
-            JOIN leave_type     lt ON lr.leave_type_id     = lt.leave_type_id
-            WHERE rs.request_status_type = ?
-            ORDER BY lr.created_at DESC
-            """;
+    private static final String SQL_FIND_LEAVE_BY_EMPLOYEE =
+            SELECT_LEAVE_VIEW + " WHERE employee_id = ? ORDER BY created_at DESC";
 
-    private static final String SQL_FIND_ALL_LEAVE = """
-            SELECT lr.leave_request_id, lr.employee_id,
-                   rs.request_status_type,
-                   lr.approved_by, lr.description,
-                   lr.created_at,
-                   lr.start_date, lr.end_date,
-                   lt.leave_type_id, lt.leave_type_name
-            FROM leave_request lr
-            JOIN request_status rs ON lr.request_status_id = rs.request_status_id
-            JOIN leave_type     lt ON lr.leave_type_id     = lt.leave_type_id
-            ORDER BY lr.created_at DESC
-            """;
+    private static final String SQL_FIND_LEAVE_BY_STATUS =
+            SELECT_LEAVE_VIEW + " WHERE request_status_type = ? ORDER BY created_at DESC";
+
+    private static final String SQL_FIND_ALL_LEAVE =
+            SELECT_LEAVE_VIEW + " ORDER BY created_at DESC";
 
     private static final String SQL_INSERT_LEAVE = """
             INSERT INTO leave_request
@@ -109,59 +57,26 @@ public class JdbcRequestDAO implements RequestDAO {
     private static final String SQL_DELETE_LEAVE =
             "DELETE FROM leave_request WHERE leave_request_id = ?";
 
-    // -----------------------------------------------------------------------
-    // SQL — work_time_request
-    // -----------------------------------------------------------------------
 
-    private static final String SQL_FIND_WTR_BY_ID = """
-            SELECT wtr.work_time_request_id, wtr.employee_id,
-                   rs.request_status_type,
-                   wtr.approved_by, wtr.reason,
-                   wtr.created_at,
-                   wtr.request_type,
-                   wtr.request_date, wtr.start_time, wtr.end_time
-            FROM work_time_request wtr
-            JOIN request_status rs ON wtr.request_status_id = rs.request_status_id
-            WHERE wtr.work_time_request_id = ?
+    // SQL — work_time_request (reads via v_work_time_requests)
+    private static final String SELECT_WTR_VIEW = """
+            SELECT work_time_request_id, employee_id, request_status_type,
+                   approved_by, reason, created_at,
+                   request_type, request_date, start_time, end_time
+            FROM v_work_time_requests
             """;
 
-    private static final String SQL_FIND_WTR_BY_EMPLOYEE = """
-            SELECT wtr.work_time_request_id, wtr.employee_id,
-                   rs.request_status_type,
-                   wtr.approved_by, wtr.reason,
-                   wtr.created_at,
-                   wtr.request_type,
-                   wtr.request_date, wtr.start_time, wtr.end_time
-            FROM work_time_request wtr
-            JOIN request_status rs ON wtr.request_status_id = rs.request_status_id
-            WHERE wtr.employee_id = ?
-            ORDER BY wtr.created_at DESC
-            """;
+    private static final String SQL_FIND_WTR_BY_ID =
+            SELECT_WTR_VIEW + " WHERE work_time_request_id = ?";
 
-    private static final String SQL_FIND_WTR_BY_STATUS = """
-            SELECT wtr.work_time_request_id, wtr.employee_id,
-                   rs.request_status_type,
-                   wtr.approved_by, wtr.reason,
-                   wtr.created_at,
-                   wtr.request_type,
-                   wtr.request_date, wtr.start_time, wtr.end_time
-            FROM work_time_request wtr
-            JOIN request_status rs ON wtr.request_status_id = rs.request_status_id
-            WHERE rs.request_status_type = ?
-            ORDER BY wtr.created_at DESC
-            """;
+    private static final String SQL_FIND_WTR_BY_EMPLOYEE =
+            SELECT_WTR_VIEW + " WHERE employee_id = ? ORDER BY created_at DESC";
 
-    private static final String SQL_FIND_ALL_WTR = """
-            SELECT wtr.work_time_request_id, wtr.employee_id,
-                   rs.request_status_type,
-                   wtr.approved_by, wtr.reason,
-                   wtr.created_at,
-                   wtr.request_type,
-                   wtr.request_date, wtr.start_time, wtr.end_time
-            FROM work_time_request wtr
-            JOIN request_status rs ON wtr.request_status_id = rs.request_status_id
-            ORDER BY wtr.created_at DESC
-            """;
+    private static final String SQL_FIND_WTR_BY_STATUS =
+            SELECT_WTR_VIEW + " WHERE request_status_type = ? ORDER BY created_at DESC";
+
+    private static final String SQL_FIND_ALL_WTR =
+            SELECT_WTR_VIEW + " ORDER BY created_at DESC";
 
     private static final String SQL_INSERT_WTR = """
             INSERT INTO work_time_request
@@ -185,10 +100,8 @@ public class JdbcRequestDAO implements RequestDAO {
     private static final String SQL_DELETE_WTR =
             "DELETE FROM work_time_request WHERE work_time_request_id = ?";
 
-    // -----------------------------------------------------------------------
-    // Public API
-    // -----------------------------------------------------------------------
 
+    // Public API
     @Override
     public Request findById(int requestId, RequestType type) {
         if (type == RequestType.LEAVE) {
@@ -263,10 +176,8 @@ public class JdbcRequestDAO implements RequestDAO {
         }
     }
 
-    // -----------------------------------------------------------------------
-    // Leave helpers
-    // -----------------------------------------------------------------------
 
+    // Leave helpers
     private LeaveRequest findLeaveById(int id) {
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(SQL_FIND_LEAVE_BY_ID)) {
@@ -370,10 +281,8 @@ public class JdbcRequestDAO implements RequestDAO {
         }
     }
 
-    // -----------------------------------------------------------------------
-    // WorkTime (overtime / undertime) helpers
-    // -----------------------------------------------------------------------
 
+    // WorkTime (overtime / undertime) helpers
     private Request findWorkTimeById(int id) {
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(SQL_FIND_WTR_BY_ID)) {
@@ -414,19 +323,19 @@ public class JdbcRequestDAO implements RequestDAO {
     }
 
     private Request mapWorkTime(ResultSet rs) throws SQLException {
-        int requestId   = rs.getInt("work_time_request_id");
-        int employeeId  = rs.getInt("employee_id");
+        int requestId = rs.getInt("work_time_request_id");
+        int employeeId = rs.getInt("employee_id");
         RequestStatus status = RequestStatus.fromDbValue(rs.getString("request_status_type"));
-        Integer approverId   = rs.getObject("approved_by") != null ? rs.getInt("approved_by") : null;
-        String  reason       = rs.getString("reason");
+        Integer approverId = rs.getObject("approved_by") != null ? rs.getInt("approved_by") : null;
+        String  reason = rs.getString("reason");
 
         Timestamp createdAt  = rs.getTimestamp("created_at");
         LocalDateTime dateFiled = createdAt != null ? createdAt.toLocalDateTime() : null;
 
-        RequestType type     = RequestType.fromDbValue(rs.getString("request_type"));
-        LocalDate   reqDate  = rs.getDate("request_date").toLocalDate();
-        LocalTime   start    = rs.getTime("start_time").toLocalTime();
-        LocalTime   end      = rs.getTime("end_time").toLocalTime();
+        RequestType type = RequestType.fromDbValue(rs.getString("request_type"));
+        LocalDate reqDate = rs.getDate("request_date").toLocalDate();
+        LocalTime start = rs.getTime("start_time").toLocalTime();
+        LocalTime end = rs.getTime("end_time").toLocalTime();
 
         if (type == RequestType.OVERTIME) {
             return new OvertimeRequest(requestId, employeeId, status, approverId,
@@ -479,11 +388,8 @@ public class JdbcRequestDAO implements RequestDAO {
         }
     }
 
-    // -----------------------------------------------------------------------
     // Utility
-    // -----------------------------------------------------------------------
-
-    /** Functional interface to prepare a PreparedStatement without checked exceptions leaking. */
+    // Functional interface to prepare a PreparedStatement without checked exceptions leaking.
     @FunctionalInterface
     private interface StatementPreparer {
         void prepare(PreparedStatement ps) throws SQLException;

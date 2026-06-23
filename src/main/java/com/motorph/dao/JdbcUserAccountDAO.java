@@ -149,16 +149,15 @@ public class JdbcUserAccountDAO implements UserAccountDAO {
     
      // Update username, password_hash, and is_active for an existing account.
      // Identified by userId (user_account_id).
-     
     @Override
     public void update(UserAccount user) {
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(UPDATE_USER)) {
 
-            ps.setString (1, user.getUsername());
-            ps.setString (2, user.getPasswordHash());
+            ps.setString(1, user.getUsername());
+            ps.setString(2, user.getPasswordHash());
             ps.setBoolean(3, user.isActive());
-            ps.setInt    (4, user.getUserId());
+            ps.setInt(4, user.getUserId());
             ps.executeUpdate();
 
         } catch (SQLException e) {

@@ -1,5 +1,3 @@
-
-
 package com.motorph.util;
 
 import javax.crypto.SecretKeyFactory;
@@ -14,6 +12,7 @@ public class PasswordUtil {
     private static final int KEY_LENGTH = 256;
     private static final String ALGORITHM = "PBKDF2WithHmacSHA256";
     
+   
     public static String hashPassword(String password) throws Exception {
         
         // Generate salt

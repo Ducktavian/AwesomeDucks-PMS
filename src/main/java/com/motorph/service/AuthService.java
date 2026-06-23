@@ -16,7 +16,7 @@ public class AuthService {
     
     public UserAccount login(String username, String password) throws Exception {
         
-        UserAccount user = userAccountDAO.findByEmployeeId(username);
+        UserAccount user = userAccountDAO.findByUsername(username);
         
         if (user == null) {
             throw new Exception("User not found.");

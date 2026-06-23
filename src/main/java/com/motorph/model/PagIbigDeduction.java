@@ -1,24 +1,12 @@
-
 package com.motorph.model;
 
-/**
- *
- * @author Lenovo
- */
 public class PagIbigDeduction implements DeductionRule {
-    
-    public PagIbigDeduction() {
-        
-    }
-    
-    // PagIBig
+
+    @Override
     public double calculate(double grossPay) {
-        
-        if (grossPay >= 1000 && grossPay <= 1500) {
-            return grossPay * 0.01;
-        } else {
-            return grossPay * 0.02;
-        }
-        
+        double contribution = (grossPay >= 1000 && grossPay <= 1500)
+                ? grossPay * 0.01
+                : grossPay * 0.02;
+        return Math.min(contribution, 100.00);
     }
 }

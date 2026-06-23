@@ -121,7 +121,7 @@ public class Payslip {
     }
 
     public PayrollPeriod getPayrollPeriod() {
-        if (periodStart.getDayOfMonth() < 15) {
+        if (periodStart.getDayOfMonth() <= 15) {
             return PayrollPeriod.FIRST_PERIOD;
         } else {
             return PayrollPeriod.SECOND_PERIOD;

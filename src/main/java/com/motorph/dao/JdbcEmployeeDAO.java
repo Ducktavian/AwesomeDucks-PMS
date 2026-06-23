@@ -71,13 +71,13 @@ public class JdbcEmployeeDAO implements EmployeeDAO {
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """;
             try (PreparedStatement stmt = conn.prepareStatement(insertEmployee)) {
-                stmt.setInt   (1, empId);
+                stmt.setInt(1, empId);
                 stmt.setString(2, employee.getFirstName());
                 stmt.setString(3, employee.getLastName());
-                stmt.setDate  (4, Date.valueOf(employee.getBirthday()));
+                stmt.setDate(4, Date.valueOf(employee.getBirthday()));
                 stmt.setString(5, employee.getPhoneNumber());
                 stmt.setString(6, employee.getEmail());
-                stmt.setInt   (7, employee.getPositionId());
+                stmt.setInt(7, employee.getPositionId());
 
                 // immediateSupervisorId is nullable
                 Integer supervisorId = employee.getImmediateSupervisorId();
@@ -149,7 +149,7 @@ public class JdbcEmployeeDAO implements EmployeeDAO {
                     VALUES (?, ?, ?, ?, ?, ?, ?, CURDATE())
                     """;
             try (PreparedStatement stmt = conn.prepareStatement(insertComp)) {
-                stmt.setInt   (1, empId);
+                stmt.setInt(1, empId);
                 stmt.setDouble(2, employee.getBasicSalary());
                 stmt.setDouble(3, employee.getRiceSubsidy());
                 stmt.setDouble(4, employee.getPhoneAllowance());
@@ -181,14 +181,14 @@ public class JdbcEmployeeDAO implements EmployeeDAO {
             // 1. Update core employee fields
             String updateEmployee = """
                     UPDATE employee SET
-                        first_name              = ?,
-                        last_name               = ?,
-                        birthdate               = ?,
-                        phone_number            = ?,
-                        email                   = ?,
-                        position_id             = ?,
+                        first_name = ?,
+                        last_name = ?,
+                        birthdate = ?,
+                        phone_number = ?,
+                        email = ?,
+                        position_id = ?,
                         immediate_supervisor_id = ?,
-                        employment_status_id    = ?
+                        employment_status_id = ?
                     WHERE employee_id = ?
                     """;
             try (PreparedStatement stmt = conn.prepareStatement(updateEmployee)) {
@@ -252,8 +252,8 @@ public class JdbcEmployeeDAO implements EmployeeDAO {
             try (PreparedStatement stmt = conn.prepareStatement(upsertGovId)) {
                 for (String[] entry : govIds) {
                     if (entry[1] != null && !entry[1].isBlank()) {
-                        stmt.setInt   (1, empId);
-                        stmt.setInt   (2, Integer.parseInt(entry[0]));
+                        stmt.setInt(1, empId);
+                        stmt.setInt(2, Integer.parseInt(entry[0]));
                         stmt.setString(3, entry[1]);
                         stmt.executeUpdate();
                     }
@@ -268,7 +268,7 @@ public class JdbcEmployeeDAO implements EmployeeDAO {
                     VALUES (?, ?, ?, ?, ?, ?, ?, CURDATE())
                     """;
             try (PreparedStatement stmt = conn.prepareStatement(insertComp)) {
-                stmt.setInt   (1, empId);
+                stmt.setInt(1, empId);
                 stmt.setDouble(2, employee.getBasicSalary());
                 stmt.setDouble(3, employee.getRiceSubsidy());
                 stmt.setDouble(4, employee.getPhoneAllowance());
@@ -369,4 +369,7 @@ public class JdbcEmployeeDAO implements EmployeeDAO {
             catch (SQLException ex) { ex.printStackTrace(); }
         }
     }
+
+
+
 }

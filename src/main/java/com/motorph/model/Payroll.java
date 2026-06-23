@@ -1,9 +1,5 @@
 package com.motorph.model;
 
-/**
- *
- * @author Ducktavian
- */
 public class Payroll {
 
     private int payrollId;
@@ -21,9 +17,9 @@ public class Payroll {
     private double netPay;
 
     public Payroll(int employeeId, int payPeriodId, int payrollStatusId,
-                    double basicSalary, double hourlyRate, double hoursWorked,
-                    double basicPay, double overtimePay, double grossPay,
-                    double totalBenefits, double totalDeductions, double netPay) {
+                   double basicSalary, double hourlyRate, double hoursWorked,
+                   double basicPay, double overtimePay, double grossPay,
+                   double totalBenefits, double totalDeductions, double netPay) {
         this.employeeId = employeeId;
         this.payPeriodId = payPeriodId;
         this.payrollStatusId = payrollStatusId;
@@ -38,59 +34,19 @@ public class Payroll {
         this.netPay = netPay;
     }
 
-    public int getPayrollId() {
-        return payrollId;
-    }
+    public int getPayrollId() { return payrollId; }
+    public void setPayrollId(int payrollId) { this.payrollId = payrollId; }
 
-    public void setPayrollId(int payrollId) {
-        this.payrollId = payrollId;
-    }
-
-    public int getEmployeeId() {
-        return employeeId;
-    }
-
-    public int getPayPeriodId() {
-        return payPeriodId;
-    }
-
-    public int getPayrollStatusId() {
-        return payrollStatusId;
-    }
-
-    public double getBasicSalary() {
-        return basicSalary;
-    }
-
-    public double getHourlyRate() {
-        return hourlyRate;
-    }
-
-    public double getHoursWorked() {
-        return hoursWorked;
-    }
-
-    public double getBasicPay() {
-        return basicPay;
-    }
-
-    public double getOvertimePay() {
-        return overtimePay;
-    }
-
-    public double getGrossPay() {
-        return grossPay;
-    }
-
-    public double getTotalBenefits() {
-        return totalBenefits;
-    }
-
-    public double getTotalDeductions() {
-        return totalDeductions;
-    }
-
-    public double getNetPay() {
-        return netPay;
-    }
+    public int getEmployeeId() { return employeeId; }
+    public int getPayPeriodId() { return payPeriodId; }
+    public int getPayrollStatusId() { return payrollStatusId; }
+    public double getBasicSalary() { return basicSalary; }
+    public double getHourlyRate() { return hourlyRate; }
+    public double getHoursWorked() { return hoursWorked; }
+    public double getBasicPay() { return basicPay; }
+    public double getOvertimePay() { return overtimePay; }
+    public double getGrossPay() { return grossPay; }
+    public double getTotalBenefits() { return totalBenefits; }
+    public double getTotalDeductions() { return totalDeductions; }
+    public double getNetPay() { return netPay; }
 }

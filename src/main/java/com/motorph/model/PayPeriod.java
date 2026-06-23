@@ -2,10 +2,6 @@ package com.motorph.model;
 
 import java.time.LocalDate;
 
-/**
- *
- * @author Ducktavian
- */
 public class PayPeriod {
 
     private int payPeriodId;
@@ -15,7 +11,7 @@ public class PayPeriod {
     private int payrollStatusId;
 
     public PayPeriod(int payPeriodId, LocalDate periodStartDate, LocalDate periodEndDate,
-                      LocalDate payDate, int payrollStatusId) {
+                     LocalDate payDate, int payrollStatusId) {
         this.payPeriodId = payPeriodId;
         this.periodStartDate = periodStartDate;
         this.periodEndDate = periodEndDate;
@@ -23,23 +19,9 @@ public class PayPeriod {
         this.payrollStatusId = payrollStatusId;
     }
 
-    public int getPayPeriodId() {
-        return payPeriodId;
-    }
-
-    public LocalDate getPeriodStartDate() {
-        return periodStartDate;
-    }
-
-    public LocalDate getPeriodEndDate() {
-        return periodEndDate;
-    }
-
-    public LocalDate getPayDate() {
-        return payDate;
-    }
-
-    public int getPayrollStatusId() {
-        return payrollStatusId;
-    }
+    public int getPayPeriodId() { return payPeriodId; }
+    public LocalDate getPeriodStartDate() { return periodStartDate; }
+    public LocalDate getPeriodEndDate() { return periodEndDate; }
+    public LocalDate getPayDate() { return payDate; }
+    public int getPayrollStatusId() { return payrollStatusId; }
 }

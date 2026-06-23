@@ -13,6 +13,8 @@ public class AppContext {
     private static final PayPeriodDAO payPeriodDAO = new JdbcPayPeriodDAO();
     private static final PayrollDAO payrollDAO = new JdbcPayrollDAO();
     private static final UserAccountDAO userAccountDAO = new JdbcUserAccountDAO();
+    private static final RequestDAO requestDAO = new JdbcRequestDAO();
+    private static final DisputeDAO disputeDAO = new JdbcDisputeDAO();
 
     // --- Services ---
     private static final AttendanceService attendanceService =
@@ -34,8 +36,16 @@ public class AppContext {
     private static final AuthService authService =
             new AuthService(userAccountDAO);
 
-   // private static final UserManagementService userManagementService =
-           // new UserManagementService(userAccountDAO);
+    private static final UserService userService =
+            new UserService(userAccountDAO);
+
+    private static final RequestService requestService = new RequestService(requestDAO);
+
+    private static final InformationDisputeService informationDisputeService =
+            new InformationDisputeService(disputeDAO);
+
+    private static final PayrollDisputeService payrollDisputeService =
+            new PayrollDisputeService(disputeDAO);
 
     
     // ---Getters---
@@ -59,8 +69,20 @@ public class AppContext {
         return authService;
     }
 
-    //public static UserManagementService getUserManagementService() {
-     //   return userManagementService;
-    //}
+    public static UserService getUserService() {
+        return userService;
+    }
+
+    public static RequestService getRequestService() {
+        return requestService;
+    }
+
+    public static InformationDisputeService getInformationDisputeService() {
+        return informationDisputeService;
+    }
+
+    public static PayrollDisputeService getPayrollDisputeService() {
+        return payrollDisputeService;
+    }
 
 }
