@@ -127,7 +127,10 @@ public class PayrollService {
                 deductionBreakdown,
                 netPay);
 
-        payslipDAO.save(payslip);
+        // Only save if this payslip doesn't already exist (avoids duplicate key on re-runs).
+        if (payslipDAO.findById(payslipNumber) == null) {
+            payslipDAO.save(payslip);
+        }
         return payslip;
     }
 

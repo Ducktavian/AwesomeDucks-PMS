@@ -13,12 +13,12 @@ public class PagIbigDeduction implements DeductionRule {
     
     // PagIBig
     public double calculate(double grossPay) {
-        
+        double contribution;
         if (grossPay >= 1000 && grossPay <= 1500) {
-            return grossPay * 0.01;
+            contribution = grossPay * 0.01;
         } else {
-            return grossPay * 0.02;
+            contribution = grossPay * 0.02;
         }
-        
+        return Math.min(contribution, 100.00);
     }
 }

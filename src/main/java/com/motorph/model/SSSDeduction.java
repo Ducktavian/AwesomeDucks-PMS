@@ -17,7 +17,7 @@ public class SSSDeduction implements DeductionRule {
         SSS_TABLE.put(3750.0, 180.00);
         SSS_TABLE.put(4250.0, 202.50);
         SSS_TABLE.put(4750.0, 225.00);
-        SSS_TABLE.put(5250.0, 147.50);
+        SSS_TABLE.put(5250.0, 247.50);
         SSS_TABLE.put(5750.0, 270.00);
         SSS_TABLE.put(6250.0, 292.50);
         SSS_TABLE.put(6750.0, 315.00);

@@ -109,8 +109,11 @@ public class JdbcDisputeDAO implements DisputeDAO {
             ps.setDate(6, dispute.getDateFiled() != null
                     ? Date.valueOf(dispute.getDateFiled()) : Date.valueOf(LocalDate.now()));
 
-            ps.setDate(7, dispute.getDateReviewed() != null
-                    ? Date.valueOf(dispute.getDateReviewed()) : null);
+            if (dispute.getDateReviewed() != null) {
+                ps.setDate(7, Date.valueOf(dispute.getDateReviewed()));
+            } else {
+                ps.setNull(7, Types.DATE);
+            }
 
             if (dispute instanceof InformationDispute info) {
                 ps.setString(8, info.getCategory());
