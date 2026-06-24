@@ -23,8 +23,8 @@ public class EmployeeService {
             throw new UnauthorizedException("No active session found.");
         }
         Role role = current.getRole();
-        if (role != Role.HR_MANAGER && role != Role.SYSTEM_ADMINISTRATOR) {
-            throw new UnauthorizedException("Only HR Manager or System Administrator can manage employees.");
+        if (role != Role.HR && role != Role.ADMIN) {
+            throw new UnauthorizedException("Only HR or Admin can manage employees.");
         }
     }
 

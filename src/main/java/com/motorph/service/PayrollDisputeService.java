@@ -47,18 +47,18 @@ public class PayrollDisputeService {
 
     
     // Marks a payroll dispute as resolved.
-    // Only PAYROLL_MANAGER, HR_MANAGER, or SYSTEM_ADMINISTRATOR may do this.
+    // Only Finance, HR, or Admin may do this.
     public void resolveDispute(PayrollDispute dispute) {
         UserAccount reviewer = Session.getCurrentUser();
         if (reviewer == null) {
             throw new IllegalStateException("No active session.");
         }
         Role role = reviewer.getRole();
-        if (role != Role.PAYROLL_MANAGER
-                && role != Role.HR_MANAGER
-                && role != Role.SYSTEM_ADMINISTRATOR) {
+        if (role != Role.FINANCE
+                && role != Role.HR
+                && role != Role.ADMIN) {
             throw new SecurityException(
-                    "Only Payroll Manager, HR Manager, or System Administrator can resolve payroll disputes.");
+                    "Only Finance, HR, or Admin can resolve payroll disputes.");
         }
         if (dispute.getStatus() == DisputeStatus.RESOLVED) {
             throw new IllegalStateException("Dispute is already resolved.");
