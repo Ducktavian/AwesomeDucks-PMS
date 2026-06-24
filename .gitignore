@@ -30,3 +30,6 @@ build/built-jar.properties
 # === OS Generated Files ===
 .DS_Store
 Thumbs.db
+
+# === Local database credentials (each dev keeps their own copy) ===
+src/main/resources/database.properties
