@@ -1,4 +1,4 @@
-package com.motorph.ui;
+package com.motorph.ui.dashboard;
 
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
@@ -30,12 +30,11 @@ import javax.swing.border.MatteBorder;
 
 import com.motorph.model.Role;
 import com.motorph.model.UserAccount;
-import com.motorph.ui.Admin.Admindashboard;
-import com.motorph.ui.IT.ITDashboard;
-import com.motorph.ui.IT.ITDisputeList;
-import com.motorph.ui.IT.ITUserAccountList;
-import com.motorph.ui.Login.Login;
-import com.motorph.ui.Settings.AccountSecurity;
+import com.motorph.ui.it.ITDashboard;
+import com.motorph.ui.it.ITDisputeList;
+import com.motorph.ui.it.ITUserAccountList;
+import com.motorph.ui.login.Login;
+import com.motorph.ui.settings.AccountSecurity;
 import com.motorph.util.Session;
 
 public class MainFrame extends JFrame {
@@ -148,7 +147,7 @@ public class MainFrame extends JFrame {
         roleCards.add(placeholderPanel("Finance"),  "Finance");
         roleCards.add(placeholderPanel("HR"),       "HR");
         roleCards.add(new ITDashboard(),            "IT");
-        roleCards.add(new Admindashboard(),         "Admin");
+        roleCards.add(placeholderPanel("Admin Dashboard"), "Admin");
 
         UserAccount user = Session.getCurrentUser();
         String defaultCard = (user != null) ? roleToCard(user.getRole()) : "Employee";
