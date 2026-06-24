@@ -18,7 +18,6 @@ import java.io.File;
 
 import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
-import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -29,11 +28,15 @@ import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.MatteBorder;
 
+import com.motorph.model.Role;
+import com.motorph.model.UserAccount;
 import com.motorph.ui.Admin.Admindashboard;
 import com.motorph.ui.IT.ITDashboard;
 import com.motorph.ui.IT.ITDisputeList;
 import com.motorph.ui.IT.ITUserAccountList;
+import com.motorph.ui.Login.Login;
 import com.motorph.ui.Settings.AccountSecurity;
+import com.motorph.util.Session;
 
 public class MainFrame extends JFrame {
 
@@ -44,10 +47,6 @@ public class MainFrame extends JFrame {
     private static final Color NAVY      = new Color(13,  36,  89);
     private static final Color MUTED     = new Color(120, 130, 150);
     private static final Color DIVIDER   = new Color(220, 225, 235);
-
-    private static final String[] ROLES = {
-        "Employee", "Finance", "HR", "IT", "Admin"
-    };
 
     private static final String[][] MAIN_NAV = {
         { "Dashboard",  "Dashboard-Icon.png"  },
@@ -126,6 +125,17 @@ public class MainFrame extends JFrame {
         setVisible(true);
     }
 
+    private String roleToCard(Role role) {
+        if (role == null) return "Employee";
+        return switch (role) {
+            case SYSTEM_ADMINISTRATOR -> "Admin";
+            case HR_MANAGER          -> "HR";
+            case PAYROLL_MANAGER     -> "Finance";
+            case DEPARTMENT_HEAD     -> "IT";
+            default                  -> "Employee";
+        };
+    }
+
     private JPanel buildDashboardPanel() {
         JPanel dashboard = new JPanel(new BorderLayout());
         dashboard.setBackground(Color.WHITE);
@@ -140,33 +150,27 @@ public class MainFrame extends JFrame {
         roleCards.add(new ITDashboard(),            "IT");
         roleCards.add(new Admindashboard(),         "Admin");
 
-        JComboBox<String> roleBox = new JComboBox<>(ROLES);
-        roleBox.setFont(new Font("SansSerif", Font.PLAIN, 12));
-        roleBox.setForeground(new Color(60, 70, 90));
-        roleBox.setBackground(Color.WHITE);
-        roleBox.setPreferredSize(new Dimension(110, 30));
-        roleBox.setSelectedItem("Admin");
-        roleLayout.show(roleCards, "Admin");
+        UserAccount user = Session.getCurrentUser();
+        String defaultCard = (user != null) ? roleToCard(user.getRole()) : "Employee";
+        roleLayout.show(roleCards, defaultCard);
 
-        roleBox.addActionListener(e -> {
-            String role = (String) roleBox.getSelectedItem();
-            if (role != null) {
-                roleLayout.show(roleCards, role);
-            }
-        });
-
-        dashboard.add(buildDashboardTopBar(roleBox), BorderLayout.NORTH);
+        dashboard.add(buildDashboardTopBar(), BorderLayout.NORTH);
         dashboard.add(roleCards, BorderLayout.CENTER);
         return dashboard;
     }
 
-    private JPanel buildDashboardTopBar(JComboBox<String> roleBox) {
+    private JPanel buildDashboardTopBar() {
         JPanel bar = new JPanel(new BorderLayout());
         bar.setBackground(Color.WHITE);
         bar.setBorder(new CompoundBorder(
             new MatteBorder(0, 0, 1, 0, DIVIDER),
             new EmptyBorder(10, 24, 10, 24)
         ));
+
+        UserAccount user = Session.getCurrentUser();
+        String displayName = (user != null) ? user.getUsername() : "Guest";
+        String displayRole = (user != null && user.getRole() != null)
+                ? user.getRole().getRoleName() : "";
 
         JPanel userChip = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         userChip.setOpaque(false);
@@ -175,12 +179,12 @@ public class MainFrame extends JFrame {
         nameBlock.setLayout(new BoxLayout(nameBlock, BoxLayout.Y_AXIS));
         nameBlock.setOpaque(false);
 
-        JLabel nameLbl = new JLabel("Name");
+        JLabel nameLbl = new JLabel(displayName);
         nameLbl.setFont(new Font("SansSerif", Font.BOLD, 13));
         nameLbl.setForeground(NAVY);
         nameLbl.setAlignmentX(Component.RIGHT_ALIGNMENT);
 
-        JLabel posLbl = new JLabel("Position");
+        JLabel posLbl = new JLabel(displayRole);
         posLbl.setFont(new Font("SansSerif", Font.PLAIN, 11));
         posLbl.setForeground(MUTED);
         posLbl.setAlignmentX(Component.RIGHT_ALIGNMENT);
@@ -205,7 +209,6 @@ public class MainFrame extends JFrame {
         userChip.add(nameBlock);
         userChip.add(avatar);
 
-        bar.add(roleBox,  BorderLayout.WEST);
         bar.add(userChip, BorderLayout.EAST);
         return bar;
     }
@@ -236,8 +239,10 @@ public class MainFrame extends JFrame {
         navPanel.setLayout(new BoxLayout(navPanel, BoxLayout.Y_AXIS));
         navPanel.setOpaque(false);
         navPanel.setBorder(new EmptyBorder(10, 0, 0, 0));
-        for (String[] item : MAIN_NAV)
+        for (String[] item : MAIN_NAV) {
+            if ("Users".equals(item[0]) && !isAdmin()) continue;
             navPanel.add(buildNavItem(item[0], item[1]));
+        }
 
         bottomNavPanel = new JPanel();
         bottomNavPanel.setLayout(new BoxLayout(bottomNavPanel, BoxLayout.Y_AXIS));
@@ -316,6 +321,12 @@ public class MainFrame extends JFrame {
                 if (!active[0]) textLbl.setForeground(TEXT_MUTED);
             }
             @Override public void mouseClicked(MouseEvent e) {
+                if ("Log Out".equals(label)) {
+                    Session.clear();
+                    dispose();
+                    SwingUtilities.invokeLater(() -> new Login(null).setVisible(true));
+                    return;
+                }
                 activeNav = label;
                 cardLayout.show(contentCards, label);
                 setTitle("MotorPH - " + label);
@@ -326,10 +337,17 @@ public class MainFrame extends JFrame {
         return item;
     }
 
+    private boolean isAdmin() {
+        UserAccount user = Session.getCurrentUser();
+        return user != null && user.getRole() == Role.SYSTEM_ADMINISTRATOR;
+    }
+
     private void rebuildNavPanels() {
         navPanel.removeAll();
-        for (String[] item : MAIN_NAV)
+        for (String[] item : MAIN_NAV) {
+            if ("Users".equals(item[0]) && !isAdmin()) continue;
             navPanel.add(buildNavItem(item[0], item[1]));
+        }
 
         bottomNavPanel.removeAll();
         for (String[] item : BOTTOM_NAV)

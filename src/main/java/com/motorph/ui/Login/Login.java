@@ -37,7 +37,11 @@ import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.border.AbstractBorder;
 
+import com.motorph.model.UserAccount;
+import com.motorph.service.AuthService;
 import com.motorph.ui.MainFrame;
+import com.motorph.util.AppContext;
+import com.motorph.util.Session;
 
 public class Login extends JDialog {
 
@@ -187,12 +191,15 @@ public class Login extends JDialog {
             return;
         }
 
-        if (username.equals("admin") && password.equals("admin123")) {
+        try {
+            AuthService authService = AppContext.getAuthService();
+            UserAccount user = authService.login(username, password);
+            Session.setCurrentUser(user);
             dispose();
             SwingUtilities.invokeLater(MainFrame::new);
-        } else {
+        } catch (Exception ex) {
             JOptionPane.showMessageDialog(this,
-                "Invalid username or password. Please try again.",
+                ex.getMessage(),
                 "Login Failed", JOptionPane.ERROR_MESSAGE);
             passwordField.setText("");
             passwordField.requestFocus();
