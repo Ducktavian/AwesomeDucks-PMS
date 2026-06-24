@@ -128,11 +128,11 @@ public class MainFrame extends JFrame {
     private String roleToCard(Role role) {
         if (role == null) return "Employee";
         return switch (role) {
-            case SYSTEM_ADMINISTRATOR -> "Admin";
-            case HR_MANAGER          -> "HR";
-            case PAYROLL_MANAGER     -> "Finance";
-            case DEPARTMENT_HEAD     -> "IT";
-            default                  -> "Employee";
+            case ADMIN    -> "Admin";
+            case HR       -> "HR";
+            case IT       -> "IT";
+            case FINANCE  -> "Finance";
+            default       -> "Employee";
         };
     }
 
@@ -339,7 +339,7 @@ public class MainFrame extends JFrame {
 
     private boolean isAdmin() {
         UserAccount user = Session.getCurrentUser();
-        return user != null && user.getRole() == Role.SYSTEM_ADMINISTRATOR;
+        return user != null && (user.getRole() == Role.ADMIN || user.getRole() == Role.IT);
     }
 
     private void rebuildNavPanels() {

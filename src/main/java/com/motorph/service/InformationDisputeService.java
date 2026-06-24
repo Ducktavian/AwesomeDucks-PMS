@@ -51,15 +51,15 @@ public class InformationDisputeService {
     }
 
    
-    // Marks a dispute as resolved. Only HR_MANAGER or SYSTEM_ADMINISTRATOR may do this.
+    // Marks a dispute as resolved. Only HR or Admin may do this.
     public void resolveDispute(InformationDispute dispute) {
         UserAccount reviewer = Session.getCurrentUser();
         if (reviewer == null) {
             throw new IllegalStateException("No active session.");
         }
         Role role = reviewer.getRole();
-        if (role != Role.HR_MANAGER && role != Role.SYSTEM_ADMINISTRATOR) {
-            throw new SecurityException("Only HR Manager or System Administrator can resolve disputes.");
+        if (role != Role.HR && role != Role.ADMIN) {
+            throw new SecurityException("Only HR or Admin can resolve disputes.");
         }
         if (dispute.getStatus() == DisputeStatus.RESOLVED) {
             throw new IllegalStateException("Dispute is already resolved.");

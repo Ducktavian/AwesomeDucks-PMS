@@ -2,10 +2,10 @@ package com.motorph.model;
 
 public enum Role {
 
-    SYSTEM_ADMINISTRATOR(1, "System Administrator"),
-    HR_MANAGER(2, "HR Manager"),
-    PAYROLL_MANAGER(3, "Payroll Manager"),
-    DEPARTMENT_HEAD(4, "Department Head"),
+    ADMIN(1, "Admin"),
+    HR(2, "HR"),
+    IT(3, "IT"),
+    FINANCE(4, "Finance"),
     EMPLOYEE(5, "Employee");
 
     private final int roleId;

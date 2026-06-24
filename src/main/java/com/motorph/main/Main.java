@@ -529,7 +529,7 @@ public class Main {
     private static void userMenu() {
         UserService svc = AppContext.getUserService();
         while (true) {
-            System.out.println("\n--- USER ACCOUNTS (SYSTEM_ADMINISTRATOR only) ---");
+            System.out.println("\n--- USER ACCOUNTS (IT / Admin only) ---");
             System.out.println("1. List all users");
             System.out.println("2. Find by user ID");
             System.out.println("3. Create user");
@@ -565,7 +565,7 @@ public class Main {
                         int empId = readInt("Employee ID: ");
                         String username = readString("Username: ");
                         String password = readString("Password: ");
-                        System.out.println("Role: 1=SYSTEM_ADMINISTRATOR 2=HR_MANAGER 3=PAYROLL_MANAGER 4=DEPARTMENT_HEAD 5=EMPLOYEE");
+                        System.out.println("Role: 1=Admin 2=HR 3=IT 4=Finance 5=Employee");
                         Role role = Role.fromId(readInt("Role: "));
                         svc.createUser(empId, username, password, role);
                         System.out.println("User created.");
@@ -577,7 +577,7 @@ public class Main {
                     }
                     case 5 -> {
                         int id = readInt("User ID: ");
-                        System.out.println("New role: 1=SYSTEM_ADMINISTRATOR 2=HR_MANAGER 3=PAYROLL_MANAGER 4=DEPARTMENT_HEAD 5=EMPLOYEE");
+                        System.out.println("New role: 1=Admin 2=HR 3=IT 4=Finance 5=Employee");
                         svc.changeRole(id, Role.fromId(readInt("Role: ")));
                         System.out.println("Role updated.");
                     }

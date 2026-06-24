@@ -17,14 +17,14 @@ public class UserService {
         this.userDAO = userAccountDAO;
     }
 
-    // Only SYSTEM_ADMINISTRATOR may manage user accounts.
+    // Only IT or Admin may manage user accounts.
     private void authorizeAdmin() {
         UserAccount current = Session.getCurrentUser();
         if (current == null) {
             throw new UnauthorizedException("No active session found.");
         }
-        if (current.getRole() != Role.SYSTEM_ADMINISTRATOR) {
-            throw new UnauthorizedException("Only a System Administrator can manage user accounts.");
+        if (current.getRole() != Role.IT && current.getRole() != Role.ADMIN) {
+            throw new UnauthorizedException("Only IT or Admin can manage user accounts.");
         }
     }
 
