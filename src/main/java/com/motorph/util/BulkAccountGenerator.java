@@ -83,7 +83,7 @@ public class BulkAccountGenerator {
              * and resets all passwords.
              */
             fixExistingAccountRoles();
-            resetAllPasswordsByEmployeeInitial();
+            // resetAllPasswordsByEmployeeInitial();
 
             /*
              * AFTER THIS WORKS:
