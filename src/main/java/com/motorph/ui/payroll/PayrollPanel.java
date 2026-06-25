@@ -1,340 +1,336 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.motorph.ui.payroll;
 
-/**
- *
- * @author Admin
- */
-
-import javax.swing.*;
-import javax.swing.border.EmptyBorder;
 import java.awt.*;
-import java.awt.geom.Arc2D;
-import java.awt.geom.Line2D;
-import java.awt.geom.RoundRectangle2D;
+import java.awt.event.*;
+import java.util.ArrayList;
+import java.util.List;
+import javax.swing.*;
+import javax.swing.border.*;
+import javax.swing.table.*;
 
-public final class PayrollPanel extends JPanel {
+public class PayrollPanel extends JPanel {
 
-    private static final int PAGE_WIDTH = 1023;
-    private static final int PAGE_HEIGHT = 800;
+    private final Color NAVY = new Color(5, 24, 108);
+    private final Color LIGHT_GRAY_ROW = new Color(245, 245, 245);
 
-    private static final Color NAVY = new Color(2, 19, 98);
-    private static final Color WHITE = Color.WHITE;
-    private static final Color BLACK = new Color(10, 10, 10);
-    private static final Color MUTED_TEXT = new Color(145, 145, 145);
-    private static final Color BORDER = new Color(214, 214, 214);
-    private static final Color LIGHT_BORDER = new Color(232, 232, 232);
-    private static final Color PLACEHOLDER = new Color(207, 207, 207);
-    private static final Color TABLE_ROW_GRAY = new Color(217, 217, 217);
+    private JTextField searchField;
+    private JTable payrollTable;
+    private DefaultTableModel tableModel;
+    private TableRowSorter<DefaultTableModel> sorter;
+
+    private int sortedColumn = -1;
+    private SortOrder currentSortOrder = SortOrder.UNSORTED;
 
     public PayrollPanel() {
-        setLayout(null);
-        setOpaque(true);
-        setBackground(WHITE);
-        setPreferredSize(new Dimension(PAGE_WIDTH, PAGE_HEIGHT));
+        setLayout(new BorderLayout());
+        setBackground(Color.WHITE);
 
-        buildSearchField();
-        buildProfileHeader();
-        buildRoleDropdown();
-        buildActionButtons();
-        buildTableHeader();
-        buildTableRows();
+        add(createTopBar(), BorderLayout.NORTH);
+        add(createContentPanel(), BorderLayout.CENTER);
     }
 
-    private void buildSearchField() {
-        SearchField searchField = new SearchField();
-        searchField.setBounds(79, 98, 304, 38);
-        add(searchField);
+    private JPanel createTopBar() {
+        JPanel topBar = new JPanel(new BorderLayout());
+        topBar.setPreferredSize(new Dimension(0, 80));
+        topBar.setBackground(Color.WHITE);
+        topBar.setBorder(new MatteBorder(0, 0, 1, 0, new Color(190, 190, 190)));
+
+        JPanel profile = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 16));
+        profile.setOpaque(false);
+        profile.setBorder(new EmptyBorder(0, 0, 0, 24));
+
+        JPanel textPanel = new JPanel();
+        textPanel.setOpaque(false);
+        textPanel.setLayout(new BoxLayout(textPanel, BoxLayout.Y_AXIS));
+
+        JLabel name = new JLabel("Name");
+        name.setForeground(NAVY);
+        name.setFont(new Font("SansSerif", Font.BOLD, 16));
+        name.setAlignmentX(Component.RIGHT_ALIGNMENT);
+
+        JLabel position = new JLabel("Position");
+        position.setForeground(Color.GRAY);
+        position.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        position.setAlignmentX(Component.RIGHT_ALIGNMENT);
+
+        textPanel.add(name);
+        textPanel.add(position);
+
+        JLabel circle = new JLabel();
+        circle.setPreferredSize(new Dimension(47, 47));
+        circle.setIcon(new CircleIcon(NAVY, 47));
+
+        profile.add(textPanel);
+        profile.add(circle);
+
+        topBar.add(profile, BorderLayout.EAST);
+        return topBar;
     }
 
-    private void buildProfileHeader() {
-        JLabel name = createLabel(
-                "Name",
-                750, 45, 128, 24,
-                headerFont(18, Font.BOLD),
-                NAVY,
-                SwingConstants.RIGHT
-        );
-        add(name);
+    private JPanel createContentPanel() {
+        JPanel content = new JPanel(new BorderLayout());
+        content.setBackground(Color.WHITE);
+        content.setBorder(new EmptyBorder(18, 78, 35, 78));
 
-        JLabel position = createLabel(
-                "Position",
-                750, 70, 128, 22,
-                textFont(16, Font.PLAIN),
-                MUTED_TEXT,
-                SwingConstants.RIGHT
-        );
-        add(position);
+        JPanel topControls = new JPanel(new BorderLayout());
+        topControls.setOpaque(false);
+        topControls.setPreferredSize(new Dimension(0, 115));
 
-        AvatarCircle avatar = new AvatarCircle();
-        avatar.setBounds(887, 40, 56, 56);
-        add(avatar);
+        searchField = new JTextField("Search");
+        searchField.setPreferredSize(new Dimension(305, 39));
+        searchField.setFont(new Font("SansSerif", Font.PLAIN, 17));
+        searchField.setForeground(new Color(180, 180, 180));
+        searchField.setBorder(new CompoundBorder(
+                new LineBorder(new Color(210, 210, 210), 1, true),
+                new EmptyBorder(0, 12, 0, 12)
+        ));
+
+        JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        searchPanel.setOpaque(false);
+        searchPanel.add(searchField);
+
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 62));
+        buttonPanel.setOpaque(false);
+
+        buttonPanel.add(button("+  Add"));
+        buttonPanel.add(button("✎  Update"));
+        buttonPanel.add(button("🗑  Delete"));
+        buttonPanel.add(button("⟳  Refresh"));
+
+        topControls.add(searchPanel, BorderLayout.WEST);
+        topControls.add(buttonPanel, BorderLayout.EAST);
+
+        createTable();
+
+        JPanel tablePanel = new JPanel(new BorderLayout());
+        tablePanel.setOpaque(false);
+
+        JScrollPane scrollPane = new JScrollPane(payrollTable);
+        scrollPane.setColumnHeaderView(null);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+        scrollPane.setViewportBorder(BorderFactory.createEmptyBorder());
+        scrollPane.getViewport().setBackground(Color.WHITE);
+        scrollPane.setBackground(Color.WHITE);
+
+        tablePanel.add(payrollTable.getTableHeader(), BorderLayout.NORTH);
+        tablePanel.add(scrollPane, BorderLayout.CENTER);
+
+        content.add(topControls, BorderLayout.NORTH);
+        content.add(tablePanel, BorderLayout.CENTER);
+
+        return content;
     }
 
-    private void buildRoleDropdown() {
-        RoleDropdown dropdown = new RoleDropdown();
-        dropdown.setBounds(79, 159, 107, 36);
-        add(dropdown);
+    private JButton button(String text) {
+        JButton btn = new JButton(text);
+        btn.setPreferredSize(new Dimension(112, 37));
+        btn.setBackground(NAVY);
+        btn.setForeground(Color.WHITE);
+        btn.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        btn.setFocusPainted(false);
+        btn.setBorderPainted(false);
+        btn.setMargin(new Insets(0, 8, 0, 8));
+        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        return btn;
     }
 
-    private void buildActionButtons() {
-        IconButton addButton = new IconButton("Add", ButtonIcon.PLUS);
-        addButton.setBounds(576, 159, 88, 36);
-        add(addButton);
+    private void createTable() {
+        String[] columns = {
+            "Payslip ID", "Employee ID", "Start Date", "End Date",
+            "Gross Pay", "Deduction", "Allowance", "Net Pay"
+        };
 
-        IconButton updateButton = new IconButton("Update", ButtonIcon.PENCIL);
-        updateButton.setBounds(668, 159, 88, 36);
-        add(updateButton);
-
-        IconButton deleteButton = new IconButton("Delete", ButtonIcon.TRASH);
-        deleteButton.setBounds(761, 159, 88, 36);
-        add(deleteButton);
-
-        IconButton refreshButton = new IconButton("Refresh", ButtonIcon.REFRESH);
-        refreshButton.setBounds(854, 159, 89, 36);
-        add(refreshButton);
-    }
-
-    private void buildTableHeader() {
-        add(createLabel("Payslip ID", 81, 216, 96, 25, textFont(13, Font.BOLD), BLACK, SwingConstants.CENTER));
-        add(createLabel("Employee ID", 190, 216, 116, 25, textFont(13, Font.BOLD), BLACK, SwingConstants.CENTER));
-        add(createLabel("Start Date", 312, 216, 98, 25, textFont(13, Font.BOLD), BLACK, SwingConstants.CENTER));
-        add(createLabel("End Date", 415, 216, 94, 25, textFont(13, Font.BOLD), BLACK, SwingConstants.CENTER));
-        add(createLabel("Gross Pay", 519, 216, 88, 25, textFont(13, Font.BOLD), BLACK, SwingConstants.CENTER));
-        add(createLabel("Deduction", 620, 216, 98, 25, textFont(13, Font.BOLD), BLACK, SwingConstants.CENTER));
-        add(createLabel("Allowance", 724, 216, 109, 25, textFont(13, Font.BOLD), BLACK, SwingConstants.CENTER));
-        add(createLabel("Net Pay", 839, 216, 78, 25, textFont(13, Font.BOLD), BLACK, SwingConstants.CENTER));
-
-        JPanel divider = new JPanel();
-        divider.setBackground(BLACK);
-        divider.setBounds(81, 253, 859, 4);
-        add(divider);
-    }
-
-    private void buildTableRows() {
-        addRowPlaceholder(81, 309, 862, 50);
-        addRowPlaceholder(81, 412, 862, 57);
-        addRowPlaceholder(81, 521, 862, 50);
-        addRowPlaceholder(81, 628, 862, 49);
-    }
-
-    private void addRowPlaceholder(int x, int y, int width, int height) {
-        JPanel row = new JPanel();
-        row.setOpaque(true);
-        row.setBackground(TABLE_ROW_GRAY);
-        row.setBounds(x, y, width, height);
-        add(row);
-    }
-
-    private JLabel createLabel(
-            String text,
-            int x,
-            int y,
-            int width,
-            int height,
-            Font font,
-            Color color,
-            int alignment
-    ) {
-        JLabel label = new JLabel(text);
-        label.setBounds(x, y, width, height);
-        label.setFont(font);
-        label.setForeground(color);
-        label.setHorizontalAlignment(alignment);
-        label.setVerticalAlignment(SwingConstants.CENTER);
-        label.setOpaque(false);
-        return label;
-    }
-
-    private static Font headerFont(int size, int style) {
-        return new Font("Segoe UI", style, size);
-    }
-
-    private static Font textFont(int size, int style) {
-        return new Font("Open Sans", style, size);
-    }
-
-    private enum ButtonIcon {
-        PLUS,
-        PENCIL,
-        TRASH,
-        REFRESH
-    }
-
-    private static final class SearchField extends JTextField {
-
-        private SearchField() {
-            setOpaque(false);
-            setBorder(new EmptyBorder(0, 37, 0, 10));
-            setFont(textFont(20, Font.PLAIN));
-            setForeground(BLACK);
-            setCaretColor(BLACK);
-        }
-
-        @Override
-        protected void paintComponent(Graphics g) {
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-
-            g2.setColor(WHITE);
-            g2.fill(new RoundRectangle2D.Double(0, 0, getWidth() - 1, getHeight() - 1, 6, 6));
-
-            g2.setColor(BORDER);
-            g2.draw(new RoundRectangle2D.Double(0, 0, getWidth() - 1, getHeight() - 1, 6, 6));
-
-            drawSearchIcon(g2);
-
-            g2.dispose();
-
-            super.paintComponent(g);
-
-            if (getText().isEmpty()) {
-                Graphics2D placeholderGraphics = (Graphics2D) g.create();
-                placeholderGraphics.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-                placeholderGraphics.setFont(textFont(20, Font.PLAIN));
-                placeholderGraphics.setColor(PLACEHOLDER);
-                placeholderGraphics.drawString("Search", 37, 26);
-                placeholderGraphics.dispose();
+        tableModel = new DefaultTableModel(columns, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
             }
-        }
+        };
 
-        private void drawSearchIcon(Graphics2D g2) {
-            g2.setColor(PLACEHOLDER);
-            g2.setStroke(new BasicStroke(1.7f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        payrollTable = new JTable(tableModel);
 
-            g2.drawOval(12, 11, 13, 13);
-            g2.drawLine(23, 23, 30, 30);
-        }
+        sorter = new TableRowSorter<>(tableModel);
+        payrollTable.setRowSorter(sorter);
+
+        payrollTable.setRowHeight(52);
+        payrollTable.setShowGrid(false);
+        payrollTable.setIntercellSpacing(new Dimension(0, 0));
+        payrollTable.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        payrollTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        payrollTable.setFillsViewportHeight(true);
+        payrollTable.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
+        payrollTable.setBackground(Color.WHITE);
+        payrollTable.setBorder(BorderFactory.createEmptyBorder());
+
+        styleHeader();
+        styleCells();
+
+        addSampleRows();
     }
 
-    private static final class RoleDropdown extends JComponent {
+    private void styleHeader() {
+        JTableHeader header = payrollTable.getTableHeader();
 
-        private RoleDropdown() {
-            setOpaque(false);
-        }
+        header.setPreferredSize(new Dimension(header.getPreferredSize().width, 58));
+        header.setReorderingAllowed(false);
+        header.setResizingAllowed(false);
+        header.setBackground(Color.WHITE);
+        header.setForeground(Color.BLACK);
+        header.setFont(new Font("SansSerif", Font.BOLD, 13));
 
-        @Override
-        protected void paintComponent(Graphics g) {
-            super.paintComponent(g);
+        // This creates one continuous black line under the whole table header.
+        header.setBorder(new MatteBorder(0, 0, 3, 0, Color.BLACK));
+        header.setDefaultRenderer(new HeaderFilterRenderer());
 
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+        header.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                int viewColumn = header.columnAtPoint(e.getPoint());
 
-            g2.setColor(WHITE);
-            g2.fillRect(0, 0, getWidth(), getHeight());
+                if (viewColumn < 0) {
+                    return;
+                }
 
-            g2.setColor(LIGHT_BORDER);
-            g2.drawRect(0, 0, getWidth() - 1, getHeight() - 1);
-
-            g2.setFont(textFont(13, Font.PLAIN));
-            g2.setColor(PLACEHOLDER);
-            g2.drawString("Finance", 11, 23);
-
-            g2.setStroke(new BasicStroke(1.6f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-            g2.drawLine(83, 14, 90, 21);
-            g2.drawLine(97, 14, 90, 21);
-
-            g2.dispose();
-        }
-    }
-
-    private static final class AvatarCircle extends JComponent {
-
-        private AvatarCircle() {
-            setOpaque(false);
-        }
-
-        @Override
-        protected void paintComponent(Graphics g) {
-            super.paintComponent(g);
-
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-            g2.setColor(NAVY);
-            g2.fillOval(0, 0, getWidth(), getHeight());
-
-            g2.dispose();
-        }
-    }
-
-    private static final class IconButton extends JButton {
-
-        private final String label;
-        private final ButtonIcon icon;
-
-        private IconButton(String label, ButtonIcon icon) {
-            this.label = label;
-            this.icon = icon;
-
-            setBorderPainted(false);
-            setContentAreaFilled(false);
-            setFocusPainted(false);
-            setOpaque(false);
-            setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-            setFont(textFont(13, Font.PLAIN));
-        }
-
-        @Override
-        protected void paintComponent(Graphics g) {
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-
-            g2.setColor(NAVY);
-            g2.fillRect(0, 0, getWidth(), getHeight());
-
-            g2.setColor(WHITE);
-            g2.setStroke(new BasicStroke(1.25f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-
-            drawIcon(g2, icon, 18, 18);
-
-            g2.setFont(textFont(13, Font.PLAIN));
-            FontMetrics metrics = g2.getFontMetrics();
-
-            int textX = icon == ButtonIcon.PLUS ? 48 : 39;
-            int textY = (getHeight() + metrics.getAscent() - metrics.getDescent()) / 2;
-
-            g2.drawString(label, textX, textY);
-
-            g2.dispose();
-        }
-
-        private void drawIcon(Graphics2D g2, ButtonIcon icon, int centerX, int centerY) {
-            switch (icon) {
-                case PLUS:
-                    g2.drawLine(centerX, centerY - 7, centerX, centerY + 7);
-                    g2.drawLine(centerX - 7, centerY, centerX + 7, centerY);
-                    break;
-
-                case PENCIL:
-                    g2.drawLine(centerX - 6, centerY + 6, centerX + 6, centerY - 6);
-                    g2.drawLine(centerX - 4, centerY + 8, centerX - 8, centerY + 9);
-                    g2.drawLine(centerX - 8, centerY + 9, centerX - 7, centerY + 5);
-                    g2.drawLine(centerX + 3, centerY - 8, centerX + 8, centerY - 3);
-                    g2.drawLine(centerX + 6, centerY - 10, centerX + 10, centerY - 6);
-                    break;
-
-                case TRASH:
-                    g2.drawRect(centerX - 6, centerY - 3, 12, 12);
-                    g2.drawLine(centerX - 8, centerY - 6, centerX + 8, centerY - 6);
-                    g2.drawLine(centerX - 3, centerY - 9, centerX + 3, centerY - 9);
-                    g2.drawLine(centerX - 3, centerY, centerX - 3, centerY + 7);
-                    g2.drawLine(centerX, centerY, centerX, centerY + 7);
-                    g2.drawLine(centerX + 3, centerY, centerX + 3, centerY + 7);
-                    break;
-
-                case REFRESH:
-                    g2.draw(new Arc2D.Double(centerX - 7, centerY - 7, 14, 14, 40, 285, Arc2D.OPEN));
-                    g2.drawLine(centerX + 5, centerY - 8, centerX + 9, centerY - 8);
-                    g2.drawLine(centerX + 9, centerY - 8, centerX + 8, centerY - 4);
-                    break;
+                int modelColumn = payrollTable.convertColumnIndexToModel(viewColumn);
+                toggleColumnSort(modelColumn);
             }
+        });
+    }
+
+    private void toggleColumnSort(int column) {
+        if (sortedColumn == column && currentSortOrder == SortOrder.ASCENDING) {
+            currentSortOrder = SortOrder.DESCENDING;
+        } else {
+            currentSortOrder = SortOrder.ASCENDING;
+        }
+
+        sortedColumn = column;
+
+        List<RowSorter.SortKey> sortKeys = new ArrayList<>();
+        sortKeys.add(new RowSorter.SortKey(column, currentSortOrder));
+        sorter.setSortKeys(sortKeys);
+        sorter.sort();
+
+        payrollTable.getTableHeader().repaint();
+    }
+
+    private void styleCells() {
+        DefaultTableCellRenderer renderer = new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(
+                    JTable table,
+                    Object value,
+                    boolean isSelected,
+                    boolean hasFocus,
+                    int row,
+                    int column) {
+
+                JLabel label = (JLabel) super.getTableCellRendererComponent(
+                        table, value, isSelected, hasFocus, row, column);
+
+                Color bg = isSelected
+                        ? new Color(200, 210, 245)
+                        : row % 2 == 0 ? Color.WHITE : LIGHT_GRAY_ROW;
+
+                label.setText(value == null ? "" : value.toString());
+                label.setOpaque(true);
+                label.setBackground(bg);
+                label.setForeground(Color.BLACK);
+                label.setBorder(new EmptyBorder(0, 8, 0, 8));
+                label.setHorizontalAlignment(SwingConstants.CENTER);
+                label.setFont(new Font("SansSerif", Font.PLAIN, 13));
+
+                return label;
+            }
+        };
+
+        for (int i = 0; i < payrollTable.getColumnCount(); i++) {
+            payrollTable.getColumnModel().getColumn(i).setCellRenderer(renderer);
+        }
+    }
+
+    private void addSampleRows() {
+        tableModel.addRow(new Object[]{"PS-001", "10001", "06/01/2026", "06/15/2026", "25000", "3000", "1500", "23500"});
+        tableModel.addRow(new Object[]{"PS-002", "10002", "06/01/2026", "06/15/2026", "22000", "2500", "1200", "20700"});
+        tableModel.addRow(new Object[]{"PS-003", "10003", "06/01/2026", "06/15/2026", "28000", "3500", "1600", "26100"});
+        tableModel.addRow(new Object[]{"PS-004", "10004", "06/01/2026", "06/15/2026", "20000", "2200", "1000", "18800"});
+    }
+
+    private class HeaderFilterRenderer extends JPanel implements TableCellRenderer {
+
+        private final JLabel titleLabel;
+        private final JLabel filterLabel;
+
+        HeaderFilterRenderer() {
+            setLayout(new BorderLayout(6, 0));
+            setOpaque(true);
+            setBackground(Color.WHITE);
+            setBorder(new EmptyBorder(0, 18, 10, 18));
+
+            titleLabel = new JLabel();
+            titleLabel.setFont(new Font("SansSerif", Font.BOLD, 13));
+            titleLabel.setForeground(Color.BLACK);
+
+            filterLabel = new JLabel("⇅");
+            filterLabel.setFont(new Font("SansSerif", Font.BOLD, 12));
+            filterLabel.setForeground(new Color(130, 130, 130));
+            filterLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+
+            add(titleLabel, BorderLayout.CENTER);
+            add(filterLabel, BorderLayout.EAST);
+        }
+
+        @Override
+        public Component getTableCellRendererComponent(
+                JTable table,
+                Object value,
+                boolean isSelected,
+                boolean hasFocus,
+                int row,
+                int column) {
+
+            int modelColumn = table.convertColumnIndexToModel(column);
+
+            titleLabel.setText(value == null ? "" : value.toString());
+
+            if (modelColumn == sortedColumn) {
+                filterLabel.setText(currentSortOrder == SortOrder.ASCENDING ? "▲" : "▼");
+                filterLabel.setForeground(NAVY);
+            } else {
+                filterLabel.setText("⇅");
+                filterLabel.setForeground(new Color(130, 130, 130));
+            }
+
+            return this;
+        }
+    }
+
+    private static class CircleIcon implements Icon {
+        private final Color color;
+        private final int size;
+
+        public CircleIcon(Color color, int size) {
+            this.color = color;
+            this.size = size;
+        }
+
+        @Override
+        public void paintIcon(Component c, Graphics g, int x, int y) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setColor(color);
+            g2.fillOval(x, y, size, size);
+            g2.dispose();
+        }
+
+        @Override
+        public int getIconWidth() {
+            return size;
+        }
+
+        @Override
+        public int getIconHeight() {
+            return size;
         }
     }
 }

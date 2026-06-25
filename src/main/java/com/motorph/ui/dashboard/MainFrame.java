@@ -27,6 +27,7 @@ import javax.swing.border.EmptyBorder;
 import com.motorph.model.Role;
 import com.motorph.model.UserAccount;
 import com.motorph.ui.employee.EmployeePanel;
+import com.motorph.ui.payroll.PayrollPanel;
 import com.motorph.ui.it.ITDashboard;
 import com.motorph.ui.it.ITDisputeList;
 import com.motorph.ui.it.ITUserAccountList;
@@ -35,6 +36,8 @@ import com.motorph.ui.settings.AccountSecurity;
 import com.motorph.util.Session;
 
 public class MainFrame extends JFrame {
+
+    private PayrollPanel payrollPanel;
 
     public static final Color SIDEBAR_BG = new Color(5, 22, 103);
     public static final Color ACCENT_W = Color.WHITE;
@@ -106,9 +109,11 @@ public class MainFrame extends JFrame {
         contentCards = new JPanel(cardLayout);
         contentCards.setBackground(Color.WHITE);
 
+        payrollPanel = new PayrollPanel();
+
         contentCards.add(buildDashboardPanel(), "Dashboard");
         contentCards.add(new EmployeePanel(), "Employees");
-        contentCards.add(placeholderPanel("Payroll"), "Payroll");
+        contentCards.add(payrollPanel, "Payroll");
         contentCards.add(placeholderPanel("Requests"), "Requests");
         contentCards.add(placeholderPanel("Attendance"), "Attendance");
         contentCards.add(new ITUserAccountList(), "Users");
@@ -220,10 +225,7 @@ public class MainFrame extends JFrame {
                     Graphics2D g2 = (Graphics2D) g.create();
                     g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                     g2.setColor(new Color(255, 255, 255, 32));
-
-                    // Wider highlight
                     g2.fillRoundRect(18, 2, getWidth() - 36, getHeight() - 4, 7, 7);
-
                     g2.dispose();
                 }
             }

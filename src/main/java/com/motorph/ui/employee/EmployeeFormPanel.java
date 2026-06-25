@@ -1,8 +1,13 @@
 package com.motorph.ui.employee;
 
 import com.motorph.model.Employee;
+import com.motorph.service.EmployeeService;
+import com.motorph.util.AppContext;
+
 import java.awt.*;
 import java.awt.event.*;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import javax.swing.*;
 import javax.swing.border.*;
 
@@ -13,6 +18,7 @@ public class EmployeeFormPanel extends JPanel {
     private static final String FONT = "Segoe UI";
 
     private final Runnable onBack;
+    private final EmployeeService employeeService = AppContext.getEmployeeService();
 
     private boolean updateMode = false;
     private Employee selectedEmployee;
@@ -27,10 +33,8 @@ public class EmployeeFormPanel extends JPanel {
 
     public EmployeeFormPanel(Runnable onBack) {
         this.onBack = onBack;
-
         setLayout(new BorderLayout());
         setBackground(Color.WHITE);
-
         add(buildTopBar(), BorderLayout.NORTH);
         add(createMainContent(), BorderLayout.CENTER);
     }
@@ -124,6 +128,7 @@ public class EmployeeFormPanel extends JPanel {
         submit.setBorderPainted(false);
         submit.setFont(new Font(FONT, Font.PLAIN, 14));
         submit.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        submit.addActionListener(e -> saveEmployee());
         main.add(submit);
 
         return main;
@@ -205,6 +210,67 @@ public class EmployeeFormPanel extends JPanel {
         }
     }
 
+    private void saveEmployee() {
+        try {
+            Employee employee = buildEmployeeFromForm();
+
+            if (updateMode) {
+                employeeService.updateEmployee(employee);
+                JOptionPane.showMessageDialog(this, "Employee updated successfully.");
+            } else {
+                employeeService.addEmployee(employee);
+                JOptionPane.showMessageDialog(this, "Employee added successfully.");
+            }
+
+            if (onBack != null) onBack.run();
+
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Failed to save employee:\n" + ex.getMessage(),
+                    "Save Error",
+                    JOptionPane.ERROR_MESSAGE
+            );
+        }
+    }
+
+    private Employee buildEmployeeFromForm() {
+        Employee employee = new Employee();
+
+        employee.setEmployeeId(getValue(employeeIdField));
+        employee.setFirstName(getValue(firstNameField));
+        employee.setLastName(getValue(lastNameField));
+        employee.setDepartment(getValue(departmentField));
+        employee.setPosition(getValue(positionField));
+        employee.setImmediateSupervisor(getValue(supervisorField));
+        employee.setStatus(getValue(statusField));
+
+        employee.setGender(getValue(genderField));
+        employee.setBirthday(parseDate(getValue(birthdateField)));
+        employee.setPhoneNumber(getValue(cellphoneField));
+        employee.setEmail(getValue(emailField));
+        employee.setAddress(getValue(addressField));
+
+        employee.setSSSNumber(getValue(sssField));
+        employee.setPhilhealthNumber(getValue(philhealthField));
+        employee.setPagIbigNumber(getValue(pagibigField));
+        employee.setTIN(getValue(tinField));
+
+        employee.setBasicSalary(parseDouble(getValue(basicSalaryField)));
+        employee.setRiceSubsidy(parseDouble(getValue(riceSubsidyField)));
+        employee.setPhoneAllowance(parseDouble(getValue(phoneAllowanceField)));
+        employee.setClothingAllowance(parseDouble(getValue(clothingAllowanceField)));
+        employee.setHourlyRate(parseDouble(getValue(hourlyRateField)));
+
+        if (updateMode && selectedEmployee != null) {
+            employee.setPositionId(selectedEmployee.getPositionId());
+            employee.setImmediateSupervisorId(selectedEmployee.getImmediateSupervisorId());
+            employee.setEmploymentStatusId(selectedEmployee.getEmploymentStatusId());
+        }
+
+        return employee;
+    }
+
     public void setAddMode() {
         updateMode = false;
         selectedEmployee = null;
@@ -232,10 +298,10 @@ public class EmployeeFormPanel extends JPanel {
         statusField.setText(safe(emp.getStatus()));
 
         genderField.setText(safe(emp.getGender()));
-        birthdateField.setText(String.valueOf(emp.getBirthday()));
+        birthdateField.setText(emp.getBirthday() == null ? "" : emp.getBirthday().format(DateTimeFormatter.ofPattern("MM-dd-yyyy")));
         cellphoneField.setText(safe(emp.getPhoneNumber()));
         telephoneField.setText("");
-        emailField.setText("");
+        emailField.setText(safe(emp.getEmail()));
         addressField.setText(safe(emp.getAddress()));
 
         sssField.setText(safe(emp.getSSSNumber()));
@@ -251,6 +317,33 @@ public class EmployeeFormPanel extends JPanel {
         clothingAllowanceField.setText(String.valueOf(emp.getClothingAllowance()));
 
         setAllFieldsBlack();
+    }
+
+    private String getValue(JTextField field) {
+        String text = field.getText().trim();
+        String placeholder = (String) field.getClientProperty("placeholder");
+
+        if (placeholder != null && text.equals(placeholder)) {
+            return "";
+        }
+
+        return text;
+    }
+
+    private LocalDate parseDate(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+
+        return LocalDate.parse(value, DateTimeFormatter.ofPattern("MM-dd-yyyy"));
+    }
+
+    private double parseDouble(String value) {
+        if (value == null || value.isBlank()) {
+            return 0.0;
+        }
+
+        return Double.parseDouble(value.replace(",", ""));
     }
 
     private void clearFields() {

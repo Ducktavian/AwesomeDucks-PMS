@@ -430,7 +430,35 @@ public class EmployeePanel extends JPanel {
             return;
         }
 
-        JOptionPane.showMessageDialog(this, "Delete employee action here.");
+        int modelRow = employeeTable.convertRowIndexToModel(selectedRow);
+        String employeeId = tableModel.getValueAt(modelRow, 0).toString();
+
+        int confirm = JOptionPane.showConfirmDialog(
+                this,
+                "Are you sure you want to delete employee " + employeeId + "?",
+                "Confirm Delete",
+                JOptionPane.YES_NO_OPTION
+        );
+
+        if (confirm != JOptionPane.YES_OPTION) {
+            return;
+        }
+
+        try {
+            employeeService.deleteEmployee(employeeId);
+
+            JOptionPane.showMessageDialog(this, "Employee deleted successfully.");
+
+            refreshTable();
+
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Failed to delete employee:\n" + ex.getMessage(),
+                    "Delete Error",
+                    JOptionPane.ERROR_MESSAGE
+            );
+        }
     }
 
     private class HeaderFilterRenderer extends JPanel implements TableCellRenderer {

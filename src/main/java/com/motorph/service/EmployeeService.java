@@ -52,6 +52,7 @@ public class EmployeeService {
         authorizeHR();
         employeeDAO.delete(employeeId);
     }
+    
 
     private void validateEmployee(Employee employee) {
         if (employee.getFirstName() == null || employee.getFirstName().isBlank()) {
