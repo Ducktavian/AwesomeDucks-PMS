@@ -1,260 +1,191 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.motorph.ui.dashboard;
 
-/**
- *
- * @author Rhynne Gracelle
- */
-
 import javax.swing.*;
-import javax.swing.border.EmptyBorder;
-import javax.swing.plaf.basic.BasicComboBoxUI;
 import java.awt.*;
-import java.awt.geom.Ellipse2D;
-import java.awt.geom.Path2D;
+import java.awt.geom.*;
 import java.util.Objects;
 
 public class DashboardPanel extends JPanel {
 
-    private static final int PANEL_WIDTH = 1023;
-    private static final int PANEL_HEIGHT = 800;
-
-    private static final Color NAVY = new Color(2, 19, 98);
+    private static final Color NAVY = new Color(5, 22, 103);
     private static final Color WHITE = Color.WHITE;
-    private static final Color SOFT_GRAY = new Color(216, 216, 216);
-    private static final Color FIELD_BORDER = new Color(235, 235, 235);
-    private static final Color FIELD_TEXT = new Color(205, 205, 205);
-    private static final Color BLACK_TEXT = new Color(8, 8, 8);
-    private static final Color MUTED_TEXT = new Color(150, 150, 150);
-    private static final Color GREEN = new Color(0, 191, 99);
-    private static final Color RED = new Color(255, 87, 87);
+    private static final Color MUTED = new Color(150, 150, 150);
+    private static final Color GREEN = new Color(0, 185, 105);
+    private static final Color RED = new Color(255, 82, 82);
 
-    private static final Font FONT_REGULAR = new Font("Segoe UI", Font.PLAIN, 14);
-    private static final Font FONT_SEMIBOLD = new Font("Segoe UI", Font.BOLD, 13);
-    private static final Font FONT_BOLD_16 = new Font("Segoe UI", Font.BOLD, 16);
-    private static final Font FONT_CARD_NUMBER = new Font("Segoe UI", Font.BOLD, 50);
-    private static final Font FONT_QUARTER_NUMBER = new Font("Segoe UI", Font.BOLD, 50);
+    private JComboBox<String> employeeDropdown;
+    private JLabel nameLabel;
+    private JLabel positionLabel;
+    private Circle avatar;
+
+    private MetricCard totalEmployeesCard;
+    private MetricCard ongoingQuarterCard;
+    private MetricCard upcomingQuarterCard;
+
+    private JLabel financialTitle;
+    private LegendDot revenueDot;
+    private JLabel revenueLabel;
+    private LegendDot expenseDot;
+    private JLabel expenseLabel;
+    private FinancialChart chart;
 
     public DashboardPanel() {
         setLayout(null);
-        setPreferredSize(new Dimension(PANEL_WIDTH, PANEL_HEIGHT));
-        setMinimumSize(new Dimension(PANEL_WIDTH, PANEL_HEIGHT));
         setBackground(WHITE);
-        setOpaque(true);
 
-        addEmployeeDropdown();
-        addProfilePreview();
-        addMetricCards();
-        addFinancialOverview();
+        buildComponents();
     }
 
-    private void addEmployeeDropdown() {
-        JComboBox<String> employeeDropdown = new JComboBox<>(new String[]{"Employee"});
-        employeeDropdown.setBounds(57, 108, 108, 35);
-        employeeDropdown.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        employeeDropdown.setForeground(FIELD_TEXT);
+    private void buildComponents() {
+        employeeDropdown = new JComboBox<>(new String[]{"Employee"});
+        employeeDropdown.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        employeeDropdown.setForeground(new Color(150, 150, 150));
         employeeDropdown.setBackground(WHITE);
         employeeDropdown.setFocusable(false);
-        employeeDropdown.setBorder(BorderFactory.createLineBorder(FIELD_BORDER, 1));
-        employeeDropdown.setOpaque(true);
-
-        employeeDropdown.setUI(new BasicComboBoxUI() {
-            @Override
-            protected JButton createArrowButton() {
-                JButton button = new JButton("⌄");
-                button.setFont(new Font("Segoe UI", Font.PLAIN, 18));
-                button.setForeground(new Color(180, 180, 180));
-                button.setBackground(WHITE);
-                button.setBorder(new EmptyBorder(0, 0, 3, 8));
-                button.setFocusable(false);
-                button.setContentAreaFilled(false);
-                return button;
-            }
-        });
-
         add(employeeDropdown);
-    }
 
-    private void addProfilePreview() {
-        JLabel nameLabel = new JLabel("Name", SwingConstants.RIGHT);
-        nameLabel.setBounds(780, 50, 100, 20);
-        nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        nameLabel = new JLabel("Name", SwingConstants.RIGHT);
+        nameLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
         nameLabel.setForeground(NAVY);
         add(nameLabel);
 
-        JLabel positionLabel = new JLabel("Position", SwingConstants.RIGHT);
-        positionLabel.setBounds(780, 75, 100, 18);
-        positionLabel.setFont(new Font("Segoe UI", Font.PLAIN, 16));
-        positionLabel.setForeground(MUTED_TEXT);
+        positionLabel = new JLabel("Position", SwingConstants.RIGHT);
+        positionLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        positionLabel.setForeground(MUTED);
         add(positionLabel);
 
-        CircleAvatar avatar = new CircleAvatar(NAVY);
-        avatar.setBounds(887, 40, 56, 56);
+        avatar = new Circle(NAVY);
         add(avatar);
-    }
 
-    private void addMetricCards() {
-        MetricCard totalEmployees = new MetricCard("Total Number of Employees");
-        totalEmployees.setBounds(57, 157, 279, 137);
-        totalEmployees.addLargeNumber("1,001", 17, 50, 130, 64);
-        totalEmployees.addInlineLabel("Employees", 158, 72, 100, 25);
-        add(totalEmployees);
+        totalEmployeesCard = new MetricCard("Total Number of Employees", "1,001", "Employees");
+        ongoingQuarterCard = new MetricCard("On-Going Quarter", "2", "April to June, 2026");
+        upcomingQuarterCard = new MetricCard("Upcoming Quarter", "3", "July to September, 2026");
 
-        MetricCard ongoingQuarter = new MetricCard("On-Going Quarter");
-        ongoingQuarter.setBounds(360, 157, 280, 137);
-        ongoingQuarter.addLargeNumber("2", 18, 45, 46, 68);
-        ongoingQuarter.addInlineLabel("April to June, 2026", 70, 70, 190, 30);
-        add(ongoingQuarter);
+        add(totalEmployeesCard);
+        add(ongoingQuarterCard);
+        add(upcomingQuarterCard);
 
-        MetricCard upcomingQuarter = new MetricCard("Upcoming Quarter");
-        upcomingQuarter.setBounds(664, 157, 279, 137);
-        upcomingQuarter.addLargeNumber("3", 18, 45, 46, 68);
-        upcomingQuarter.addInlineLabel("July to September, 2026", 70, 70, 200, 30);
-        add(upcomingQuarter);
-    }
+        financialTitle = new JLabel("Financial Overview");
+        financialTitle.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        financialTitle.setForeground(Color.BLACK);
+        add(financialTitle);
 
-    private void addFinancialOverview() {
-        JLabel title = new JLabel("Financial Overview");
-        title.setBounds(57, 326, 220, 24);
-        title.setFont(FONT_BOLD_16);
-        title.setForeground(BLACK_TEXT);
-        add(title);
-
-        addLegendDot(387, 383, GREEN);
-
-        JLabel revenueLabel = new JLabel("Revenue");
-        revenueLabel.setBounds(407, 380, 70, 22);
+        revenueDot = new LegendDot(GREEN);
+        revenueLabel = new JLabel("Revenue");
         revenueLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        revenueLabel.setForeground(BLACK_TEXT);
+
+        expenseDot = new LegendDot(RED);
+        expenseLabel = new JLabel("Total Expenses");
+        expenseLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+
+        add(revenueDot);
         add(revenueLabel);
+        add(expenseDot);
+        add(expenseLabel);
 
-        addLegendDot(488, 383, RED);
-
-        JLabel expensesLabel = new JLabel("Total Expenses");
-        expensesLabel.setBounds(508, 380, 120, 22);
-        expensesLabel.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        expensesLabel.setForeground(BLACK_TEXT);
-        add(expensesLabel);
-
-        FinancialChart chart = new FinancialChart();
-        chart.setBounds(57, 404, 854, 305);
+        chart = new FinancialChart();
         add(chart);
     }
 
-    private void addLegendDot(int x, int y, Color color) {
-        LegendDot dot = new LegendDot(color);
-        dot.setBounds(x, y, 14, 14);
-        add(dot);
+    @Override
+    public void doLayout() {
+        super.doLayout();
+
+        int w = getWidth();
+
+        int marginLeft = 58;
+        int marginRight = 58;
+        int top = 40;
+
+        avatar.setBounds(w - marginRight - 56, top, 56, 56);
+        nameLabel.setBounds(w - marginRight - 170, top + 8, 105, 22);
+        positionLabel.setBounds(w - marginRight - 170, top + 33, 105, 20);
+
+        employeeDropdown.setBounds(marginLeft, 108, 110, 36);
+
+        int cardY = 158;
+        int cardH = 137;
+        int gap = 24;
+        int availableW = w - marginLeft - marginRight;
+        int cardW = (availableW - (gap * 2)) / 3;
+
+        totalEmployeesCard.setBounds(marginLeft, cardY, cardW, cardH);
+        ongoingQuarterCard.setBounds(marginLeft + cardW + gap, cardY, cardW, cardH);
+        upcomingQuarterCard.setBounds(marginLeft + (cardW + gap) * 2, cardY, cardW, cardH);
+
+        financialTitle.setBounds(marginLeft, 330, 250, 25);
+
+        int legendCenterX = marginLeft + (availableW / 2) - 110;
+        revenueDot.setBounds(legendCenterX, 384, 14, 14);
+        revenueLabel.setBounds(legendCenterX + 20, 380, 90, 22);
+
+        expenseDot.setBounds(legendCenterX + 105, 384, 14, 14);
+        expenseLabel.setBounds(legendCenterX + 125, 380, 130, 22);
+
+        chart.setBounds(marginLeft, 415, availableW, 320);
     }
 
-    private static final class MetricCard extends JPanel {
+    private static class MetricCard extends JPanel {
 
-        private MetricCard(String titleText) {
+        private final JLabel titleLabel;
+        private final JLabel numberLabel;
+        private final JLabel descLabel;
+
+        MetricCard(String title, String number, String desc) {
             setLayout(null);
             setBackground(NAVY);
-            setOpaque(true);
 
-            JLabel title = new JLabel(titleText);
-            title.setBounds(18, 19, 230, 24);
-            title.setFont(FONT_SEMIBOLD);
-            title.setForeground(WHITE);
-            add(title);
-        }
+            titleLabel = new JLabel(title);
+            titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            titleLabel.setForeground(WHITE);
+            add(titleLabel);
 
-        private void addLargeNumber(String value, int x, int y, int width, int height) {
-            JLabel label = new JLabel(value);
-            label.setBounds(x, y, width, height);
-            label.setFont(value.length() > 1 ? FONT_CARD_NUMBER : FONT_QUARTER_NUMBER);
-            label.setForeground(WHITE);
-            add(label);
-        }
+            numberLabel = new JLabel(number);
+            numberLabel.setFont(new Font("Segoe UI", Font.BOLD, number.length() > 1 ? 42 : 46));
+            numberLabel.setForeground(WHITE);
+            add(numberLabel);
 
-        private void addInlineLabel(String text, int x, int y, int width, int height) {
-            JLabel label = new JLabel(text);
-            label.setBounds(x, y, width, height);
-            label.setFont(FONT_BOLD_16);
-            label.setForeground(WHITE);
-            add(label);
-        }
-    }
-
-    private static final class CircleAvatar extends JPanel {
-        private final Color color;
-
-        private CircleAvatar(Color color) {
-            this.color = Objects.requireNonNull(color);
-            setOpaque(false);
+            descLabel = new JLabel(desc);
+            descLabel.setFont(new Font("Segoe UI", Font.BOLD, 15));
+            descLabel.setForeground(WHITE);
+            add(descLabel);
         }
 
         @Override
-        protected void paintComponent(Graphics g) {
-            super.paintComponent(g);
+        public void doLayout() {
+            super.doLayout();
 
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            int w = getWidth();
 
-            g2.setColor(color);
-            g2.fill(new Ellipse2D.Double(0, 0, getWidth(), getHeight()));
+            titleLabel.setBounds(18, 18, w - 36, 22);
+            numberLabel.setBounds(18, 54, 135, 55);
+            descLabel.setBounds(155, 67, w - 165, 28);
 
-            g2.dispose();
+            if (w < 270) {
+                descLabel.setFont(new Font("Segoe UI", Font.BOLD, 13));
+                numberLabel.setFont(new Font("Segoe UI", Font.BOLD, 38));
+            } else {
+                descLabel.setFont(new Font("Segoe UI", Font.BOLD, 15));
+            }
         }
     }
 
-    private static final class LegendDot extends JPanel {
-        private final Color color;
+    private static class FinancialChart extends JPanel {
 
-        private LegendDot(Color color) {
-            this.color = Objects.requireNonNull(color);
-            setOpaque(false);
-        }
+        private final int[] revenue = {100000, 200000, 300000, 400000, 1000000};
+        private final int[] expenses = {75000, 100000, 200000, 300000, 400000};
 
-        @Override
-        protected void paintComponent(Graphics g) {
-            super.paintComponent(g);
-
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-
-            g2.setColor(color);
-            g2.fillOval(0, 0, 14, 14);
-
-            g2.dispose();
-        }
-    }
-
-    private static final class FinancialChart extends JPanel {
-
-        private static final int PLOT_LEFT = 99;
-        private static final int PLOT_TOP = 22;
-        private static final int PLOT_RIGHT = 854;
-        private static final int PLOT_BOTTOM = 274;
-        private static final int MAX_VALUE = 1_000_000;
-
-        private static final String[] Y_LABELS = {
+        private final String[] yLabels = {
                 "1,000,000", "800,000", "600,000", "400,000", "200,000", "0"
         };
 
-        private static final String[] X_LABELS = {
+        private final String[] xLabels = {
                 "Jan 2022", "Jul 2022", "Jan 2023", "Jul 2023", "Jan 2024",
                 "Jul 2024", "Jan 2025", "Jul 2025", "Jan 2026"
         };
 
-        private static final int[] YEAR_INDEXES = {0, 2, 4, 6, 8};
-
-        private static final int[] REVENUE = {
-                100_000, 200_000, 300_000, 400_000, 1_000_000
-        };
-
-        private static final int[] EXPENSES = {
-                75_000, 100_000, 200_000, 300_000, 400_000
-        };
-
-        private FinancialChart() {
+        FinancialChart() {
             setOpaque(false);
-            setBackground(WHITE);
         }
 
         @Override
@@ -265,69 +196,59 @@ public class DashboardPanel extends JPanel {
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
-            paintGridAndLabels(g2);
-            paintSeries(g2, REVENUE, GREEN);
-            paintSeries(g2, EXPENSES, RED);
+            int left = 92;
+            int top = 20;
+            int right = getWidth() - 24;
+            int bottom = getHeight() - 45;
+
+            g2.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+
+            for (int i = 0; i < yLabels.length; i++) {
+                int y = top + (int) ((bottom - top) * (i / 5.0));
+
+                g2.setColor(new Color(205, 205, 205));
+                g2.drawLine(left, y, right, y);
+
+                g2.setColor(Color.BLACK);
+                FontMetrics fm = g2.getFontMetrics();
+                g2.drawString(yLabels[i], left - fm.stringWidth(yLabels[i]) - 10, y + 5);
+            }
+
+            for (int i = 0; i < xLabels.length; i++) {
+                int x = left + (int) ((right - left) * (i / 8.0));
+                FontMetrics fm = g2.getFontMetrics();
+
+                g2.setColor(Color.BLACK);
+                g2.drawString(xLabels[i], x - fm.stringWidth(xLabels[i]) / 2, bottom + 25);
+            }
+
+            drawSeries(g2, revenue, GREEN, left, top, right, bottom);
+            drawSeries(g2, expenses, RED, left, top, right, bottom);
 
             g2.dispose();
         }
 
-        private void paintGridAndLabels(Graphics2D g2) {
-            g2.setFont(FONT_REGULAR);
-            FontMetrics metrics = g2.getFontMetrics();
-            g2.setStroke(new BasicStroke(1f));
-
-            for (int i = 0; i < Y_LABELS.length; i++) {
-                int y = PLOT_TOP + Math.round(i * ((PLOT_BOTTOM - PLOT_TOP) / 5f));
-
-                g2.setColor(SOFT_GRAY);
-                g2.drawLine(PLOT_LEFT, y, PLOT_RIGHT, y);
-
-                g2.setColor(BLACK_TEXT);
-                int labelWidth = metrics.stringWidth(Y_LABELS[i]);
-                g2.drawString(Y_LABELS[i], 89 - labelWidth, y + 5);
-            }
-
-            g2.setFont(FONT_REGULAR);
-            metrics = g2.getFontMetrics();
-
-            for (int i = 0; i < X_LABELS.length; i++) {
-                int x = getXForIndex(i);
-                int labelWidth = metrics.stringWidth(X_LABELS[i]);
-
-                g2.setColor(BLACK_TEXT);
-                g2.drawString(X_LABELS[i], x - labelWidth / 2, 295);
-            }
-        }
-
-        private void paintSeries(Graphics2D g2, int[] values, Color color) {
+        private void drawSeries(Graphics2D g2, int[] values, Color color, int left, int top, int right, int bottom) {
             Point[] points = new Point[values.length];
+            int[] indexes = {0, 2, 4, 6, 8};
 
             for (int i = 0; i < values.length; i++) {
-                points[i] = new Point(getXForIndex(YEAR_INDEXES[i]), getYForValue(values[i]));
+                int x = left + (int) ((right - left) * (indexes[i] / 8.0));
+                int y = bottom - (int) ((bottom - top) * (values[i] / 1_000_000.0));
+                points[i] = new Point(x, y);
             }
 
             g2.setColor(color);
-            g2.setStroke(new BasicStroke(5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+            g2.setStroke(new BasicStroke(4.5f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
             g2.draw(createSmoothPath(points));
 
-            for (Point point : points) {
-                g2.fillOval(point.x - 7, point.y - 7, 14, 14);
+            for (Point p : points) {
+                g2.fillOval(p.x - 6, p.y - 6, 12, 12);
             }
         }
 
-        private int getXForIndex(int index) {
-            float step = (PLOT_RIGHT - PLOT_LEFT) / 8f;
-            return Math.round(PLOT_LEFT + (index * step));
-        }
-
-        private int getYForValue(int value) {
-            float ratio = value / (float) MAX_VALUE;
-            return Math.round(PLOT_BOTTOM - (ratio * (PLOT_BOTTOM - PLOT_TOP)));
-        }
-
         private Shape createSmoothPath(Point[] points) {
-            Path2D.Double path = new Path2D.Double();
+            Path2D path = new Path2D.Double();
             path.moveTo(points[0].x, points[0].y);
 
             for (int i = 0; i < points.length - 1; i++) {
@@ -345,6 +266,41 @@ public class DashboardPanel extends JPanel {
             }
 
             return path;
+        }
+    }
+
+    private static class Circle extends JPanel {
+
+        private final Color color;
+
+        Circle(Color color) {
+            this.color = Objects.requireNonNull(color);
+            setOpaque(false);
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setColor(color);
+            g2.fillOval(0, 0, getWidth(), getHeight());
+            g2.dispose();
+        }
+    }
+
+    private static class LegendDot extends JPanel {
+
+        private final Color color;
+
+        LegendDot(Color color) {
+            this.color = color;
+            setOpaque(false);
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            g.setColor(color);
+            g.fillOval(0, 0, 14, 14);
         }
     }
 }
