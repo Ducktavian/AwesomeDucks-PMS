@@ -19,12 +19,19 @@ public class EmployeePanel extends JPanel {
     private static final Color BORDER_GRAY = new Color(210, 210, 210);
     private static final Color SELECTED_ROW = new Color(225, 230, 245);
 
+    private static final String EMPLOYEE_LIST = "EMPLOYEE_LIST";
+    private static final String EMPLOYEE_FORM = "EMPLOYEE_FORM";
+
     private static final String[] COLUMNS = {
         "Employee No.", "Name", "Status", "Position",
         "Immediate Supervisor", "Role"
     };
 
     private final EmployeeService employeeService = AppContext.getEmployeeService();
+
+    private CardLayout cardLayout;
+    private JPanel cardPanel;
+    private EmployeeFormPanel formPanel;
 
     private DefaultTableModel tableModel;
     private JTable employeeTable;
@@ -40,10 +47,32 @@ public class EmployeePanel extends JPanel {
         setLayout(new BorderLayout());
         setBackground(Color.WHITE);
 
-        add(buildTopBar(), BorderLayout.NORTH);
-        add(buildBody(), BorderLayout.CENTER);
+        cardLayout = new CardLayout();
+        cardPanel = new JPanel(cardLayout);
+
+        JPanel listPanel = buildEmployeeListPanel();
+
+        formPanel = new EmployeeFormPanel(() -> {
+            cardLayout.show(cardPanel, EMPLOYEE_LIST);
+            refreshTable();
+        });
+
+        cardPanel.add(listPanel, EMPLOYEE_LIST);
+        cardPanel.add(formPanel, EMPLOYEE_FORM);
+
+        add(cardPanel, BorderLayout.CENTER);
 
         loadEmployees();
+    }
+
+    private JPanel buildEmployeeListPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBackground(Color.WHITE);
+
+        panel.add(buildTopBar(), BorderLayout.NORTH);
+        panel.add(buildBody(), BorderLayout.CENTER);
+
+        return panel;
     }
 
     private JPanel buildTopBar() {
@@ -269,12 +298,7 @@ public class EmployeePanel extends JPanel {
                     table, value, isSelected, hasFocus, row, column
                 );
 
-                Color bg;
-                if (isSelected) {
-                    bg = SELECTED_ROW;
-                } else {
-                    bg = row % 2 == 0 ? Color.WHITE : ROW_GRAY;
-                }
+                Color bg = isSelected ? SELECTED_ROW : row % 2 == 0 ? Color.WHITE : ROW_GRAY;
 
                 label.setText(value == null ? "" : value.toString());
                 label.setOpaque(true);
@@ -296,8 +320,6 @@ public class EmployeePanel extends JPanel {
     private JButton navyButton(String icon, String text, int width, Runnable action) {
         JButton button = new JButton(icon + "  " + text);
         button.setPreferredSize(new Dimension(width, 37));
-        button.setMinimumSize(new Dimension(width, 37));
-        button.setMaximumSize(new Dimension(width, 37));
         button.setBackground(NAVY);
         button.setForeground(Color.WHITE);
         button.setFont(new Font("SansSerif", Font.PLAIN, 13));
@@ -367,7 +389,8 @@ public class EmployeePanel extends JPanel {
     }
 
     private void addEmployee() {
-        JOptionPane.showMessageDialog(this, "Add employee form here.");
+        formPanel.setAddMode();
+        cardLayout.show(cardPanel, EMPLOYEE_FORM);
     }
 
     private void updateEmployee() {
@@ -378,7 +401,25 @@ public class EmployeePanel extends JPanel {
             return;
         }
 
-        JOptionPane.showMessageDialog(this, "Update employee form here.");
+        int modelRow = employeeTable.convertRowIndexToModel(selectedRow);
+        String employeeId = tableModel.getValueAt(modelRow, 0).toString();
+
+        Employee selectedEmployee = null;
+
+        for (Employee emp : allEmployees) {
+            if (emp.getEmployeeId().equals(employeeId)) {
+                selectedEmployee = emp;
+                break;
+            }
+        }
+
+        if (selectedEmployee == null) {
+            JOptionPane.showMessageDialog(this, "Employee not found.");
+            return;
+        }
+
+        formPanel.setUpdateMode(selectedEmployee);
+        cardLayout.show(cardPanel, EMPLOYEE_FORM);
     }
 
     private void deleteEmployee() {
@@ -406,7 +447,6 @@ public class EmployeePanel extends JPanel {
             titleLabel = new JLabel();
             titleLabel.setFont(new Font("SansSerif", Font.BOLD, 13));
             titleLabel.setForeground(Color.BLACK);
-            titleLabel.setHorizontalAlignment(SwingConstants.LEFT);
 
             filterLabel = new JLabel("⇅");
             filterLabel.setFont(new Font("SansSerif", Font.BOLD, 12));
@@ -427,7 +467,6 @@ public class EmployeePanel extends JPanel {
                 int column) {
 
             int modelColumn = table.convertColumnIndexToModel(column);
-
             titleLabel.setText(value == null ? "" : value.toString());
 
             if (modelColumn == sortedColumn) {
@@ -448,8 +487,6 @@ public class EmployeePanel extends JPanel {
         CircleAvatar(int size) {
             this.size = size;
             setPreferredSize(new Dimension(size, size));
-            setMinimumSize(new Dimension(size, size));
-            setMaximumSize(new Dimension(size, size));
             setOpaque(false);
         }
 
@@ -458,10 +495,7 @@ public class EmployeePanel extends JPanel {
             super.paintComponent(g);
 
             Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(
-                RenderingHints.KEY_ANTIALIASING,
-                RenderingHints.VALUE_ANTIALIAS_ON
-            );
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
             g2.setColor(NAVY);
             g2.fillOval(0, 0, size - 1, size - 1);
@@ -481,10 +515,7 @@ public class EmployeePanel extends JPanel {
         @Override
         public void paintBorder(Component c, Graphics g, int x, int y, int width, int height) {
             Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(
-                RenderingHints.KEY_ANTIALIASING,
-                RenderingHints.VALUE_ANTIALIAS_ON
-            );
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             g2.setColor(color);
             g2.drawRoundRect(x, y, width - 1, height - 1, radius, radius);
             g2.dispose();
