@@ -1,0 +1,119 @@
+<!-- Created with Jaspersoft Studio version 7.0.6.final using JasperReports Library version 7.0.6-5d2a603fdc6b3db8f842a83383e594f41891534d  -->
+<jasperReport name="MotorPH_Clone_Report" language="java" pageWidth="1600" pageHeight="900" orientation="Landscape" columnWidth="1570" leftMargin="15" rightMargin="15" topMargin="15" bottomMargin="15" uuid="7dab6986-e4d4-4601-a5ff-206c02ed8510">
+	<query language="sql"><![CDATA[SELECT
+ e.employee_id,
+ CONCAT(e.first_name,' ',e.last_name) employee_name,
+ ep.position_name,
+ d.department_name,
+ p.gross_pay,
+ p.total_deductions,
+ p.net_pay
+FROM payroll p
+JOIN employee e ON p.employee_id=e.employee_id
+JOIN employee_position ep ON e.position_id=ep.position_id
+JOIN department d ON ep.department_id=d.department_id
+ORDER BY p.payroll_id DESC]]></query>
+	<field name="employee_id" class="java.lang.Integer"/>
+	<field name="employee_name" class="java.lang.String"/>
+	<field name="position_name" class="java.lang.String"/>
+	<field name="department_name" class="java.lang.String"/>
+	<field name="gross_pay" class="java.math.BigDecimal"/>
+	<field name="total_deductions" class="java.math.BigDecimal"/>
+	<field name="net_pay" class="java.math.BigDecimal"/>
+	<title height="170">
+		<element kind="staticText" uuid="8990538c-430a-4a6c-a75c-7a0595a371f1" x="220" y="10" width="300" height="50" fontSize="37.0">
+			<text><![CDATA[MotorPH]]></text>
+		</element>
+		<element kind="staticText" uuid="1287e1cd-8fcd-4a11-addb-d2b12399c049" x="220" y="65" width="700" height="20">
+			<text><![CDATA[7 Jupiter Avenue cor. F. Sandoval Jr., Bagong Nayon, Quezon City]]></text>
+		</element>
+		<element kind="staticText" uuid="80a1a8ef-2c47-423a-b53d-6448795b5530" x="220" y="90" width="700" height="20">
+			<text><![CDATA[Phone: (028) 911-5071 / (028) 911-5072 / (028) 911-5073]]></text>
+		</element>
+		<element kind="staticText" uuid="86f89e0e-b1e2-4cf9-b67d-ce5dbc52a9fa" x="220" y="115" width="400" height="20">
+			<text><![CDATA[Email: corporate@motorph.com]]></text>
+		</element>
+		<element kind="staticText" uuid="46c8fb72-18fc-4270-8c19-26fe15469bd7" x="0" y="145" width="500" height="20">
+			<text><![CDATA[MONTHLY PAYROLL SUMMARY REPORT]]></text>
+		</element>
+		<element kind="image" uuid="c7ce3060-b91b-4f03-95e6-3de1332583f2" x="0" y="0" width="190" height="145">
+			<expression><![CDATA[""]]></expression>
+		</element>
+	</title>
+	<columnHeader height="60">
+		<element kind="rectangle" uuid="42f55ac1-21ea-43e7-a192-3fcdf9f62016" mode="Opaque" x="0" y="0" width="1570" height="60" backcolor="#344255"/>
+		<element kind="staticText" uuid="85efc600-cee6-4fc6-bfba-59beb348f8df" x="0" y="20" width="80" height="20">
+			<text><![CDATA[Employee No]]></text>
+		</element>
+		<element kind="staticText" uuid="ba50797d-ff07-4339-bb98-9d674edaebee" x="80" y="20" width="220" height="20" backcolor="#FFFFFF">
+			<text><![CDATA[Employee Full Name]]></text>
+		</element>
+		<element kind="staticText" uuid="c512594b-7173-4a12-982a-544c39ace73f" x="300" y="20" width="180" height="20">
+			<text><![CDATA[Position]]></text>
+		</element>
+		<element kind="staticText" uuid="5adc5ce2-b8b3-42d4-b3c3-e444aba0201e" x="480" y="20" width="140" height="20">
+			<text><![CDATA[Department]]></text>
+		</element>
+		<element kind="staticText" uuid="071c9eee-332a-43c7-bdba-0b115f694ee3" x="620" y="20" width="120" height="20">
+			<text><![CDATA[Gross Income]]></text>
+		</element>
+		<element kind="staticText" uuid="c9249855-a920-414b-b932-689d611ad919" x="740" y="5" width="260" height="20">
+			<text><![CDATA[SOCIAL SECURITY SYSTEM]]></text>
+		</element>
+		<element kind="staticText" uuid="280e6314-c016-4ae2-a8b3-3c1cbddaa57e" x="740" y="30" width="130" height="20">
+			<text><![CDATA[SSS No.]]></text>
+		</element>
+		<element kind="staticText" uuid="92f090d7-830f-4245-98c4-5c2137979908" x="870" y="30" width="130" height="20">
+			<text><![CDATA[Contribution]]></text>
+		</element>
+		<element kind="staticText" uuid="c47f5189-bc0e-4058-85a5-bc2efa7fc851" x="1000" y="5" width="220" height="20">
+			<text><![CDATA[PHILHEALTH]]></text>
+		</element>
+		<element kind="staticText" uuid="1cf38812-675f-4e65-9d16-0a6e7d3c9768" x="1000" y="30" width="110" height="20">
+			<text><![CDATA[Philhealth No.]]></text>
+		</element>
+		<element kind="staticText" uuid="befde2eb-c3fe-4016-8b3e-4981559500e8" x="1110" y="30" width="110" height="20">
+			<text><![CDATA[Contribution]]></text>
+		</element>
+		<element kind="staticText" uuid="44f4558f-10b0-4b93-b785-f65543f66dda" x="1220" y="5" width="180" height="20">
+			<text><![CDATA[PAG-IBIG]]></text>
+		</element>
+		<element kind="staticText" uuid="33c43c02-dfd5-4689-8265-10fed7c7fd41" x="1220" y="30" width="90" height="20">
+			<text><![CDATA[Pagibig No.]]></text>
+		</element>
+		<element kind="staticText" uuid="5794e0f2-93a2-48bf-893b-e55ef2a89678" x="1310" y="30" width="90" height="20">
+			<text><![CDATA[Contribution]]></text>
+		</element>
+		<element kind="staticText" uuid="f7142dec-238f-4dc9-9470-ad92885fc6ae" x="1400" y="5" width="100" height="20">
+			<text><![CDATA[BIR]]></text>
+		</element>
+		<element kind="staticText" uuid="ecb2c518-d80d-4d4a-95b7-9d4741ab6e33" x="1400" y="30" width="80" height="20">
+			<text><![CDATA[TIN]]></text>
+		</element>
+		<element kind="staticText" uuid="2b506425-77c3-47e5-afb7-c706526395ce" x="1480" y="30" width="90" height="20">
+			<text><![CDATA[Net Pay]]></text>
+		</element>
+	</columnHeader>
+	<detail>
+		<band height="25">
+			<element kind="textField" uuid="ba241f98-60a6-4583-b213-67b61bcb3158" x="0" y="0" width="80" height="20">
+				<expression><![CDATA[$F{employee_id}]]></expression>
+			</element>
+			<element kind="textField" uuid="e8b20db8-b553-4186-89b7-4e3f1e2e998b" x="80" y="0" width="220" height="20">
+				<expression><![CDATA[$F{employee_name}]]></expression>
+			</element>
+			<element kind="textField" uuid="0a7e26a0-71d2-405c-9353-08710bf17db5" x="300" y="0" width="180" height="20">
+				<expression><![CDATA[$F{position_name}]]></expression>
+			</element>
+			<element kind="textField" uuid="d59df19a-7aa8-40ac-97f5-0d4b6ee4f56d" x="480" y="0" width="140" height="20">
+				<expression><![CDATA[$F{department_name}]]></expression>
+			</element>
+			<element kind="textField" uuid="11b4aff4-e5b8-4632-84be-94d000360c9f" x="620" y="0" width="120" height="20">
+				<expression><![CDATA[$F{gross_pay}]]></expression>
+			</element>
+			<element kind="textField" uuid="9bfe8c6c-95bb-408e-84e2-89e00fd24b28" x="1480" y="0" width="90" height="20">
+				<expression><![CDATA[$F{net_pay}]]></expression>
+			</element>
+		</band>
+	</detail>
+</jasperReport>
