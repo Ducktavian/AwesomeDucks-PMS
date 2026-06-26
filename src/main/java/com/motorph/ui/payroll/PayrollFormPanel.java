@@ -96,36 +96,38 @@ public class PayrollFormPanel extends JPanel {
     private JPanel createFormWrapper() {
         JPanel wrapper = new JPanel(new BorderLayout());
         wrapper.setOpaque(false);
-        wrapper.setBorder(new EmptyBorder(22, 0, 0, 0));
+        wrapper.setBorder(new EmptyBorder(14, 0, 0, 0));
 
         JPanel form = new JPanel(new GridBagLayout());
         form.setOpaque(false);
 
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.anchor = GridBagConstraints.NORTHWEST;
-        gbc.weightx = 1.0;
+        GridBagConstraints leftGbc = new GridBagConstraints();
+        leftGbc.gridx = 0;
+        leftGbc.gridy = 0;
+        leftGbc.weightx = 1.0;
+        leftGbc.weighty = 1.0;
+        leftGbc.fill = GridBagConstraints.BOTH;
+        leftGbc.anchor = GridBagConstraints.NORTHWEST;
+        leftGbc.insets = new Insets(0, 0, 0, 55);
 
-        JPanel leftColumn = createLeftColumn();
-        JPanel rightColumn = createRightColumn();
+        GridBagConstraints rightGbc = new GridBagConstraints();
+        rightGbc.gridx = 1;
+        rightGbc.gridy = 0;
+        rightGbc.weightx = 1.0;
+        rightGbc.weighty = 1.0;
+        rightGbc.fill = GridBagConstraints.BOTH;
+        rightGbc.anchor = GridBagConstraints.NORTHWEST;
+        rightGbc.insets = new Insets(0, 0, 0, 0);
 
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        gbc.weightx = 1.0;
-        gbc.insets = new Insets(0, 0, 0, 44);
-        form.add(leftColumn, gbc);
+        form.add(createLeftColumn(), leftGbc);
+        form.add(createRightColumn(), rightGbc);
 
-        gbc.gridx = 1;
-        gbc.gridy = 0;
-        gbc.insets = new Insets(0, 44, 0, 0);
-        form.add(rightColumn, gbc);
-
-        wrapper.add(form, BorderLayout.NORTH);
+        wrapper.add(form, BorderLayout.CENTER);
         wrapper.add(createButtonRow(), BorderLayout.SOUTH);
 
         return wrapper;
     }
-
+    
     private JPanel createLeftColumn() {
         JPanel col = new JPanel(new GridBagLayout());
         col.setOpaque(false);
@@ -154,6 +156,14 @@ public class PayrollFormPanel extends JPanel {
 
         addSpacer(col, row++, 12);
         addEmphasisFormRow(col, row++, "Gross Pay", createTextField());
+        
+        GridBagConstraints pushDown = new GridBagConstraints();
+        pushDown.gridx = 0;
+        pushDown.gridy = row;
+        pushDown.gridwidth = 2;
+        pushDown.weighty = 1.0;
+        pushDown.fill = GridBagConstraints.VERTICAL;
+        col.add(Box.createVerticalGlue(), pushDown);
 
         return col;
     }
@@ -180,9 +190,17 @@ public class PayrollFormPanel extends JPanel {
 
         addSpacer(col, row++, 16);
         addEmphasisFormRow(col, row++, "Net Pay", createTextField());
+        
+        GridBagConstraints pushDown = new GridBagConstraints();
+        pushDown.gridx = 0;
+        pushDown.gridy = row;
+        pushDown.gridwidth = 2;
+        pushDown.weighty = 1.0;
+        pushDown.fill = GridBagConstraints.VERTICAL;
+        col.add(Box.createVerticalGlue(), pushDown);
 
         return col;
-    }
+    }     
 
     private void addSectionTitle(JPanel parent, int row, String title) {
         GridBagConstraints gbc = baseGbc(row);
@@ -190,7 +208,7 @@ public class PayrollFormPanel extends JPanel {
         gbc.insets = new Insets(0, 0, 8, 0);
 
         JLabel label = new JLabel(title);
-        label.setFont(new Font(FONT, Font.BOLD, 18));
+        label.setFont(new Font(FONT, Font.BOLD, 15));
         label.setForeground(TEXT_DARK);
 
         parent.add(label, gbc);
@@ -203,7 +221,7 @@ public class PayrollFormPanel extends JPanel {
         labelGbc.insets = new Insets(0, 0, 10, 24);
 
         JLabel label = new JLabel(labelText);
-        label.setPreferredSize(new Dimension(165, 32));
+        label.setPreferredSize(new Dimension(145, 26));
         label.setFont(new Font(FONT, labelText.endsWith(":") ? Font.BOLD : Font.PLAIN, 13));
         label.setForeground(TEXT_DARK);
         label.setVerticalAlignment(SwingConstants.CENTER);
@@ -236,20 +254,22 @@ public class PayrollFormPanel extends JPanel {
         gbc.gridy = row;
         gbc.anchor = GridBagConstraints.NORTHWEST;
         gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weighty = 0;
         return gbc;
     }
 
     private JTextField createTextField() {
         JTextField field = new JTextField();
-        field.setFont(new Font(FONT, Font.PLAIN, 13));
-        field.setPreferredSize(new Dimension(320, 32));
-        field.setMinimumSize(new Dimension(220, 32));
+        field.setFont(new Font(FONT, Font.PLAIN, 12));
+        field.setPreferredSize(new Dimension(180, 26));
+        field.setMinimumSize(new Dimension(120, 26));
+        field.setMaximumSize(new Dimension(Integer.MAX_VALUE, 26));
         field.setBackground(Color.WHITE);
         field.setForeground(TEXT_DARK);
         field.setCaretColor(NAVY);
         field.setBorder(new CompoundBorder(
-                new RoundedBorder(8, FIELD_BORDER),
-                new EmptyBorder(3, 10, 3, 10)
+                new RoundedBorder(7, FIELD_BORDER),
+                new EmptyBorder(2, 8, 2, 8)
         ));
         return field;
     }
@@ -261,8 +281,8 @@ public class PayrollFormPanel extends JPanel {
         JComboBox<String> bonusType = new JComboBox<>(new String[]{
             "Bonus Type", "Performance", "Holiday", "13th Month", "Other"
         });
-        bonusType.setFont(new Font(FONT, Font.PLAIN, 12));
-        bonusType.setPreferredSize(new Dimension(125, 32));
+        bonusType.setFont(new Font(FONT, Font.PLAIN, 11));
+        bonusType.setPreferredSize(new Dimension(105, 26));
         bonusType.setBackground(Color.WHITE);
         bonusType.setFocusable(false);
 
@@ -320,7 +340,7 @@ public class PayrollFormPanel extends JPanel {
             }
         };
 
-        button.setPreferredSize(new Dimension(150, 42));
+        button.setPreferredSize(new Dimension(125, 36));
         button.setForeground(Color.WHITE);
         button.setFocusPainted(false);
         button.setBorderPainted(false);
@@ -402,10 +422,10 @@ public class PayrollFormPanel extends JPanel {
         GridBagConstraints labelGbc = baseGbc(row);
         labelGbc.gridx = 0;
         labelGbc.weightx = 0;
-        labelGbc.insets = new Insets(0, 0, 10, 24);
+        labelGbc.insets = new Insets(0, 0, 7, 18);
 
         JLabel label = new JLabel(labelText);
-        label.setPreferredSize(new Dimension(165, 32));
+        label.setPreferredSize(new Dimension(145, 26));
         label.setFont(new Font(FONT, Font.BOLD, 16));
         label.setForeground(TEXT_DARK);
         label.setVerticalAlignment(SwingConstants.CENTER);
@@ -415,7 +435,7 @@ public class PayrollFormPanel extends JPanel {
         GridBagConstraints fieldGbc = baseGbc(row);
         fieldGbc.gridx = 1;
         fieldGbc.weightx = 1.0;
-        fieldGbc.insets = new Insets(0, 0, 10, 0);
+        fieldGbc.insets = new Insets(0, 0, 7, 0);
         fieldGbc.fill = GridBagConstraints.HORIZONTAL;
 
         parent.add(field, fieldGbc);
