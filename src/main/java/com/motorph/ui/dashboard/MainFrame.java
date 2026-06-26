@@ -28,6 +28,7 @@ import com.motorph.model.Role;
 import com.motorph.model.UserAccount;
 import com.motorph.ui.employee.EmployeePanel;
 import com.motorph.ui.payroll.PayrollPanel;
+import com.motorph.ui.request.RequestPanel;
 import com.motorph.ui.it.ITDashboard;
 import com.motorph.ui.it.ITDisputeList;
 import com.motorph.ui.it.ITUserAccountList;
@@ -114,7 +115,7 @@ public class MainFrame extends JFrame {
         contentCards.add(buildDashboardPanel(), "Dashboard");
         contentCards.add(new EmployeePanel(), "Employees");
         contentCards.add(payrollPanel, "Payroll");
-        contentCards.add(placeholderPanel("Requests"), "Requests");
+        contentCards.add(new RequestPanel(), "Requests");
         contentCards.add(placeholderPanel("Attendance"), "Attendance");
         contentCards.add(new ITUserAccountList(), "Users");
         contentCards.add(new AccountSecurity(), "Settings");
