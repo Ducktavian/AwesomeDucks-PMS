@@ -92,11 +92,33 @@ public class PayrollPanel extends JPanel {
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 62));
         buttonPanel.setOpaque(false);
 
-        buttonPanel.add(button("+  Add"));
-        buttonPanel.add(button("✎  Update"));
-        buttonPanel.add(button("🗑  Delete"));
-        buttonPanel.add(button("⟳  Refresh"));
+        JButton addButton = button("+  Add");
+        JButton updateButton = button("✎  Update");
+        JButton deleteButton = button("🗑  Delete");
+        JButton refreshButton = button("⟳  Refresh");
 
+        buttonPanel.add(addButton);
+        buttonPanel.add(updateButton);
+        buttonPanel.add(deleteButton);
+        buttonPanel.add(refreshButton);
+
+        /* ---------- OPEN PAYROLL FORM ---------- */
+        addButton.addActionListener(e -> {
+            removeAll();
+            setLayout(new BorderLayout());
+            add(new PayrollFormPanel(() -> {
+                removeAll();
+                setLayout(new BorderLayout());
+                add(createTopBar(), BorderLayout.NORTH);
+                add(createContentPanel(), BorderLayout.CENTER);
+                revalidate();
+                repaint();
+            }), BorderLayout.CENTER);
+
+            revalidate();
+            repaint();
+        });
+        
         topControls.add(searchPanel, BorderLayout.WEST);
         topControls.add(buttonPanel, BorderLayout.EAST);
 
