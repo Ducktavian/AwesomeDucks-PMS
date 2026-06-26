@@ -1,0 +1,214 @@
+<!-- Created with Jaspersoft Studio version 7.0.6.final using JasperReports Library version 7.0.6-5d2a603fdc6b3db8f842a83383e594f41891534d  -->
+<jasperReport name="Payslip" language="java" pageWidth="595" pageHeight="842" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20" uuid="1349de11-d07f-46ce-bced-564f1a92903b">
+	<parameter name="LOGO" class="java.lang.String"/>
+	<field name="employee_id" class="java.lang.Integer"/>
+	<field name="employee_name" class="java.lang.String"/>
+	<field name="position" class="java.lang.String"/>
+	<field name="department" class="java.lang.String"/>
+	<field name="period_start" class="java.util.Date"/>
+	<field name="period_end" class="java.util.Date"/>
+	<field name="monthly_salary" class="java.math.BigDecimal"/>
+	<field name="daily_rate" class="java.math.BigDecimal"/>
+	<field name="days_worked" class="java.lang.Integer"/>
+	<field name="overtime_hours" class="java.math.BigDecimal"/>
+	<field name="rice_subsidy" class="java.math.BigDecimal"/>
+	<field name="phone_allowance" class="java.math.BigDecimal"/>
+	<field name="clothing_allowance" class="java.math.BigDecimal"/>
+	<field name="sss" class="java.math.BigDecimal"/>
+	<field name="philhealth" class="java.math.BigDecimal"/>
+	<field name="pagibig" class="java.math.BigDecimal"/>
+	<field name="withholding_tax" class="java.math.BigDecimal"/>
+	<field name="gross_income" class="java.math.BigDecimal"/>
+	<field name="total_benefits" class="java.math.BigDecimal"/>
+	<field name="total_deductions" class="java.math.BigDecimal"/>
+	<field name="net_pay" class="java.math.BigDecimal"/>
+	<title height="150">
+		<element kind="image" uuid="2b43c0a2-6e06-4f35-a688-0e83ebeac201" x="0" y="0" width="120" height="80">
+			<expression><![CDATA[$P{LOGO}]]></expression>
+		</element>
+		<element kind="staticText" uuid="93462aba-753c-4c66-bc73-b30b7aeb44e3" x="140" y="0" width="250" height="40" fontSize="28.0" bold="true" hTextAlign="Center">
+			<text><![CDATA[MotorPH]]></text>
+		</element>
+		<element kind="staticText" uuid="e3a24c8d-70e6-4ba0-b50b-d78d2e2afe48" x="140" y="45" width="350" height="20">
+			<text><![CDATA[7 Jupiter Avenue cor. F. Sandoval Jr., Quezon City]]></text>
+		</element>
+		<element kind="staticText" uuid="edd53baa-1d49-4b8b-b49f-bba4168cce6c" x="140" y="65" width="300" height="20">
+			<text><![CDATA[(028) 911-5071 / (028) 911-5072]]></text>
+		</element>
+		<element kind="staticText" uuid="3ca4983e-75e2-4a97-8c49-e9797850709f" x="140" y="85" width="300" height="20">
+			<text><![CDATA[corporate@motorph.com]]></text>
+		</element>
+		<element kind="staticText" uuid="20118084-6749-42b7-a6bd-3bdd3b91abb9" x="160" y="110" width="250" height="30" fontSize="18.0" bold="true" hTextAlign="Center">
+			<text><![CDATA[EMPLOYEE PAYSLIP]]></text>
+		</element>
+	</title>
+	<detail>
+		<band height="680">
+			<element kind="frame" uuid="c6561c1f-08ab-42fb-82dd-2363346a5f95" x="0" y="0" width="555" height="90">
+				<element kind="staticText" uuid="7f36be90-1643-4e35-a693-d784a383b407" x="0" y="0" width="120" height="30" backcolor="#2F3E52" bold="true">
+					<text><![CDATA[PAYSLIP]]></text>
+				</element>
+				<element kind="textField" uuid="b504694f-0df4-4dd8-9f81-fd818969e3b0" x="120" y="0" width="150" height="30">
+					<expression><![CDATA[$F{employee_id}]]></expression>
+				</element>
+				<element kind="staticText" uuid="fb42222b-b6a4-4fd6-bf7a-6a84519ea998" x="270" y="0" width="120" height="30" backcolor="#2F3E52">
+					<text><![CDATA[PERIOD START]]></text>
+				</element>
+				<element kind="textField" uuid="a7e94807-42b6-4509-ba65-a0f67535a2eb" x="390" y="0" width="165" height="30" pattern="MM/dd/yyyy">
+					<expression><![CDATA[$F{period_start}]]></expression>
+				</element>
+				<element kind="staticText" uuid="fa3c4800-c723-449c-a636-6ffaa2193409" x="0" y="32" width="120" height="30" backcolor="#2F3E52" bold="true">
+					<text><![CDATA[EMPLOYEE ID]]></text>
+				</element>
+				<element kind="textField" uuid="baf14751-caa5-45ad-8a94-9410c5791fd2" x="120" y="32" width="150" height="30">
+					<expression><![CDATA[$F{employee_id}]]></expression>
+				</element>
+				<element kind="staticText" uuid="7a31a689-c107-4f7c-b81d-85b21738b995" x="270" y="30" width="120" height="30" backcolor="#2F3E52">
+					<text><![CDATA[PERIOD END]]></text>
+				</element>
+				<element kind="textField" uuid="de503b58-c958-4c97-8c8a-bf0f9d909432" x="390" y="32" width="165" height="30" pattern="MM/dd/yyyy">
+					<expression><![CDATA[$F{period_end}]]></expression>
+				</element>
+				<element kind="textField" uuid="0a64d1cf-ef3e-4517-9546-7d010db20d76" x="390" y="63" width="165" height="30" pattern="MM/dd/yyyy">
+					<expression><![CDATA[$F{position} +" / "+ $F{department}]]></expression>
+				</element>
+				<element kind="staticText" uuid="b7212f3c-fd51-4fee-a0ec-00a10b4ba127" x="0" y="63" width="120" height="30" backcolor="#2F3E52" bold="true">
+					<text><![CDATA[EMPLOYEE NAME]]></text>
+				</element>
+				<element kind="textField" uuid="f6c6d8e1-9b94-427f-a5bf-2528ab123b7f" x="120" y="63" width="150" height="30">
+					<expression><![CDATA[$F{employee_name}]]></expression>
+				</element>
+				<element kind="staticText" uuid="e381d201-e32e-4ff8-87ef-80bedbe39461" x="270" y="63" width="120" height="30" backcolor="#2F3E52">
+					<text><![CDATA[POSITION/
+DEPARTMENT]]></text>
+				</element>
+			</element>
+			<element kind="rectangle" uuid="a3b3d9a4-710e-4a3f-b42d-2c863e7d1207" mode="Opaque" x="0" y="110" width="555" height="25" backcolor="#2F3E52"/>
+			<element kind="staticText" uuid="33ff7c60-f1ca-4a12-b71e-f411da411ba8" x="10" y="114" width="100" height="20" forecolor="#F7F2F2" bold="true">
+				<text><![CDATA[EARNINGS]]></text>
+			</element>
+			<element kind="staticText" uuid="c8fc4647-3d89-44e7-8dd8-8f1c99e6cc68" x="10" y="145" width="150" height="20">
+				<text><![CDATA[Monthly Salary]]></text>
+			</element>
+			<element kind="textField" uuid="be6f1215-ed3e-4e4f-be19-65924d6c67ae" x="420" y="145" width="120" height="20" pattern="###,##0.00" hTextAlign="Right">
+				<expression><![CDATA[$F{monthly_salary}]]></expression>
+			</element>
+			<element kind="rectangle" uuid="7b037fb6-185e-44d5-8198-62055bd7725b" mode="Opaque" x="0" y="260" width="555" height="25" backcolor="#2F3E52"/>
+			<element kind="staticText" uuid="773d11ff-8a99-4edf-ae75-4f8dc9422bcf" x="10" y="264" width="100" height="20" forecolor="#FFF7F7">
+				<text><![CDATA[BENEFITS]]></text>
+			</element>
+			<element kind="rectangle" uuid="d6ddc9d8-f590-4ff4-ae43-1748d19a41ce" mode="Opaque" x="0" y="380" width="555" height="25" backcolor="#2F3E52"/>
+			<element kind="staticText" uuid="bf72d888-46a3-4c8e-8f1c-a5bb10507a67" x="10" y="384" width="100" height="20" forecolor="#FAF3F2">
+				<text><![CDATA[DEDUCTIONS]]></text>
+			</element>
+			<element kind="rectangle" uuid="9a07d01e-8c23-4ada-9027-5d9230f38329" mode="Opaque" x="0" y="528" width="555" height="25" backcolor="#2F3E52"/>
+			<element kind="staticText" uuid="7c33e54d-2c57-4e5e-87aa-26fd9caa0fe9" x="10" y="532" width="100" height="20" forecolor="#FAFAFA">
+				<text><![CDATA[SUMMARY]]></text>
+			</element>
+			<element kind="rectangle" uuid="63db07e4-0ec8-407b-8f8b-7888eca9354d" mode="Opaque" x="0" y="628" width="555" height="30" backcolor="#EAEAEA"/>
+			<element kind="staticText" uuid="7e10afbb-f0c9-4bdb-826a-236d810cae10" x="11" y="631" width="150" height="20" fontSize="12.0" bold="true">
+				<text><![CDATA[TAKE HOME PAY]]></text>
+			</element>
+			<element kind="textField" uuid="bf8b7d87-cb15-4c84-86ba-8c95f493af02" x="405" y="631" width="140" height="20" fontSize="12.0" pattern="###,##0.00" bold="true" hTextAlign="Right">
+				<expression><![CDATA[$F{net_pay}]]></expression>
+			</element>
+			<element kind="staticText" uuid="a2cd3785-61e8-4b98-9275-bc63860ddd51" x="10" y="165" width="150" height="20">
+				<text><![CDATA[Daily Rate]]></text>
+			</element>
+			<element kind="textField" uuid="2c07340a-1584-49fc-9a70-b30cfa7daee9" x="421" y="167" width="120" height="20" pattern="###,##0.00" hTextAlign="Right">
+				<expression><![CDATA[$F{daily_rate}]]></expression>
+			</element>
+			<element kind="staticText" uuid="7f349908-1804-484c-beba-510b6a3b4588" x="10" y="185" width="150" height="20">
+				<text><![CDATA[Days Worked]]></text>
+			</element>
+			<element kind="textField" uuid="e7735ac5-3852-4567-83be-d6a1de5cc328" x="419" y="187" width="124" height="20" pattern="###,##0.00" hTextAlign="Right">
+				<expression><![CDATA[$F{days_worked}]]></expression>
+			</element>
+			<element kind="staticText" uuid="117299ec-1455-41e7-969a-a385ea5ca45c" x="11" y="290" width="150" height="20">
+				<text><![CDATA[Rice Subsidy]]></text>
+			</element>
+			<element kind="textField" uuid="316e4aa9-c991-46ac-b41a-1308dda7e608" x="421" y="287" width="120" height="20" pattern="###,##0.00" hTextAlign="Right">
+				<expression><![CDATA[$F{rice_subsidy}]]></expression>
+			</element>
+			<element kind="staticText" uuid="5403c60e-11e4-467c-a25a-5acc11eb9502" x="11" y="310" width="150" height="20">
+				<text><![CDATA[Phone Allowance]]></text>
+			</element>
+			<element kind="textField" uuid="a23cfc1d-6d94-435d-9816-9e2257d2a052" x="421" y="308" width="120" height="20" pattern="###,##0.00" hTextAlign="Right">
+				<expression><![CDATA[$F{phone_allowance}]]></expression>
+			</element>
+			<element kind="staticText" uuid="f58e35fb-9a1f-46da-9ad9-d7eca7b695e8" x="11" y="330" width="150" height="20">
+				<text><![CDATA[Clothing Allowance]]></text>
+			</element>
+			<element kind="textField" uuid="0209383f-fbd8-4a48-a89d-8b42eacd9842" x="417" y="329" width="124" height="20" pattern="###,##0.00" hTextAlign="Right">
+				<expression><![CDATA[$F{clothing_allowance}]]></expression>
+			</element>
+			<element kind="staticText" uuid="0d2432a8-72b7-415f-9714-db7cd1523e5d" x="11" y="351" width="150" height="20" bold="true">
+				<text><![CDATA[Total]]></text>
+			</element>
+			<element kind="textField" uuid="a7b58e4f-de18-4989-9eaf-e517ecd7c6c9" x="417" y="351" width="124" height="20" pattern="###,##0.00" bold="true" hTextAlign="Right">
+				<expression><![CDATA[$F{total_benefits}]]></expression>
+			</element>
+			<element kind="staticText" uuid="bcd824ba-4a9e-42be-aee0-2ca1e75f2da3" x="11" y="411" width="150" height="20">
+				<text><![CDATA[Social Security System]]></text>
+			</element>
+			<element kind="textField" uuid="287466b0-f007-4a5b-bd38-a8bf16526e89" x="421" y="408" width="120" height="20" pattern="###,##0.00" hTextAlign="Right">
+				<expression><![CDATA[$F{sss}]]></expression>
+			</element>
+			<element kind="staticText" uuid="42ceb1ea-331f-42e2-b762-6503328b7345" x="11" y="431" width="150" height="20">
+				<text><![CDATA[Philhealth]]></text>
+			</element>
+			<element kind="textField" uuid="bf64373c-75ed-4000-a726-907606eb0350" x="421" y="429" width="120" height="20" pattern="###,##0.00" hTextAlign="Right">
+				<expression><![CDATA[$F{philhealth}]]></expression>
+			</element>
+			<element kind="staticText" uuid="767554b4-6fff-413a-a0d5-51015a5a52be" x="11" y="451" width="150" height="20">
+				<text><![CDATA[Pag-Ibig]]></text>
+			</element>
+			<element kind="textField" uuid="6a97fc26-6623-412f-a870-e61f3a146bc4" x="417" y="450" width="124" height="20" pattern="###,##0.00" hTextAlign="Right">
+				<expression><![CDATA[$F{pagibig}]]></expression>
+			</element>
+			<element kind="staticText" uuid="f2663fe8-477a-4f68-baaa-f32ad58e4527" x="11" y="472" width="150" height="20">
+				<text><![CDATA[Withholding Tax]]></text>
+			</element>
+			<element kind="textField" uuid="caa44814-c4fc-418a-93e9-ff6f8ba9410f" x="417" y="472" width="124" height="20" pattern="###,##0.00" hTextAlign="Right">
+				<expression><![CDATA[$F{withholding_tax}]]></expression>
+			</element>
+			<element kind="staticText" uuid="11415320-ea32-4909-969f-aa4c319df319" x="11" y="562" width="150" height="20">
+				<text><![CDATA[Gross Income]]></text>
+			</element>
+			<element kind="textField" uuid="15519010-3303-4df4-bc43-79a5cfeea624" x="421" y="559" width="120" height="20" pattern="###,##0.00" hTextAlign="Right">
+				<expression><![CDATA[$F{gross_income}]]></expression>
+			</element>
+			<element kind="staticText" uuid="51500435-0cd3-417b-a3bc-afad06b39138" x="10" y="582" width="150" height="20">
+				<text><![CDATA[Benefits]]></text>
+			</element>
+			<element kind="textField" uuid="76403a0d-5573-4a44-8eb6-44afeb926732" x="421" y="580" width="120" height="20" pattern="###,##0.00" hTextAlign="Right">
+				<expression><![CDATA[$F{total_benefits}]]></expression>
+			</element>
+			<element kind="staticText" uuid="8156884e-974a-4f6f-8b63-a60679e83c45" x="10" y="602" width="150" height="20">
+				<text><![CDATA[Deducations]]></text>
+			</element>
+			<element kind="textField" uuid="2d8ef0f7-55c6-4584-ac4a-38053e00b536" x="420" y="601" width="124" height="20" pattern="###,##0.00" hTextAlign="Right">
+				<expression><![CDATA[$F{withholding_tax}]]></expression>
+			</element>
+			<element kind="staticText" uuid="4cf6ecd3-593d-4849-94fe-4378f60b95c0" x="10" y="205" width="150" height="20">
+				<text><![CDATA[Overtime]]></text>
+			</element>
+			<element kind="staticText" uuid="623663b8-6c63-441c-9c79-b4ac3ef5f26b" x="10" y="225" width="150" height="20" bold="true">
+				<text><![CDATA[Gross Income]]></text>
+			</element>
+			<element kind="textField" uuid="35c6ea34-adef-4a05-9dfe-10a6d576983f" x="423" y="208" width="120" height="20" pattern="###,##0.00" hTextAlign="Right">
+				<expression><![CDATA[$F{overtime_hours}]]></expression>
+			</element>
+			<element kind="textField" uuid="c792545d-82b1-4f87-837c-61681b55a36e" x="421" y="230" width="124" height="20" pattern="###,##0.00" bold="true" hTextAlign="Right">
+				<expression><![CDATA[$F{gross_income}]]></expression>
+			</element>
+			<element kind="staticText" uuid="b1e56658-c373-40cd-b770-fba40a9192c5" x="11" y="495" width="150" height="20" bold="true">
+				<text><![CDATA[TOTAL DEDUCTIONS]]></text>
+			</element>
+			<element kind="textField" uuid="32d8b87a-6535-4ef5-a3c6-9d3acb862c24" x="417" y="495" width="124" height="20" pattern="###,##0.00" bold="true" hTextAlign="Right">
+				<expression><![CDATA[$F{total_deductions}]]></expression>
+			</element>
+			<property name="com.jaspersoft.studio.unit.height" value="px"/>
+		</band>
+	</detail>
+</jasperReport>

@@ -30,7 +30,7 @@ public class DatabaseConnection {
             throw new RuntimeException("Failed to load database.properties", e);
         }
         URL      = props.getProperty("db.url");
-        USER     = props.getProperty("db.user");
+        USER     = props.getProperty("db.user"); 
         PASSWORD = props.getProperty("db.password");
     }
 
