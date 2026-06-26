@@ -1,0 +1,306 @@
+<!-- Created with Jaspersoft Studio version 7.0.6.final using JasperReports Library version 7.0.6-5d2a603fdc6b3db8f842a83383e594f41891534d  -->
+<jasperReport name="MotorPH_Payroll_Summary_Report" language="java" pageWidth="842" pageHeight="595" orientation="Landscape" columnWidth="802" leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20" uuid="7dab6986-e4d4-4601-a5ff-206c02ed8510">
+	<property name="com.jaspersoft.studio.data.defaultdataadapter" value="AOOP"/>
+	<property name="com.jaspersoft.studio.unit." value="pixel"/>
+	<property name="com.jaspersoft.studio.unit.pageHeight" value="pixel"/>
+	<property name="com.jaspersoft.studio.unit.pageWidth" value="pixel"/>
+	<property name="com.jaspersoft.studio.unit.topMargin" value="pixel"/>
+	<property name="com.jaspersoft.studio.unit.bottomMargin" value="pixel"/>
+	<property name="com.jaspersoft.studio.unit.leftMargin" value="pixel"/>
+	<property name="com.jaspersoft.studio.unit.rightMargin" value="pixel"/>
+	<style name="Base" forecolor="#111111" fontName="SansSerif" fontSize="8.0"/>
+	<style name="CompanyName" forecolor="#1B3A6B" fontName="SansSerif" fontSize="26.0" bold="true" italic="true"/>
+	<style name="CompanyInfo" forecolor="#003366" fontName="SansSerif" fontSize="7.0" bold="true"/>
+	<style name="ReportTitle" forecolor="#003366" fontName="SansSerif" fontSize="13.0" bold="true" underline="true"/>
+	<style name="InfoLabel" forecolor="#FFFFFF" fontName="SansSerif" fontSize="7.0" bold="true"/>
+	<style name="InfoValue" forecolor="#000000" fontName="SansSerif" fontSize="7.0"/>
+	<style name="ColumnHeader" forecolor="#FFFFFF" fontName="SansSerif" fontSize="7.0" bold="true"/>
+	<style name="DetailCell" forecolor="#000000" fontName="SansSerif" fontSize="7.0">
+		<conditionalStyle mode="Opaque" backcolor="#F2F2F2">
+			<conditionExpression><![CDATA[$V{REPORT_COUNT}.intValue() % 2 == 0]]></conditionExpression>
+		</conditionalStyle>
+		<conditionalStyle mode="Opaque" backcolor="#FFFFFF">
+			<conditionExpression><![CDATA[$V{REPORT_COUNT}.intValue() % 2 != 0]]></conditionExpression>
+		</conditionalStyle>
+	</style>
+	<parameter name="LOGO_PATH" class="java.lang.String">
+		<defaultValueExpression><![CDATA[""]]></defaultValueExpression>
+	</parameter>
+	<parameter name="REPORT_PERIOD" class="java.lang.String">
+		<defaultValueExpression><![CDATA["All Payroll Records"]]></defaultValueExpression>
+	</parameter>
+	<parameter name="PREPARED_BY" class="java.lang.String">
+		<defaultValueExpression><![CDATA["Finance Department"]]></defaultValueExpression>
+	</parameter>
+	<query language="SQL"><![CDATA[SELECT
+    e.employee_id,
+    CONCAT(e.first_name, ' ', e.last_name) AS employee_name,
+    ep.position_name,
+    d.department_name,
+    p.gross_pay,
+    p.total_deductions,
+    p.net_pay
+FROM payroll p
+JOIN employee e
+    ON p.employee_id = e.employee_id
+JOIN employee_position ep
+    ON e.position_id = ep.position_id
+JOIN department d
+    ON ep.department_id = d.department_id
+ORDER BY p.payroll_id DESC]]></query>
+	<field name="employee_id" class="java.lang.Integer"/>
+	<field name="employee_name" class="java.lang.String"/>
+	<field name="position_name" class="java.lang.String"/>
+	<field name="department_name" class="java.lang.String"/>
+	<field name="gross_pay" class="java.math.BigDecimal"/>
+	<field name="total_deductions" class="java.math.BigDecimal"/>
+	<field name="net_pay" class="java.math.BigDecimal"/>
+	<variable name="TOTAL_GROSS_PAY" calculation="Sum" class="java.math.BigDecimal">
+		<expression><![CDATA[$F{gross_pay}]]></expression>
+	</variable>
+	<variable name="TOTAL_DEDUCTIONS_AMOUNT" calculation="Sum" class="java.math.BigDecimal">
+		<expression><![CDATA[$F{total_deductions}]]></expression>
+	</variable>
+	<variable name="TOTAL_NET_PAY" calculation="Sum" class="java.math.BigDecimal">
+		<expression><![CDATA[$F{net_pay}]]></expression>
+	</variable>
+	<background splitType="Stretch"/>
+	<title height="112" splitType="Stretch">
+		<element kind="image" uuid="c7ce3060-b91b-4f03-95e6-3de1332583f2" x="150" y="3" width="100" height="70" scaleImage="RetainShape" onErrorType="Blank">
+			<expression><![CDATA[$P{LOGO_PATH}]]></expression>
+		</element>
+		<element kind="staticText" uuid="1287e1cd-8fcd-4a11-addb-d2b12399c049" x="310" y="37" width="350" height="12" forecolor="#003366" fontSize="7.0" bold="true" vTextAlign="Middle" style="CompanyInfo">
+			<text><![CDATA[7 Jupiter Avenue cor. F. Sandoval Jr., Bagong Nayon, Quezon City]]></text>
+		</element>
+		<element kind="staticText" uuid="80a1a8ef-2c47-423a-b53d-6448795b5530" x="310" y="51" width="350" height="12" forecolor="#003366" fontSize="7.0" bold="true" vTextAlign="Middle" style="CompanyInfo">
+			<text><![CDATA[Phone: (028) 911-5071 / (028) 911-5072 / (028) 911-5073]]></text>
+		</element>
+		<element kind="staticText" uuid="86f89e0e-b1e2-4cf9-b67d-ce5dbc52a9fa" x="310" y="65" width="350" height="12" forecolor="#003366" fontSize="7.0" bold="true" vTextAlign="Middle" style="CompanyInfo">
+			<text><![CDATA[Email: corporate@motorph.com]]></text>
+		</element>
+		<element kind="staticText" uuid="46c8fb72-18fc-4270-8c19-26fe15469bd7" x="250" y="89" width="340" height="20" forecolor="#003366" fontSize="13.0" bold="true" underline="true" hTextAlign="Center" vTextAlign="Middle" style="ReportTitle">
+			<text><![CDATA[MONTHLY PAYROLL SUMMARY REPORT]]></text>
+		</element>
+		<element kind="staticText" uuid="b17032f5-f86b-4948-9f9b-36a770314493" x="310" y="5" width="180" height="32" forecolor="#1B3A6B" fontName="SansSerif" fontSize="24.0" italic="true" bold="true" vTextAlign="Middle">
+			<text><![CDATA[MotorPH]]></text>
+		</element>
+	</title>
+	<pageHeader height="45" splitType="Stretch">
+		<element kind="staticText" uuid="5ca264bf-a80b-44ab-898f-ef7a3126c111" mode="Opaque" x="0" y="0" width="105" height="22" backcolor="#2F3E50" vTextAlign="Middle" style="InfoLabel">
+			<paragraph leftIndent="5"/>
+			<text><![CDATA[REPORT PERIOD]]></text>
+			<box style="InfoLabel">
+				<pen lineWidth="0.25" lineColor="#FFFFFF"/>
+			</box>
+		</element>
+		<element kind="textField" uuid="bc3dd185-4923-47d4-a2c4-769e7e19de39" x="105" y="0" width="250" height="22" blankWhenNull="true" vTextAlign="Middle" style="InfoValue">
+			<paragraph leftIndent="5"/>
+			<expression><![CDATA[$P{REPORT_PERIOD}]]></expression>
+			<box style="InfoValue">
+				<pen lineWidth="0.25" lineColor="#D0D0D0"/>
+			</box>
+		</element>
+		<element kind="staticText" uuid="77105b90-763e-47a0-bc59-7a976d40c929" mode="Opaque" x="355" y="0" width="125" height="22" backcolor="#2F3E50" vTextAlign="Middle" style="InfoLabel">
+			<paragraph leftIndent="5"/>
+			<text><![CDATA[GENERATED DATE]]></text>
+			<box style="InfoLabel">
+				<pen lineWidth="0.25" lineColor="#FFFFFF"/>
+			</box>
+		</element>
+		<element kind="textField" uuid="e02c1e48-c42f-40e5-a7da-167137b2e6f5" x="480" y="0" width="322" height="22" blankWhenNull="true" vTextAlign="Middle" style="InfoValue">
+			<paragraph leftIndent="5"/>
+			<expression><![CDATA[new java.text.SimpleDateFormat("MMM dd, yyyy hh:mm a").format(new java.util.Date())]]></expression>
+			<box style="InfoValue">
+				<pen lineWidth="0.25" lineColor="#D0D0D0"/>
+			</box>
+		</element>
+		<element kind="staticText" uuid="3d70228d-d059-41af-b677-b7b52fc0f617" mode="Opaque" x="0" y="22" width="105" height="22" backcolor="#2F3E50" vTextAlign="Middle" style="InfoLabel">
+			<paragraph leftIndent="5"/>
+			<text><![CDATA[PREPARED BY]]></text>
+			<box style="InfoLabel">
+				<pen lineWidth="0.25" lineColor="#FFFFFF"/>
+			</box>
+		</element>
+		<element kind="textField" uuid="10cb4e27-67f5-490b-bb76-3ec9a5046aa0" x="105" y="22" width="250" height="22" blankWhenNull="true" vTextAlign="Middle" style="InfoValue">
+			<paragraph leftIndent="5"/>
+			<expression><![CDATA[$P{PREPARED_BY}]]></expression>
+			<box style="InfoValue">
+				<pen lineWidth="0.25" lineColor="#D0D0D0"/>
+			</box>
+		</element>
+		<element kind="staticText" uuid="45e19e47-bc8b-4a54-a0b9-1287909e9c21" mode="Opaque" x="355" y="22" width="125" height="22" backcolor="#2F3E50" vTextAlign="Middle" style="InfoLabel">
+			<paragraph leftIndent="5"/>
+			<text><![CDATA[REPORT TYPE]]></text>
+			<box style="InfoLabel">
+				<pen lineWidth="0.25" lineColor="#FFFFFF"/>
+			</box>
+		</element>
+		<element kind="staticText" uuid="0f690f7b-8135-4b94-9cd9-4d82f87e5e0b" x="480" y="22" width="322" height="22" vTextAlign="Middle" style="InfoValue">
+			<paragraph leftIndent="5"/>
+			<text><![CDATA[Payroll Summary / Finance Report]]></text>
+			<box style="InfoValue">
+				<pen lineWidth="0.25" lineColor="#D0D0D0"/>
+			</box>
+		</element>
+	</pageHeader>
+	<columnHeader height="25" splitType="Stretch">
+		<element kind="staticText" uuid="85efc600-cee6-4fc6-bfba-59beb348f8df" mode="Opaque" x="0" y="0" width="75" height="25" backcolor="#2F3E50" hTextAlign="Center" vTextAlign="Middle" style="ColumnHeader">
+			<text><![CDATA[Employee No.]]></text>
+			<box style="ColumnHeader">
+				<pen lineWidth="0.25" lineColor="#FFFFFF"/>
+			</box>
+		</element>
+		<element kind="staticText" uuid="ba50797d-ff07-4339-bb98-9d674edaebee" mode="Opaque" x="75" y="0" width="180" height="25" backcolor="#2F3E50" hTextAlign="Center" vTextAlign="Middle" style="ColumnHeader">
+			<text><![CDATA[Employee Full Name]]></text>
+			<box style="ColumnHeader">
+				<pen lineWidth="0.25" lineColor="#FFFFFF"/>
+			</box>
+		</element>
+		<element kind="staticText" uuid="c512594b-7173-4a12-982a-544c39ace73f" mode="Opaque" x="255" y="0" width="150" height="25" backcolor="#2F3E50" hTextAlign="Center" vTextAlign="Middle" style="ColumnHeader">
+			<text><![CDATA[Position]]></text>
+			<box style="ColumnHeader">
+				<pen lineWidth="0.25" lineColor="#FFFFFF"/>
+			</box>
+		</element>
+		<element kind="staticText" uuid="5adc5ce2-b8b3-42d4-b3c3-e444aba0201e" mode="Opaque" x="405" y="0" width="120" height="25" backcolor="#2F3E50" hTextAlign="Center" vTextAlign="Middle" style="ColumnHeader">
+			<text><![CDATA[Department]]></text>
+			<box style="ColumnHeader">
+				<pen lineWidth="0.25" lineColor="#FFFFFF"/>
+			</box>
+		</element>
+		<element kind="staticText" uuid="071c9eee-332a-43c7-bdba-0b115f694ee3" mode="Opaque" x="525" y="0" width="95" height="25" backcolor="#2F3E50" hTextAlign="Center" vTextAlign="Middle" style="ColumnHeader">
+			<text><![CDATA[Gross Income]]></text>
+			<box style="ColumnHeader">
+				<pen lineWidth="0.25" lineColor="#FFFFFF"/>
+			</box>
+		</element>
+		<element kind="staticText" uuid="45791e2f-2d0d-4bf8-9bfc-1f16cd79ff61" mode="Opaque" x="620" y="0" width="95" height="25" backcolor="#2F3E50" hTextAlign="Center" vTextAlign="Middle" style="ColumnHeader">
+			<text><![CDATA[Deductions]]></text>
+			<box style="ColumnHeader">
+				<pen lineWidth="0.25" lineColor="#FFFFFF"/>
+			</box>
+		</element>
+		<element kind="staticText" uuid="2b506425-77c3-47e5-afb7-c706526395ce" mode="Opaque" x="715" y="0" width="87" height="25" backcolor="#2F3E50" hTextAlign="Center" vTextAlign="Middle" style="ColumnHeader">
+			<text><![CDATA[Net Pay]]></text>
+			<box style="ColumnHeader">
+				<pen lineWidth="0.25" lineColor="#FFFFFF"/>
+			</box>
+		</element>
+	</columnHeader>
+	<detail>
+		<band height="22" splitType="Stretch">
+			<element kind="textField" uuid="ba241f98-60a6-4583-b213-67b61bcb3158" x="0" y="0" width="75" height="22" blankWhenNull="true" hTextAlign="Center" vTextAlign="Middle" style="DetailCell">
+				<expression><![CDATA[$F{employee_id}]]></expression>
+				<box style="DetailCell">
+					<pen lineWidth="0.1" lineColor="#FFFFFF"/>
+				</box>
+			</element>
+			<element kind="textField" uuid="e8b20db8-b553-4186-89b7-4e3f1e2e998b" x="75" y="0" width="180" height="22" blankWhenNull="true" vTextAlign="Middle" style="DetailCell">
+				<paragraph leftIndent="4"/>
+				<expression><![CDATA[$F{employee_name}]]></expression>
+				<box style="DetailCell">
+					<pen lineWidth="0.1" lineColor="#FFFFFF"/>
+				</box>
+			</element>
+			<element kind="textField" uuid="0a7e26a0-71d2-405c-9353-08710bf17db5" x="255" y="0" width="150" height="22" blankWhenNull="true" vTextAlign="Middle" style="DetailCell">
+				<paragraph leftIndent="4"/>
+				<expression><![CDATA[$F{position_name}]]></expression>
+				<box style="DetailCell">
+					<pen lineWidth="0.1" lineColor="#FFFFFF"/>
+				</box>
+			</element>
+			<element kind="textField" uuid="d59df19a-7aa8-40ac-97f5-0d4b6ee4f56d" x="405" y="0" width="120" height="22" blankWhenNull="true" vTextAlign="Middle" style="DetailCell">
+				<paragraph leftIndent="4"/>
+				<expression><![CDATA[$F{department_name}]]></expression>
+				<box style="DetailCell">
+					<pen lineWidth="0.1" lineColor="#FFFFFF"/>
+				</box>
+			</element>
+			<element kind="textField" uuid="11b4aff4-e5b8-4632-84be-94d000360c9f" x="525" y="0" width="95" height="22" pattern="₱#,##0.00" blankWhenNull="true" hTextAlign="Right" vTextAlign="Middle" style="DetailCell">
+				<paragraph rightIndent="5"/>
+				<expression><![CDATA[$F{gross_pay}]]></expression>
+				<box style="DetailCell">
+					<pen lineWidth="0.1" lineColor="#FFFFFF"/>
+				</box>
+			</element>
+			<element kind="textField" uuid="904f29b2-d771-4c6c-b6a6-ece3a3a5f247" x="620" y="0" width="95" height="22" pattern="₱#,##0.00" blankWhenNull="true" hTextAlign="Right" vTextAlign="Middle" style="DetailCell">
+				<paragraph rightIndent="5"/>
+				<expression><![CDATA[$F{total_deductions}]]></expression>
+				<box style="DetailCell">
+					<pen lineWidth="0.1" lineColor="#FFFFFF"/>
+				</box>
+			</element>
+			<element kind="textField" uuid="9bfe8c6c-95bb-408e-84e2-89e00fd24b28" x="715" y="0" width="87" height="22" pattern="₱#,##0.00" blankWhenNull="true" hTextAlign="Right" vTextAlign="Middle" style="DetailCell">
+				<paragraph rightIndent="5"/>
+				<expression><![CDATA[$F{net_pay}]]></expression>
+				<box style="DetailCell">
+					<pen lineWidth="0.1" lineColor="#FFFFFF"/>
+				</box>
+			</element>
+		</band>
+	</detail>
+	<pageFooter height="22" splitType="Stretch">
+		<element kind="line" uuid="2381e905-9a2f-4e25-b332-8d5aa110c56f" x="0" y="0" width="802" height="1" forecolor="#D9D9D9"/>
+		<element kind="textField" uuid="2d31e5e6-c7f0-40f1-a7b5-436158c2f827" x="0" y="4" width="300" height="14" fontSize="7.0" vTextAlign="Middle" style="Base">
+			<expression><![CDATA["Generated: " + new java.text.SimpleDateFormat("MMM dd, yyyy hh:mm a").format(new java.util.Date())]]></expression>
+		</element>
+		<element kind="textField" uuid="ea113448-4f97-4856-9178-f170a11b4635" x="650" y="4" width="80" height="14" fontSize="7.0" hTextAlign="Right" vTextAlign="Middle" style="Base">
+			<expression><![CDATA["Page " + $V{PAGE_NUMBER} + " of"]]></expression>
+		</element>
+		<element kind="textField" uuid="efa29e9d-2a6b-4ab4-a037-f44936a52fc8" x="732" y="4" width="70" height="14" fontSize="7.0" evaluationTime="Report" vTextAlign="Middle" style="Base">
+			<expression><![CDATA[" " + $V{PAGE_NUMBER}]]></expression>
+		</element>
+	</pageFooter>
+	<summary height="58" splitType="Stretch">
+		<element kind="rectangle" uuid="b6d36a6f-b995-4f4b-bcb1-57059e1ab279" mode="Opaque" x="0" y="10" width="802" height="36" forecolor="#F2F2F2" backcolor="#F2F2F2"/>
+		<element kind="staticText" uuid="3d945b13-9d04-4fd2-94f4-81fd9124094b" mode="Opaque" x="0" y="10" width="145" height="36" backcolor="#2F3E50" vTextAlign="Middle" style="InfoLabel">
+			<paragraph leftIndent="8"/>
+			<text><![CDATA[TOTAL EMPLOYEES]]></text>
+			<box style="InfoLabel">
+				<pen lineWidth="0.25" lineColor="#FFFFFF"/>
+			</box>
+		</element>
+		<element kind="textField" uuid="2788072a-ef82-4722-92b9-9e31459594dc" x="145" y="10" width="65" height="36" fontSize="11.0" bold="true" hTextAlign="Center" vTextAlign="Middle" style="InfoValue">
+			<expression><![CDATA[$V{REPORT_COUNT}]]></expression>
+			<box style="InfoValue">
+				<pen lineWidth="0.25" lineColor="#D0D0D0"/>
+			</box>
+		</element>
+		<element kind="staticText" uuid="eb95ce87-9f58-45b6-9228-62a8a67516f7" mode="Opaque" x="230" y="10" width="90" height="36" backcolor="#2F3E50" hTextAlign="Center" vTextAlign="Middle" style="InfoLabel">
+			<text><![CDATA[TOTAL GROSS]]></text>
+			<box style="InfoLabel">
+				<pen lineWidth="0.25" lineColor="#FFFFFF"/>
+			</box>
+		</element>
+		<element kind="textField" uuid="691d681a-847f-4a69-9240-d6653a0c0afa" x="320" y="10" width="105" height="36" pattern="₱#,##0.00" bold="true" hTextAlign="Center" vTextAlign="Middle" style="InfoValue">
+			<expression><![CDATA[$V{TOTAL_GROSS_PAY}]]></expression>
+			<box style="InfoValue">
+				<pen lineWidth="0.25" lineColor="#D0D0D0"/>
+			</box>
+		</element>
+		<element kind="staticText" uuid="2f8fd97a-2121-46b4-8fd7-5f04e21df337" mode="Opaque" x="425" y="10" width="115" height="36" backcolor="#2F3E50" hTextAlign="Center" vTextAlign="Middle" style="InfoLabel">
+			<text><![CDATA[TOTAL DEDUCTIONS]]></text>
+			<box style="InfoLabel">
+				<pen lineWidth="0.25" lineColor="#FFFFFF"/>
+			</box>
+		</element>
+		<element kind="textField" uuid="9cd7c7a0-c193-45e8-b7f8-f30b12aab5b0" x="540" y="10" width="105" height="36" pattern="₱#,##0.00" bold="true" hTextAlign="Center" vTextAlign="Middle" style="InfoValue">
+			<expression><![CDATA[$V{TOTAL_DEDUCTIONS_AMOUNT}]]></expression>
+			<box style="InfoValue">
+				<pen lineWidth="0.25" lineColor="#D0D0D0"/>
+			</box>
+		</element>
+		<element kind="staticText" uuid="cae7bc1e-fde7-4f25-88a8-c7d7a34b88a3" mode="Opaque" x="645" y="10" width="72" height="36" backcolor="#2F3E50" hTextAlign="Center" vTextAlign="Middle" style="InfoLabel">
+			<text><![CDATA[TOTAL NET]]></text>
+			<box style="InfoLabel">
+				<pen lineWidth="0.25" lineColor="#FFFFFF"/>
+			</box>
+		</element>
+		<element kind="textField" uuid="a4e7bb78-29b5-4d33-a03a-c6a0a292465d" x="717" y="10" width="85" height="36" pattern="₱#,##0.00" bold="true" hTextAlign="Center" vTextAlign="Middle" style="InfoValue">
+			<expression><![CDATA[$V{TOTAL_NET_PAY}]]></expression>
+			<box style="InfoValue">
+				<pen lineWidth="0.25" lineColor="#D0D0D0"/>
+			</box>
+		</element>
+	</summary>
+</jasperReport>
