@@ -26,6 +26,7 @@ import javax.swing.border.EmptyBorder;
 
 import com.motorph.model.Role;
 import com.motorph.model.UserAccount;
+import com.motorph.ui.attendance.AttendancePanel;
 import com.motorph.ui.employee.EmployeePanel;
 import com.motorph.ui.payroll.PayrollPanel;
 import com.motorph.ui.request.RequestPanel;
@@ -116,7 +117,7 @@ public class MainFrame extends JFrame {
         contentCards.add(new EmployeePanel(), "Employees");
         contentCards.add(payrollPanel, "Payroll");
         contentCards.add(new RequestPanel(), "Requests");
-        contentCards.add(placeholderPanel("Attendance"), "Attendance");
+        contentCards.add(new AttendancePanel(), "Attendance");
         contentCards.add(new ITUserAccountList(), "Users");
         contentCards.add(new AccountSecurity(), "Settings");
         contentCards.add(new ITDisputeList(), "Help Center");
