@@ -1,5 +1,6 @@
-package com.motorph.ui.it;
+package com.motorph.ui.helpcenter;
 
+import com.motorph.ui.helpcenter.HelpCenterPanel;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -33,7 +34,7 @@ import javax.swing.border.MatteBorder;
  * Matches the two-column form layout with Approve / Reject / Confirm actions.
  * Call {@link #load(ITDisputeList.DisputeEntry)} before showing this panel.
  */
-public class ITDisputeDetail extends JPanel {
+public class DisputeDetail extends JPanel {
 
     // ── Palette (from the screenshot) ────────────────────────────────────────
     private static final Color NAVY        = new Color(13,  36,  89);
@@ -56,7 +57,7 @@ public class ITDisputeDetail extends JPanel {
 
     private final Runnable onBack;
 
-    public ITDisputeDetail(Runnable onBack) {
+    public DisputeDetail(Runnable onBack) {
         this.onBack = onBack;
         setLayout(new BorderLayout());
         setBackground(Color.WHITE);
@@ -66,7 +67,7 @@ public class ITDisputeDetail extends JPanel {
     }
 
     /** Populate all fields from the selected dispute entry. */
-    public void load(ITDisputeList.DisputeEntry entry) {
+    public void load(HelpCenterPanel.DisputeEntry entry) {
         ticketIdField  .setText(entry.ticketId);
         dateField      .setText(entry.date);
         employeeField  .setText(entry.employeeName);

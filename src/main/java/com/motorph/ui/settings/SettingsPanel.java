@@ -27,7 +27,7 @@ import javax.swing.border.AbstractBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
-public class AccountSecurity extends JPanel {
+public class SettingsPanel extends JPanel {
 
     private static final int STRENGTH_WEAK   = 1;
     private static final int STRENGTH_FAIR   = 2;
@@ -40,7 +40,7 @@ public class AccountSecurity extends JPanel {
     private StrengthBar    strengthBar;
     private JLabel         strengthLabel;
 
-    public AccountSecurity() {
+    public SettingsPanel() {
         setLayout(new BorderLayout());
         setBackground(new Color(245, 247, 252));
         buildUI();

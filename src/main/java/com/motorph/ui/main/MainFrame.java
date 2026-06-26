@@ -1,4 +1,4 @@
-package com.motorph.ui.dashboard;
+package com.motorph.ui.main;
 
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
@@ -27,14 +27,14 @@ import javax.swing.border.EmptyBorder;
 import com.motorph.model.Role;
 import com.motorph.model.UserAccount;
 import com.motorph.ui.attendance.AttendancePanel;
+import com.motorph.ui.dashboard.DashboardPanel;
 import com.motorph.ui.employee.EmployeePanel;
 import com.motorph.ui.payroll.PayrollPanel;
 import com.motorph.ui.request.RequestPanel;
 import com.motorph.ui.it.ITDashboard;
-import com.motorph.ui.it.ITDisputeList;
-import com.motorph.ui.it.ITUserAccountList;
+import com.motorph.ui.helpcenter.HelpCenterPanel;
 import com.motorph.ui.login.Login;
-import com.motorph.ui.settings.AccountSecurity;
+import com.motorph.ui.settings.SettingsPanel;
 import com.motorph.util.Session;
 
 public class MainFrame extends JFrame {
@@ -56,7 +56,6 @@ public class MainFrame extends JFrame {
         { "Payroll",    "Payroll-Icon.png" },
         { "Requests",   "Requests-icon.png" },
         { "Attendance", "Attendance-Icon.png" },
-        { "Users",      "Users-Icon.png" },
     };
 
     private static final String[][] BOTTOM_NAV = {
@@ -118,9 +117,8 @@ public class MainFrame extends JFrame {
         contentCards.add(payrollPanel, "Payroll");
         contentCards.add(new RequestPanel(), "Requests");
         contentCards.add(new AttendancePanel(), "Attendance");
-        contentCards.add(new ITUserAccountList(), "Users");
-        contentCards.add(new AccountSecurity(), "Settings");
-        contentCards.add(new ITDisputeList(), "Help Center");
+        contentCards.add(new SettingsPanel(), "Settings");
+        contentCards.add(new HelpCenterPanel(), "Help Center");
         contentCards.add(placeholderPanel("Log Out"), "Log Out");
 
         root.add(contentCards, BorderLayout.CENTER);
@@ -191,7 +189,6 @@ public class MainFrame extends JFrame {
         navPanel.setBorder(new EmptyBorder(28, 0, 0, 0));
 
         for (String[] item : MAIN_NAV) {
-            if ("Users".equals(item[0]) && !isAdminOrIT()) continue;
             navPanel.add(buildNavItem(item[0], item[1]));
         }
 
@@ -320,7 +317,6 @@ public class MainFrame extends JFrame {
         navPanel.removeAll();
 
         for (String[] item : MAIN_NAV) {
-            if ("Users".equals(item[0]) && !isAdminOrIT()) continue;
             navPanel.add(buildNavItem(item[0], item[1]));
         }
 

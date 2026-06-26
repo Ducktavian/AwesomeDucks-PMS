@@ -12,7 +12,7 @@ import javax.swing.border.AbstractBorder;
 
 import com.motorph.model.UserAccount;
 import com.motorph.service.AuthService;
-import com.motorph.ui.dashboard.MainFrame;
+import com.motorph.ui.main.MainFrame;
 import com.motorph.util.AppContext;
 import com.motorph.util.Session;
 
