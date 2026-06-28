@@ -11,7 +11,7 @@
         <maven.compiler.release>17</maven.compiler.release>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>   
-        <exec.mainClass>com.motorph.motorph.MotorPH</exec.mainClass>
+        <exec.mainClass>com.motorph.main.Main</exec.mainClass>
     </properties>
     
     <dependencies>
@@ -64,7 +64,7 @@
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.1.0</version>
                 <configuration>
-                    <mainClass>com.motorph.ui.MainFrame</mainClass>
+                    <mainClass>com.motorph.main.Main</mainClass>
                 </configuration>
             </plugin>
             <plugin>
