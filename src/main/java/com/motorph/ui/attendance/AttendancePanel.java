@@ -17,8 +17,11 @@ public class AttendancePanel extends JPanel {
     private static final String FONT = "Segoe UI";
 
     private static final String[] COLUMNS = {
-        "Employee ID", "Type", "Date", "Time In", "Time Out", "Validity"
+        "Employee ID", "Type", "Date", "Time In", "Break Out", "Break In",
+        "Time Out", "Total Hours Worked", "Validity"
     };
+
+    private final List<Object[]> attendanceRows = new ArrayList<>();
 
     private DefaultTableModel tableModel;
     private JTable attendanceTable;
@@ -29,11 +32,30 @@ public class AttendancePanel extends JPanel {
     private SortOrder currentSortOrder = SortOrder.UNSORTED;
 
     public AttendancePanel() {
+        loadSampleRows();
+
         setLayout(new BorderLayout());
         setBackground(Color.WHITE);
 
         add(buildTopBar(), BorderLayout.NORTH);
         add(buildBody(), BorderLayout.CENTER);
+    }
+
+    private void showAttendanceList() {
+        removeAll();
+        setLayout(new BorderLayout());
+        add(buildTopBar(), BorderLayout.NORTH);
+        add(buildBody(), BorderLayout.CENTER);
+        revalidate();
+        repaint();
+    }
+
+    private void loadSampleRows() {
+        attendanceRows.clear();
+        attendanceRows.add(new Object[]{"10001", "Regular", "09/01/2026", "8:00 AM", "12:00 PM", "1:00 PM", "5:00 PM", "8 hrs", "Valid"});
+        attendanceRows.add(new Object[]{"10002", "Regular", "05/01/2026", "8:00 AM", "12:00 PM", "1:00 PM", "5:00 PM", "8 hrs", "Valid"});
+        attendanceRows.add(new Object[]{"10003", "Overtime", "09/01/2026", "8:00 AM", "12:00 PM", "1:00 PM", "7:00 PM", "10 hrs", "Valid"});
+        attendanceRows.add(new Object[]{"10004", "Holiday", "05/01/2026", "8:00 AM", "12:00 PM", "1:00 PM", "5:00 PM", "8 hrs", "Invalid"});
     }
 
     private JPanel buildTopBar() {
@@ -135,22 +157,108 @@ public class AttendancePanel extends JPanel {
         row.setAlignmentX(Component.LEFT_ALIGNMENT);
         row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
 
-        JPanel leftButtons = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
-        leftButtons.setOpaque(false);
-        leftButtons.add(navyButton("", "Time In", 90));
-        leftButtons.add(navyButton("", "Time Out", 95));
-
         JPanel rightButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         rightButtons.setOpaque(false);
 
-        rightButtons.add(navyButton("+", "Add", 90));
-        rightButtons.add(navyButton("✎", "Update", 105));
-        rightButtons.add(navyButton("🗑", "Delete", 105));
-        rightButtons.add(navyButton("⟳", "Refresh", 110));
+        JButton addButton = navyButton("+", "Add", 90);
+        addButton.addActionListener(e -> {
+            removeAll();
+            setLayout(new BorderLayout());
 
-        row.add(leftButtons, BorderLayout.WEST);
+            add(new AttendanceFormPanel(
+                    this::showAttendanceList,
+                    rowData -> {
+                        attendanceRows.add(rowData);
+                        showAttendanceList();
+                    }
+            ), BorderLayout.CENTER);
+
+            revalidate();
+            repaint();
+        });
+        rightButtons.add(addButton);
+
+        JButton updateButton = navyButton("✎", "Update", 105);
+        updateButton.addActionListener(e -> {
+            int selectedRow = attendanceTable.getSelectedRow();
+
+            if (selectedRow == -1) {
+                JOptionPane.showMessageDialog(
+                        this,
+                        "Please select an attendance entry to update.",
+                        "No Entry Selected",
+                        JOptionPane.WARNING_MESSAGE
+                );
+                return;
+            }
+
+            int modelRow = attendanceTable.convertRowIndexToModel(selectedRow);
+            Object[] existingData = attendanceRows.get(modelRow);
+
+            removeAll();
+            setLayout(new BorderLayout());
+
+            add(new AttendanceFormPanel(
+                    this::showAttendanceList,
+                    existingData,
+                    updatedData -> {
+                        attendanceRows.set(modelRow, updatedData);
+                        showAttendanceList();
+                    }
+            ), BorderLayout.CENTER);
+
+            revalidate();
+            repaint();
+        });
+        rightButtons.add(updateButton);
+
+        JButton deleteButton = navyButton("🗑", "Delete", 105);
+        deleteButton.addActionListener(e -> {
+            int selectedRow = attendanceTable.getSelectedRow();
+
+            if (selectedRow == -1) {
+                JOptionPane.showMessageDialog(
+                        this,
+                        "Please select an attendance entry to delete.",
+                        "No Entry Selected",
+                        JOptionPane.WARNING_MESSAGE
+                );
+                return;
+            }
+
+            int confirm = JOptionPane.showConfirmDialog(
+                    this,
+                    "Are you sure you want to delete this attendance entry?",
+                    "Confirm Delete",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE
+            );
+
+            if (confirm != JOptionPane.YES_OPTION) {
+                return;
+            }
+
+            int modelRow = attendanceTable.convertRowIndexToModel(selectedRow);
+            attendanceRows.remove(modelRow);
+            showAttendanceList();
+
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Attendance entry deleted successfully.",
+                    "Deleted",
+                    JOptionPane.INFORMATION_MESSAGE
+            );
+        });
+        rightButtons.add(deleteButton);
+
+        JButton refreshButton = navyButton("⟳", "Refresh", 110);
+        refreshButton.addActionListener(e -> {
+            loadSampleRows();
+            showAttendanceList();
+        });
+        rightButtons.add(refreshButton);
+
         row.add(rightButtons, BorderLayout.EAST);
-
         return row;
     }
 
@@ -165,6 +273,10 @@ public class AttendancePanel extends JPanel {
                 return false;
             }
         };
+
+        for (Object[] row : attendanceRows) {
+            tableModel.addRow(row);
+        }
 
         attendanceTable = new JTable(tableModel);
         attendanceTable.setRowHeight(56);
@@ -182,17 +294,12 @@ public class AttendancePanel extends JPanel {
         styleHeader();
         styleColumns();
         styleCells();
-        addSampleRows();
 
         JScrollPane scrollPane = new JScrollPane(attendanceTable);
         scrollPane.setColumnHeaderView(null);
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
         scrollPane.getViewport().setBackground(Color.WHITE);
         scrollPane.setBackground(Color.WHITE);
-
-        JScrollBar verticalBar = scrollPane.getVerticalScrollBar();
-        verticalBar.setUnitIncrement(16);
-        verticalBar.setBackground(Color.WHITE);
 
         tablePanel.add(attendanceTable.getTableHeader(), BorderLayout.NORTH);
         tablePanel.add(scrollPane, BorderLayout.CENTER);
@@ -224,11 +331,9 @@ public class AttendancePanel extends JPanel {
     }
 
     private void toggleColumnSort(int column) {
-        if (sortedColumn == column && currentSortOrder == SortOrder.ASCENDING) {
-            currentSortOrder = SortOrder.DESCENDING;
-        } else {
-            currentSortOrder = SortOrder.ASCENDING;
-        }
+        currentSortOrder = sortedColumn == column && currentSortOrder == SortOrder.ASCENDING
+                ? SortOrder.DESCENDING
+                : SortOrder.ASCENDING;
 
         sortedColumn = column;
 
@@ -241,7 +346,7 @@ public class AttendancePanel extends JPanel {
     }
 
     private void styleColumns() {
-        int[] widths = {150, 150, 170, 130, 130, 120};
+        int[] widths = {120, 100, 140, 95, 95, 95, 95, 150, 105};
         TableColumnModel columns = attendanceTable.getColumnModel();
 
         for (int i = 0; i < widths.length; i++) {
@@ -251,22 +356,12 @@ public class AttendancePanel extends JPanel {
 
     private void styleCells() {
         for (int i = 0; i < attendanceTable.getColumnCount(); i++) {
-            if (i == 5) {
+            if (i == 8) {
                 attendanceTable.getColumnModel().getColumn(i).setCellRenderer(new ValidityRenderer());
             } else {
                 attendanceTable.getColumnModel().getColumn(i).setCellRenderer(new DefaultAttendanceCellRenderer());
             }
         }
-    }
-
-    private void addSampleRows() {
-        tableModel.addRow(new Object[]{"Juan Cruz", "Holiday", "September 1, 2026", "5:00 PM", "6:00 PM", "Invalid"});
-        tableModel.addRow(new Object[]{"Super Man", "Regular", "May 1, 2026", "5:00 PM", "8:00 PM", "Valid"});
-        tableModel.addRow(new Object[]{"Juan Cruz", "Overtime", "September 1, 2026", "5:00 PM", "", "Valid"});
-        tableModel.addRow(new Object[]{"Super Man", "Regular", "May 1, 2026", "5:00 PM", "8:00 PM", "Valid"});
-        tableModel.addRow(new Object[]{"Juan Cruz", "Overtime", "September 1, 2026", "5:00 PM", "", "Valid"});
-        tableModel.addRow(new Object[]{"Super Man", "Regular", "May 1, 2026", "5:00 PM", "8:00 PM", "Valid"});
-        tableModel.addRow(new Object[]{"Juan Cruz", "Holiday", "September 1, 2026", "5:00 PM", "6:00 PM", "Valid"});
     }
 
     private void applySearchFilter() {
@@ -299,8 +394,8 @@ public class AttendancePanel extends JPanel {
 
     private class HeaderFilterRenderer extends JPanel implements TableCellRenderer {
 
-        private final JLabel titleLabel;
-        private final JLabel filterLabel;
+        private final JLabel titleLabel = new JLabel();
+        private final JLabel filterLabel = new JLabel("⇅");
 
         HeaderFilterRenderer() {
             setLayout(new BorderLayout(6, 0));
@@ -308,12 +403,10 @@ public class AttendancePanel extends JPanel {
             setBackground(Color.WHITE);
             setBorder(new EmptyBorder(0, 18, 10, 18));
 
-            titleLabel = new JLabel();
-            titleLabel.setFont(new Font("SansSerif", Font.BOLD, 13));
+            titleLabel.setFont(new Font(FONT, Font.BOLD, 13));
             titleLabel.setForeground(Color.BLACK);
 
-            filterLabel = new JLabel("⇅");
-            filterLabel.setFont(new Font("SansSerif", Font.BOLD, 12));
+            filterLabel.setFont(new Font(FONT, Font.BOLD, 12));
             filterLabel.setForeground(new Color(130, 130, 130));
             filterLabel.setHorizontalAlignment(SwingConstants.RIGHT);
 
@@ -323,12 +416,8 @@ public class AttendancePanel extends JPanel {
 
         @Override
         public Component getTableCellRendererComponent(
-                JTable table,
-                Object value,
-                boolean isSelected,
-                boolean hasFocus,
-                int row,
-                int column) {
+                JTable table, Object value, boolean isSelected,
+                boolean hasFocus, int row, int column) {
 
             int modelColumn = table.convertColumnIndexToModel(column);
             titleLabel.setText(value == null ? "" : value.toString());
@@ -348,12 +437,8 @@ public class AttendancePanel extends JPanel {
     private static class DefaultAttendanceCellRenderer extends DefaultTableCellRenderer {
         @Override
         public Component getTableCellRendererComponent(
-                JTable table,
-                Object value,
-                boolean isSelected,
-                boolean hasFocus,
-                int row,
-                int column) {
+                JTable table, Object value, boolean isSelected,
+                boolean hasFocus, int row, int column) {
 
             JLabel label = (JLabel) super.getTableCellRendererComponent(
                     table, value, isSelected, hasFocus, row, column
@@ -378,23 +463,14 @@ public class AttendancePanel extends JPanel {
         private String status = "";
         private Color rowBackground = Color.WHITE;
 
-        ValidityRenderer() {
-            setOpaque(true);
-        }
-
         @Override
         public Component getTableCellRendererComponent(
-                JTable table,
-                Object value,
-                boolean isSelected,
-                boolean hasFocus,
-                int row,
-                int column) {
+                JTable table, Object value, boolean isSelected,
+                boolean hasFocus, int row, int column) {
 
             status = value == null ? "" : value.toString();
             rowBackground = isSelected ? SELECTED_ROW : row % 2 == 0 ? Color.WHITE : ROW_GRAY;
             setBackground(rowBackground);
-
             return this;
         }
 
@@ -405,8 +481,9 @@ public class AttendancePanel extends JPanel {
             Graphics2D g2 = (Graphics2D) g.create();
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-            boolean valid = "Valid".equalsIgnoreCase(status);
-            Color pillColor = valid ? new Color(0, 190, 100) : new Color(255, 82, 82);
+            Color pillColor = "Valid".equalsIgnoreCase(status)
+                    ? new Color(0, 190, 100)
+                    : new Color(255, 82, 82);
 
             int pillW = 72;
             int pillH = 26;
