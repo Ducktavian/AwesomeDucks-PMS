@@ -1,15 +1,15 @@
 package com.motorph.ui.attendance;
 
-import com.motorph.model.Attendance;          // NEW
+import com.motorph.model.Attendance;         
 import com.motorph.model.Role;
 import com.motorph.model.UserAccount;
-import com.motorph.service.AttendanceService;  // NEW
-import com.motorph.util.AppContext;            // NEW
+import com.motorph.service.AttendanceService;  
+import com.motorph.util.AppContext;          
 import com.motorph.util.Session;
 
 import java.awt.*;
 import java.awt.event.*;
-import java.time.format.DateTimeFormatter;     // NEW
+import java.time.format.DateTimeFormatter;    
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.*;
@@ -33,8 +33,8 @@ public class AttendancePanel extends JPanel {
 
     // NEW: connection to the database via service -> dao
     private final AttendanceService attendanceService = AppContext.getAttendanceService();
-    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("MM/dd/yyyy"); // NEW
-    private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("h:mm a");      // NEW
+    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("MM/dd/yyyy");
+    private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("h:mm a");     
 
     private DefaultTableModel tableModel;
     private JTable attendanceTable;
@@ -87,8 +87,9 @@ public class AttendancePanel extends JPanel {
         repaint();
     }
 
-    // NEW: loads attendance from the database (service -> dao) instead of hardcoded rows.
+    // NEW: loads attendance from the database (service -> dao)
     // Privileged roles pull every record; everyone else only pulls their own.
+    // kala ko may toggle dito for all vs own records?
     private void loadSampleRows() {
         attendanceRows.clear();
 
@@ -112,7 +113,7 @@ public class AttendancePanel extends JPanel {
     }
 
     // NEW: maps one Attendance record into the table-row format this panel expects.
-    // Break Out / Break In and Type are not stored in the attendance table yet,
+    // Break Out / Break In and Type ay wala pa,
     // so those cells are left blank.
     private Object[] toTableRow(Attendance a) {
         double hours = attendanceService.computeDailyHours(a);

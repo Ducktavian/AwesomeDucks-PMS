@@ -1,15 +1,15 @@
 package com.motorph.ui.payroll;
 
-import com.motorph.model.Payslip;             // NEW
+import com.motorph.model.Payslip;            
 import com.motorph.model.Role;
 import com.motorph.model.UserAccount;
-import com.motorph.service.PayrollService;     // NEW
-import com.motorph.util.AppContext;            // NEW
+import com.motorph.service.PayrollService;     
+import com.motorph.util.AppContext;            
 import com.motorph.util.Session;
 
 import java.awt.*;
 import java.awt.event.*;
-import java.time.format.DateTimeFormatter;     // NEW
+import java.time.format.DateTimeFormatter;     
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.*;
@@ -343,8 +343,7 @@ public class PayrollPanel extends JPanel {
         }
     }
 
-    // NEW: loads payslips from the database (service -> dao) instead of hardcoded rows.
-    // Row-level RBAC is still enforced by addPayrollRow() / canSeeRow().
+    // NEW: loads payslips from the database (service -> dao)
     private void addSampleRows() {
         tableModel.setRowCount(0);
 

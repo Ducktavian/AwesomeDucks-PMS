@@ -1,25 +1,25 @@
 package com.motorph.ui.request;
 
-import com.motorph.model.Employee;            // NEW
-import com.motorph.model.LeaveRequest;         // NEW
-import com.motorph.model.OvertimeRequest;      // NEW
-import com.motorph.model.Request;              // NEW
+import com.motorph.model.Employee;            
+import com.motorph.model.LeaveRequest;         
+import com.motorph.model.OvertimeRequest;      
+import com.motorph.model.Request;             
 import com.motorph.model.Role;
-import com.motorph.model.UndertimeRequest;     // NEW
+import com.motorph.model.UndertimeRequest;     
 import com.motorph.model.UserAccount;
-import com.motorph.service.EmployeeService;    // NEW
-import com.motorph.service.RequestService;     // NEW
-import com.motorph.util.AppContext;            // NEW
+import com.motorph.service.EmployeeService;    
+import com.motorph.service.RequestService;     
+import com.motorph.util.AppContext;            
 import com.motorph.util.Session;
 
 import java.awt.*;
 import java.awt.event.*;
-import java.time.format.DateTimeFormatter;     // NEW
+import java.time.format.DateTimeFormatter;     
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;                       // NEW
+import java.util.HashMap;                       
 import java.util.List;
-import java.util.Map;                           // NEW
+import java.util.Map;                         
 import javax.swing.*;
 import javax.swing.border.*;
 import javax.swing.table.*;
@@ -105,8 +105,9 @@ public class RequestPanel extends JPanel {
         repaint();
     }
 
-    // NEW: loads requests from the database (service -> dao) instead of hardcoded rows.
+    // NEW: loads requests from the database (service -> dao)
     // Privileged roles pull every request; everyone else only pulls their own.
+    // dito rin pala same with Attendance
     private void loadSampleRows() {
         requestRows.clear();
 
@@ -138,7 +139,7 @@ public class RequestPanel extends JPanel {
     }
 
     // NEW: maps one Request (any subtype) into the table-row format this panel expects.
-    // Notes are not stored on the request yet, so that cell is left blank.
+    // Notes are not stored on the request yet, so blank
     private Object[] toTableRow(Request r, Map<String, Employee> employeeCache) {
         String employeeId = String.valueOf(r.getEmployeeId());
 
