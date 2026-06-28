@@ -1,14 +1,25 @@
 package com.motorph.ui.request;
 
+import com.motorph.model.Employee;            // NEW
+import com.motorph.model.LeaveRequest;         // NEW
+import com.motorph.model.OvertimeRequest;      // NEW
+import com.motorph.model.Request;              // NEW
 import com.motorph.model.Role;
+import com.motorph.model.UndertimeRequest;     // NEW
 import com.motorph.model.UserAccount;
+import com.motorph.service.EmployeeService;    // NEW
+import com.motorph.service.RequestService;     // NEW
+import com.motorph.util.AppContext;            // NEW
 import com.motorph.util.Session;
 
 import java.awt.*;
 import java.awt.event.*;
+import java.time.format.DateTimeFormatter;     // NEW
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;                       // NEW
 import java.util.List;
+import java.util.Map;                           // NEW
 import javax.swing.*;
 import javax.swing.border.*;
 import javax.swing.table.*;
@@ -41,6 +52,12 @@ public class RequestPanel extends JPanel {
 
     private int sortedColumn = -1;
     private SortOrder currentSortOrder = SortOrder.UNSORTED;
+
+    // NEW: connections to the database via service -> dao
+    private final RequestService requestService = AppContext.getRequestService();
+    private final EmployeeService employeeService = AppContext.getEmployeeService();
+    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("MM/dd/yyyy"); // NEW
+    private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("h:mm a");      // NEW
 
     public RequestPanel() {
         applyRBAC();
@@ -88,14 +105,88 @@ public class RequestPanel extends JPanel {
         repaint();
     }
 
+    // NEW: loads requests from the database (service -> dao) instead of hardcoded rows.
+    // Privileged roles pull every request; everyone else only pulls their own.
     private void loadSampleRows() {
         requestRows.clear();
-        requestRows.add(new Object[]{"Juan Dela Cruz", "IT", "Overtime", "03/01/2026", "03/01/2026", "5:00 PM", "7:00 PM", "Project work", "", "Pending", "10001"});
-        requestRows.add(new Object[]{"Maria Santos", "HR", "Leave", "03/03/2026", "03/05/2026", "", "", "Vacation", "", "Pending", "10002"});
-        requestRows.add(new Object[]{"Pedro Reyes", "Finance", "Undertime", "03/04/2026", "03/04/2026", "3:00 PM", "5:00 PM", "Personal", "", "Rejected", "10003"});
-        requestRows.add(new Object[]{"Ana Lopez", "IT", "Overtime", "03/07/2026", "03/07/2026", "6:00 PM", "9:00 PM", "System update", "", "Approved", "10004"});
-        requestRows.add(new Object[]{"Carlos Mendez", "HR", "Leave", "03/10/2026", "03/11/2026", "", "", "Family event", "", "Pending", "10005"});
-        requestRows.add(new Object[]{"Lisa Tan", "Employee", "Overtime", "03/12/2026", "03/12/2026", "5:00 PM", "8:00 PM", "Reports", "", "Pending", "10006"});
+
+        try {
+            List<Request> requests;
+            if (canViewAllRequests) {
+                requests = requestService.findAll();
+            } else if (!currentEmployeeId.isBlank()) {
+                requests = requestService.findByEmployee(Integer.parseInt(currentEmployeeId));
+            } else {
+                requests = new ArrayList<>();
+            }
+
+            // Cache employee lookups so we don't hit the DB once per request row.
+            Map<String, Employee> employeeCache = new HashMap<>();
+
+            for (Request r : requests) {
+                requestRows.add(toTableRow(r, employeeCache));
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Failed to load requests:\n" + ex.getMessage(),
+                    "Load Error",
+                    JOptionPane.ERROR_MESSAGE
+            );
+        }
+    }
+
+    // NEW: maps one Request (any subtype) into the table-row format this panel expects.
+    // Notes are not stored on the request yet, so that cell is left blank.
+    private Object[] toTableRow(Request r, Map<String, Employee> employeeCache) {
+        String employeeId = String.valueOf(r.getEmployeeId());
+
+        Employee emp = employeeCache.computeIfAbsent(
+                employeeId, id -> employeeService.findEmployee(id));
+
+        String name = emp == null ? "" : emp.getFullName();
+        String department = emp == null ? "" : emp.getDepartment();
+
+        String startDate = "";
+        String endDate = "";
+        String startTime = "";
+        String endTime = "";
+
+        if (r instanceof LeaveRequest leave) {
+            startDate = leave.getStartDate() == null ? "" : leave.getStartDate().format(DATE_FMT);
+            endDate = leave.getEndDate() == null ? "" : leave.getEndDate().format(DATE_FMT);
+        } else if (r instanceof OvertimeRequest ot) {
+            startDate = ot.getOvertimeDate() == null ? "" : ot.getOvertimeDate().format(DATE_FMT);
+            endDate = startDate;
+            startTime = ot.getStartTime() == null ? "" : ot.getStartTime().format(TIME_FMT);
+            endTime = ot.getEndTime() == null ? "" : ot.getEndTime().format(TIME_FMT);
+        } else if (r instanceof UndertimeRequest ut) {
+            startDate = ut.getUndertimeDate() == null ? "" : ut.getUndertimeDate().format(DATE_FMT);
+            endDate = startDate;
+            startTime = ut.getStartTime() == null ? "" : ut.getStartTime().format(TIME_FMT);
+            endTime = ut.getEndTime() == null ? "" : ut.getEndTime().format(TIME_FMT);
+        }
+
+        return new Object[]{
+            name,
+            department,
+            r.getRequestType() == null ? "" : pretty(r.getRequestType().name()),
+            startDate,
+            endDate,
+            startTime,
+            endTime,
+            r.getReason() == null ? "" : r.getReason(),
+            "",                                                   // Notes (not modeled yet)
+            r.getStatus() == null ? "" : pretty(r.getStatus().name()),
+            employeeId
+        };
+    }
+
+    // NEW: "LEAVE" -> "Leave", "APPROVED" -> "Approved" for display.
+    private String pretty(String enumName) {
+        String lower = enumName.toLowerCase();
+        return Character.toUpperCase(lower.charAt(0)) + lower.substring(1);
     }
 
     private JPanel buildBody() {

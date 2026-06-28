@@ -1,11 +1,15 @@
 package com.motorph.ui.attendance;
 
+import com.motorph.model.Attendance;          // NEW
 import com.motorph.model.Role;
 import com.motorph.model.UserAccount;
+import com.motorph.service.AttendanceService;  // NEW
+import com.motorph.util.AppContext;            // NEW
 import com.motorph.util.Session;
 
 import java.awt.*;
 import java.awt.event.*;
+import java.time.format.DateTimeFormatter;     // NEW
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.*;
@@ -26,6 +30,11 @@ public class AttendancePanel extends JPanel {
     };
 
     private final List<Object[]> attendanceRows = new ArrayList<>();
+
+    // NEW: connection to the database via service -> dao
+    private final AttendanceService attendanceService = AppContext.getAttendanceService();
+    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("MM/dd/yyyy"); // NEW
+    private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("h:mm a");      // NEW
 
     private DefaultTableModel tableModel;
     private JTable attendanceTable;
@@ -78,12 +87,48 @@ public class AttendancePanel extends JPanel {
         repaint();
     }
 
+    // NEW: loads attendance from the database (service -> dao) instead of hardcoded rows.
+    // Privileged roles pull every record; everyone else only pulls their own.
     private void loadSampleRows() {
         attendanceRows.clear();
-        attendanceRows.add(new Object[]{"10001", "Regular", "09/01/2026", "8:00 AM", "12:00 PM", "1:00 PM", "5:00 PM", "8 hrs", "Valid"});
-        attendanceRows.add(new Object[]{"10002", "Regular", "05/01/2026", "8:00 AM", "12:00 PM", "1:00 PM", "5:00 PM", "8 hrs", "Valid"});
-        attendanceRows.add(new Object[]{"10003", "Overtime", "09/01/2026", "8:00 AM", "12:00 PM", "1:00 PM", "7:00 PM", "10 hrs", "Valid"});
-        attendanceRows.add(new Object[]{"10004", "Holiday", "05/01/2026", "8:00 AM", "12:00 PM", "1:00 PM", "5:00 PM", "8 hrs", "Invalid"});
+
+        try {
+            List<Attendance> records = canViewAllAttendance
+                    ? attendanceService.getAllAttendance()
+                    : attendanceService.getAllAttendance(currentEmployeeId);
+
+            for (Attendance record : records) {
+                attendanceRows.add(toTableRow(record));
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Failed to load attendance:\n" + ex.getMessage(),
+                    "Load Error",
+                    JOptionPane.ERROR_MESSAGE
+            );
+        }
+    }
+
+    // NEW: maps one Attendance record into the table-row format this panel expects.
+    // Break Out / Break In and Type are not stored in the attendance table yet,
+    // so those cells are left blank.
+    private Object[] toTableRow(Attendance a) {
+        double hours = attendanceService.computeDailyHours(a);
+        boolean complete = a.getLogIn() != null && a.getLogOut() != null;
+
+        return new Object[]{
+            a.getEmployeeId(),
+            "",                                       // Type (not modeled yet)
+            a.getDate() == null ? "" : a.getDate().format(DATE_FMT),
+            a.getLogIn() == null ? "" : a.getLogIn().format(TIME_FMT),
+            "",                                       // Break Out (not modeled yet)
+            "",                                       // Break In (not modeled yet)
+            a.getLogOut() == null ? "" : a.getLogOut().format(TIME_FMT),
+            complete ? hours + " hrs" : "",
+            complete ? "Valid" : "Invalid"
+        };
     }
 
     private JPanel buildBody() {

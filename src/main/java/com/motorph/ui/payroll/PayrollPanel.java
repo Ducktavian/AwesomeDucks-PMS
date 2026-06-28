@@ -1,11 +1,15 @@
 package com.motorph.ui.payroll;
 
+import com.motorph.model.Payslip;             // NEW
 import com.motorph.model.Role;
 import com.motorph.model.UserAccount;
+import com.motorph.service.PayrollService;     // NEW
+import com.motorph.util.AppContext;            // NEW
 import com.motorph.util.Session;
 
 import java.awt.*;
 import java.awt.event.*;
+import java.time.format.DateTimeFormatter;     // NEW
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.*;
@@ -33,6 +37,10 @@ public class PayrollPanel extends JPanel {
 
     private int sortedColumn = -1;
     private SortOrder currentSortOrder = SortOrder.UNSORTED;
+
+    // NEW: connection to the database via service -> dao
+    private final PayrollService payrollService = AppContext.getPayrollService();
+    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("MM/dd/yyyy"); // NEW
 
     public PayrollPanel() {
         applyRBAC();
@@ -335,13 +343,40 @@ public class PayrollPanel extends JPanel {
         }
     }
 
+    // NEW: loads payslips from the database (service -> dao) instead of hardcoded rows.
+    // Row-level RBAC is still enforced by addPayrollRow() / canSeeRow().
     private void addSampleRows() {
         tableModel.setRowCount(0);
 
-        addPayrollRow(new Object[]{"PS-001", "10001", "06/01/2026", "06/15/2026", "25000", "3000", "1500", "23500"});
-        addPayrollRow(new Object[]{"PS-002", "10002", "06/01/2026", "06/15/2026", "22000", "2500", "1200", "20700"});
-        addPayrollRow(new Object[]{"PS-003", "10003", "06/01/2026", "06/15/2026", "28000", "3500", "1600", "26100"});
-        addPayrollRow(new Object[]{"PS-004", "10004", "06/01/2026", "06/15/2026", "20000", "2200", "1000", "18800"});
+        try {
+            List<Payslip> payslips = payrollService.getAllPayslips();
+
+            for (Payslip p : payslips) {
+                addPayrollRow(new Object[]{
+                    p.getPayslipId(),
+                    p.getEmployeeNumber(),
+                    p.getPeriodStart() == null ? "" : p.getPeriodStart().format(DATE_FMT),
+                    p.getPeriodEnd() == null ? "" : p.getPeriodEnd().format(DATE_FMT),
+                    money(p.getGrossPay()),
+                    money(p.getTotalDeductions()),
+                    money(p.getAllowances()),
+                    money(p.getNetPay())
+                });
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Failed to load payroll:\n" + ex.getMessage(),
+                    "Load Error",
+                    JOptionPane.ERROR_MESSAGE
+            );
+        }
+    }
+
+    // NEW: formats a peso amount with thousands separators and 2 decimals.
+    private String money(double value) {
+        return String.format("%,.2f", value);
     }
 
     private void addPayrollRow(Object[] row) {

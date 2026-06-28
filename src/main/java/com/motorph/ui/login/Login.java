@@ -218,9 +218,25 @@ public class Login extends JFrame {
             SwingUtilities.invokeLater(MainFrame::new);
 
         } catch (Exception ex) {
+            // Print the full chain to the console so the real cause is never lost.
+            ex.printStackTrace();
+
+            // Surface the underlying cause (e.g. the wrapped SQLException) in the
+            // dialog, not just the top-level wrapper message.
+            Throwable root = ex;
+            while (root.getCause() != null) {
+                root = root.getCause();
+            }
+
+            String message = ex.getMessage();
+            if (root != ex) {
+                message += "\n\nCause: " + root.getClass().getSimpleName()
+                        + ": " + root.getMessage();
+            }
+
             JOptionPane.showMessageDialog(
                     this,
-                    ex.getMessage(),
+                    message,
                     "Login Failed",
                     JOptionPane.ERROR_MESSAGE
             );
