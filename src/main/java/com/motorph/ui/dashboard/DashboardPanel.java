@@ -3,169 +3,605 @@ package com.motorph.ui.dashboard;
 import java.awt.*;
 import javax.swing.*;
 
+import com.motorph.model.Role;
+import com.motorph.util.Session;
+
 public class DashboardPanel extends JPanel {
 
     private static final Color NAVY = new Color(7, 24, 105);
+    private static final Color GRID_GRAY = new Color(200, 200, 200);
+    private static final Color EXPENSE_GRAY = new Color(150, 150, 150);
+    private static final String FONT = "Segoe UI";
+
+    private JPanel contentSwitcher;
+    private CardLayout cardLayout;
 
     public DashboardPanel() {
         setLayout(new BorderLayout());
         setBackground(Color.WHITE);
-
         add(createMainContent(), BorderLayout.CENTER);
     }
 
     private JPanel createMainContent() {
-        JPanel content = new JPanel(null);
-        content.setBackground(Color.WHITE);
+        JPanel wrapper = new JPanel(new BorderLayout());
+        wrapper.setBackground(Color.WHITE);
+        wrapper.setBorder(BorderFactory.createEmptyBorder(40, 55, 35, 55));
 
-        content.add(createRoleDropdown());
+        String currentRole = getCurrentUserRole();
 
-        content.add(createCard("Total Number of Employees", "1,001", null, 120, 110));
-        content.add(createCard("On-Going Quarter", "Q2", "April to June 2026", 445, 110));
-        content.add(createCard("Upcoming Quarter", "Q3", "July to September 2026", 770, 110));
+        JComboBox<String> roleDropdown = new JComboBox<>(getAllowedDashboards(currentRole));
+        roleDropdown.setPreferredSize(new Dimension(130, 36));
+        roleDropdown.setFont(new Font(FONT, Font.PLAIN, 14));
+        roleDropdown.setBackground(Color.WHITE);
+        roleDropdown.setFocusable(false);
 
-        JLabel title = new JLabel("Financial Overview");
-        title.setFont(new Font("SansSerif", Font.BOLD, 16));
-        title.setBounds(120, 280, 250, 30);
-        content.add(title);
+        JPanel dropdownPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        dropdownPanel.setOpaque(false);
+        dropdownPanel.add(roleDropdown);
 
-        content.add(createChartPanel());
+        cardLayout = new CardLayout();
+        contentSwitcher = new JPanel(cardLayout);
+        contentSwitcher.setOpaque(false);
 
-        return content;
+        contentSwitcher.add(createAdminDashboard(), "Admin");
+        contentSwitcher.add(createFinanceDashboard(), "Finance");
+        contentSwitcher.add(createHRDashboard(), "HR");
+        contentSwitcher.add(createITDashboard(), "IT");
+        contentSwitcher.add(createEmployeeDashboard(), "Employee");
+
+        roleDropdown.addActionListener(e -> {
+            String selected = roleDropdown.getSelectedItem().toString();
+            cardLayout.show(contentSwitcher, selected);
+        });
+
+        wrapper.add(dropdownPanel, BorderLayout.NORTH);
+        wrapper.add(contentSwitcher, BorderLayout.CENTER);
+
+        String firstDashboard = roleDropdown.getSelectedItem().toString();
+        SwingUtilities.invokeLater(() -> cardLayout.show(contentSwitcher, firstDashboard));
+
+        return wrapper;
     }
 
-    private JComboBox<String> createRoleDropdown() {
-        JComboBox<String> combo = new JComboBox<>(new String[]{"Admin"});
-        combo.setBounds(995, 55, 106, 36);
-        combo.setForeground(Color.GRAY);
-        combo.setBackground(Color.WHITE);
-        combo.setFocusable(false);
-        return combo;
+    private String getCurrentUserRole() {
+        if (Session.getCurrentUser() == null || Session.getCurrentUser().getRole() == null) {
+            return "Employee";
+        }
+
+        return roleToDashboard(Session.getCurrentUser().getRole());
     }
 
-    private JPanel createCard(String title, String value, String subtitle, int x, int y) {
-        JPanel card = new JPanel(null);
-        card.setBounds(x, y, 280, 138);
+    private String roleToDashboard(Role role) {
+        if (role == null) {
+            return "Employee";
+        }
+
+        return switch (role) {
+            case ADMIN -> "Admin";
+            case HR -> "HR";
+            case IT -> "IT";
+            case FINANCE -> "Finance";
+            default -> "Employee";
+        };
+    }
+
+    private String[] getAllowedDashboards(String role) {
+        switch (role) {
+            case "Admin":
+                return new String[]{"Admin", "Finance", "HR", "IT", "Employee"};
+
+            case "Finance":
+                return new String[]{"Finance", "Employee"};
+
+            case "HR":
+                return new String[]{"HR", "Employee"};
+
+            case "IT":
+                return new String[]{"IT", "Employee"};
+
+            case "Employee":
+            default:
+                return new String[]{"Employee"};
+        }
+    }
+
+    private JPanel createAdminDashboard() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setOpaque(false);
+
+        JPanel cardsPanel = createCardsPanel();
+        cardsPanel.add(createCard("Total Number of Employees", "1,001", null));
+        cardsPanel.add(createCard("On-Going Quarter", "Q2", "April to June 2026"));
+        cardsPanel.add(createCard("Upcoming Quarter", "Q3", "July to September 2026"));
+
+        JPanel chartArea = new JPanel(new BorderLayout());
+        chartArea.setOpaque(false);
+        chartArea.add(createSectionTitle("Financial Overview"), BorderLayout.NORTH);
+        chartArea.add(new FinancialChartPanel(), BorderLayout.CENTER);
+
+        panel.add(cardsPanel, BorderLayout.NORTH);
+        panel.add(chartArea, BorderLayout.CENTER);
+
+        return panel;
+    }
+
+    private JPanel createFinanceDashboard() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setOpaque(false);
+
+        JPanel cardsPanel = createCardsPanel();
+        cardsPanel.add(createCard("Pending Payroll", "100", null));
+        cardsPanel.add(createCard("On-Going Period", "June", "16-30, 2026"));
+        cardsPanel.add(createCard("Upcoming Period", "July", "1-15, 2026"));
+
+        JPanel chartArea = new JPanel(new BorderLayout());
+        chartArea.setOpaque(false);
+        chartArea.add(createSectionTitle("Financial Overview"), BorderLayout.NORTH);
+        chartArea.add(new FinancialChartPanel(), BorderLayout.CENTER);
+
+        panel.add(cardsPanel, BorderLayout.NORTH);
+        panel.add(chartArea, BorderLayout.CENTER);
+
+        return panel;
+    }
+
+    private JPanel createEmployeeDashboard() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setOpaque(false);
+
+        JPanel cardsPanel = createCardsPanel();
+        cardsPanel.add(createCard("On-Going Payroll Period", "June", "1-15, 2026"));
+        cardsPanel.add(createMultiValueCard(
+                "Total Hours Worked",
+                new String[]{"80", "10", "0"},
+                new String[]{"Regular", "Overtime", "Holiday"},
+                3
+        ));
+        cardsPanel.add(createMultiValueCard(
+                "Available Leave",
+                new String[]{"15", "15"},
+                new String[]{"Vacation Leave", "Sick Leave"},
+                2
+        ));
+
+        JPanel chartArea = new JPanel(new BorderLayout());
+        chartArea.setOpaque(false);
+        chartArea.add(createSectionTitle("Attendance History"), BorderLayout.NORTH);
+        chartArea.add(new AttendanceChartPanel(), BorderLayout.CENTER);
+
+        panel.add(cardsPanel, BorderLayout.NORTH);
+        panel.add(chartArea, BorderLayout.CENTER);
+
+        return panel;
+    }
+
+    private JPanel createITDashboard() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setOpaque(false);
+
+        JPanel cardsPanel = createCardsPanel();
+        cardsPanel.add(createCard("Total Number of Employees", "100", null));
+        cardsPanel.add(createCard("Pending Tickets", "101", null));
+        cardsPanel.add(createCard("Resolved Tickets", "101", null));
+
+        JPanel chartArea = new JPanel(new BorderLayout());
+        chartArea.setOpaque(false);
+        chartArea.add(createSectionTitle("IT Support History"), BorderLayout.NORTH);
+        chartArea.add(new ITSupportChartPanel(), BorderLayout.CENTER);
+
+        panel.add(cardsPanel, BorderLayout.NORTH);
+        panel.add(chartArea, BorderLayout.CENTER);
+
+        return panel;
+    }
+
+    private JPanel createHRDashboard() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setOpaque(false);
+
+        JPanel cardsPanel = createCardsPanel();
+        cardsPanel.add(createCard("Total Number of Employees", "1,001", null));
+        cardsPanel.add(createMultiValueCard(
+                "Leave Request",
+                new String[]{"10", "10", "0"},
+                new String[]{"Pending", "Approved", "Rejected"},
+                3
+        ));
+        cardsPanel.add(createMultiValueCard(
+                "Other Requests",
+                new String[]{"15", "15"},
+                new String[]{"Pending OT", "Pending UT"},
+                2
+        ));
+
+        JPanel tablesPanel = new JPanel(new GridLayout(1, 2, 40, 0));
+        tablesPanel.setOpaque(false);
+        tablesPanel.setBorder(BorderFactory.createEmptyBorder(30, 0, 0, 0));
+        tablesPanel.add(createHRTablePanel("On Leave Today"));
+        tablesPanel.add(createHRTablePanel("On Overtime Today"));
+
+        panel.add(cardsPanel, BorderLayout.NORTH);
+        panel.add(tablesPanel, BorderLayout.CENTER);
+
+        return panel;
+    }
+
+    private JPanel createCardsPanel() {
+        JPanel cardsPanel = new JPanel(new GridLayout(1, 3, 24, 0));
+        cardsPanel.setOpaque(false);
+        cardsPanel.setBorder(BorderFactory.createEmptyBorder(18, 0, 0, 0));
+        return cardsPanel;
+    }
+
+    private JLabel createSectionTitle(String text) {
+        JLabel title = new JLabel(text);
+        title.setFont(new Font(FONT, Font.BOLD, 16));
+        title.setBorder(BorderFactory.createEmptyBorder(30, 0, 10, 0));
+        return title;
+    }
+
+    private JPanel createCard(String title, String value, String subtitle) {
+        JPanel card = new JPanel(new GridBagLayout());
         card.setBackground(NAVY);
+        card.setPreferredSize(new Dimension(260, 138));
+        card.setMinimumSize(new Dimension(210, 125));
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridx = 0;
+        gbc.weightx = 1;
+        gbc.anchor = GridBagConstraints.WEST;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
 
         JLabel titleLabel = new JLabel(title);
         titleLabel.setForeground(Color.WHITE);
-        titleLabel.setFont(new Font("SansSerif", Font.BOLD, 13));
-        titleLabel.setBounds(18, 15, 240, 25);
+        titleLabel.setFont(new Font(FONT, Font.BOLD, 13));
 
         JLabel valueLabel = new JLabel(value);
         valueLabel.setForeground(Color.WHITE);
-        valueLabel.setFont(new Font("SansSerif", Font.BOLD, 52));
-        valueLabel.setBounds(18, 45, 240, 60);
+        valueLabel.setFont(new Font(FONT, Font.BOLD, 52));
 
-        card.add(titleLabel);
-        card.add(valueLabel);
+        gbc.gridy = 0;
+        gbc.insets = new Insets(12, 20, 0, 20);
+        card.add(titleLabel, gbc);
+
+        gbc.gridy = 1;
+        gbc.insets = new Insets(8, 20, 0, 20);
+        card.add(valueLabel, gbc);
 
         if (subtitle != null) {
             JLabel subLabel = new JLabel(subtitle);
             subLabel.setForeground(Color.WHITE);
-            subLabel.setFont(new Font("SansSerif", Font.BOLD, 13));
-            subLabel.setBounds(20, 98, 240, 25);
-            card.add(subLabel);
+            subLabel.setFont(new Font(FONT, Font.BOLD, 13));
+
+            gbc.gridy = 2;
+            gbc.insets = new Insets(0, 20, 12, 20);
+            card.add(subLabel, gbc);
         }
 
         return card;
     }
 
-    private JPanel createChartPanel() {
-        JPanel chart = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
+    private JPanel createMultiValueCard(String titleText, String[] numbers, String[] labels, int columns) {
+        JPanel card = new JPanel(new BorderLayout());
+        card.setBackground(NAVY);
+        card.setPreferredSize(new Dimension(260, 138));
+        card.setMinimumSize(new Dimension(210, 125));
+        card.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
 
-                Graphics2D g2 = (Graphics2D) g;
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        JLabel title = new JLabel(titleText);
+        title.setForeground(Color.WHITE);
+        title.setFont(new Font(FONT, Font.BOLD, 13));
 
-                int left = 100;
-                int top = 85;
-                int width = 755;
-                int height = 252;
+        JPanel values = new JPanel(new GridLayout(2, columns, 8, 0));
+        values.setOpaque(false);
 
-                g2.setColor(Color.BLACK);
-                g2.setFont(new Font("SansSerif", Font.PLAIN, 14));
+        for (String number : numbers) {
+            JLabel numberLabel = new JLabel(number, SwingConstants.LEFT);
+            numberLabel.setForeground(Color.WHITE);
+            numberLabel.setFont(new Font(FONT, Font.BOLD, 52));
+            values.add(numberLabel);
+        }
 
-                String[] yLabels = {
-                    "1,000,000", "800,000", "600,000",
-                    "400,000", "200,000", "0"
-                };
+        for (String label : labels) {
+            JLabel labelText = new JLabel(label, SwingConstants.LEFT);
+            labelText.setForeground(Color.WHITE);
+            labelText.setFont(new Font(FONT, Font.BOLD, 13));
+            values.add(labelText);
+        }
 
-                for (int i = 0; i < yLabels.length; i++) {
-                    int y = top + (i * height / 5);
-                    g2.drawString(yLabels[i], 20, y + 5);
+        card.add(title, BorderLayout.NORTH);
+        card.add(values, BorderLayout.CENTER);
 
-                    g2.setColor(new Color(200, 200, 200));
-                    g2.drawLine(left, y, left + width, y);
-                    g2.setColor(Color.BLACK);
-                }
-
-                String[] xLabels = {
-                    "Jan 2022", "Jul 2022", "Jan 2023", "Jul 2023",
-                    "Jan 2024", "Jul 2024", "Jan 2025", "Jul 2025", "Jan 2026"
-                };
-
-                for (int i = 0; i < xLabels.length; i++) {
-                    int x = left + (i * width / 8);
-                    g2.drawString(xLabels[i], x - 28, top + height + 22);
-                }
-
-                int[] revenueX = {
-                    left + 28, left + 205, left + 380,
-                    left + 552, left + 725
-                };
-
-                int[] revenueY = {
-                    top + 226, top + 202, top + 176,
-                    top + 151, top
-                };
-
-                int[] expenseX = revenueX;
-
-                int[] expenseY = {
-                    top + 232, top + 226, top + 202,
-                    top + 176, top + 151
-                };
-
-                drawLine(g2, expenseX, expenseY, new Color(150, 150, 150));
-                drawLine(g2, revenueX, revenueY, NAVY);
-
-                drawLegend(g2, left + 230, 50);
-            }
-        };
-
-        chart.setBackground(Color.WHITE);
-        chart.setBounds(120, 320, 900, 380);
-        return chart;
+        return card;
     }
 
-    private void drawLine(Graphics2D g2, int[] x, int[] y, Color color) {
+    private JPanel createHRTablePanel(String titleText) {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setOpaque(false);
+
+        JLabel title = new JLabel(titleText);
+        title.setFont(new Font(FONT, Font.BOLD, 16));
+        title.setBorder(BorderFactory.createEmptyBorder(0, 0, 20, 0));
+
+        String[] columns = {"Name", "Department", "Reason"};
+
+        Object[][] data = {
+                {"Juan Cruz", "IT", "Vacation"},
+                {"Super Man", "HR", "Vacation"},
+                {"Juan Cruz", "IT", "Vacation"},
+                {"Super Man", "HR", "Vacation"},
+                {"Juan Cruz", "IT", "Vacation"}
+        };
+
+        JTable table = new JTable(data, columns);
+        table.setFont(new Font(FONT, Font.PLAIN, 12));
+        table.setRowHeight(55);
+        table.setShowGrid(true);
+        table.setGridColor(Color.WHITE);
+        table.setIntercellSpacing(new Dimension(1, 0));
+        table.setBackground(Color.WHITE);
+        table.setSelectionBackground(new Color(220, 220, 220));
+        table.setFocusable(false);
+
+        table.getTableHeader().setFont(new Font(FONT, Font.BOLD, 14));
+        table.getTableHeader().setBackground(Color.WHITE);
+        table.getTableHeader().setForeground(Color.BLACK);
+        table.getTableHeader().setPreferredSize(new Dimension(0, 45));
+        table.getTableHeader().setBorder(BorderFactory.createMatteBorder(0, 0, 3, 0, Color.BLACK));
+
+        table.setDefaultRenderer(Object.class, new javax.swing.table.DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(
+                    JTable table, Object value, boolean isSelected,
+                    boolean hasFocus, int row, int column) {
+
+                Component c = super.getTableCellRendererComponent(
+                        table, value, isSelected, hasFocus, row, column);
+
+                c.setFont(new Font(FONT, Font.PLAIN, 12));
+                c.setForeground(Color.BLACK);
+
+                if (!isSelected) {
+                    c.setBackground(row % 2 == 0 ? Color.WHITE : new Color(215, 215, 215));
+                }
+
+                setBorder(BorderFactory.createMatteBorder(0, 0, 0, 1, Color.WHITE));
+                return c;
+            }
+        });
+
+        JScrollPane scrollPane = new JScrollPane(table);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+        scrollPane.setBackground(Color.WHITE);
+        scrollPane.getViewport().setBackground(Color.WHITE);
+
+        panel.add(title, BorderLayout.NORTH);
+        panel.add(scrollPane, BorderLayout.CENTER);
+
+        return panel;
+    }
+
+    private class FinancialChartPanel extends JPanel {
+        public FinancialChartPanel() {
+            setBackground(Color.WHITE);
+            setMinimumSize(new Dimension(650, 320));
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            Graphics2D g2 = setupGraphics(g);
+
+            int left = 100;
+            int top = 75;
+            int bottom = 55;
+            int right = 35;
+
+            int chartWidth = Math.max(300, getWidth() - left - right);
+            int chartHeight = Math.max(200, getHeight() - top - bottom);
+
+            drawFinancialLegend(g2, getWidth() / 2 - 115, 25);
+
+            drawLineGrid(g2, new String[]{
+                    "1,000,000", "800,000", "600,000",
+                    "400,000", "200,000", "0"
+            }, left, top, chartWidth, chartHeight);
+
+            drawXLabels(g2, new String[]{
+                    "Jan 2022", "Jul 2022", "Jan 2023", "Jul 2023",
+                    "Jan 2024", "Jul 2024", "Jan 2025", "Jul 2025", "Jan 2026"
+            }, left, top, chartWidth, chartHeight);
+
+            drawDataLine(g2, new int[]{
+                    100000, 160000, 200000, 250000, 300000,
+                    320000, 400000, 650000, 1000000
+            }, left, top, chartWidth, chartHeight, 1000000, NAVY);
+
+            drawDataLine(g2, new int[]{
+                    70000, 80000, 100000, 150000, 200000,
+                    230000, 300000, 340000, 400000
+            }, left, top, chartWidth, chartHeight, 1000000, EXPENSE_GRAY);
+        }
+    }
+
+    private class AttendanceChartPanel extends JPanel {
+        public AttendanceChartPanel() {
+            setBackground(Color.WHITE);
+            setMinimumSize(new Dimension(650, 320));
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            Graphics2D g2 = setupGraphics(g);
+
+            int left = 45;
+            int top = 25;
+            int bottom = 45;
+            int right = 25;
+
+            int chartWidth = Math.max(300, getWidth() - left - right);
+            int chartHeight = Math.max(200, getHeight() - top - bottom);
+
+            drawLineGrid(g2, new String[]{"10", "8", "6", "4", "2", "0"},
+                    left, top, chartWidth, chartHeight);
+
+            String[] xLabels = {"06/01", "06/02", "06/03", "06/04", "06/05", "06/06", "06/07", "06/08"};
+            int[] values = {8, 7, 9, 7, 8, 7, 9, 7};
+
+            int barGap = 16;
+            int barWidth = Math.max(35, (chartWidth / values.length) - barGap);
+
+            g2.setColor(NAVY);
+
+            for (int i = 0; i < values.length; i++) {
+                int xCenter = left + (i * chartWidth / values.length) + chartWidth / values.length / 2;
+                int barHeight = (int) ((values[i] / 10.0) * chartHeight);
+                int x = xCenter - barWidth / 2;
+                int y = top + chartHeight - barHeight;
+
+                g2.fillRoundRect(x, y, barWidth, barHeight, 12, 12);
+
+                g2.setColor(Color.BLACK);
+                g2.setFont(new Font(FONT, Font.PLAIN, 14));
+                g2.drawString(xLabels[i], xCenter - 20, top + chartHeight + 25);
+
+                g2.setColor(NAVY);
+            }
+        }
+    }
+
+    private class ITSupportChartPanel extends JPanel {
+        public ITSupportChartPanel() {
+            setBackground(Color.WHITE);
+            setMinimumSize(new Dimension(650, 320));
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            Graphics2D g2 = setupGraphics(g);
+
+            int left = 45;
+            int top = 45;
+            int bottom = 45;
+            int right = 25;
+
+            int chartWidth = Math.max(300, getWidth() - left - right);
+            int chartHeight = Math.max(200, getHeight() - top - bottom);
+
+            drawITLegend(g2, getWidth() / 2 - 90, 15);
+
+            drawLineGrid(g2, new String[]{"40", "30", "20", "10", "0"},
+                    left, top, chartWidth, chartHeight);
+
+            String[] months = {"Jan", "Feb", "Mar", "Apr", "May"};
+            int[] resolved = {24, 16, 12, 8, 10};
+            int[] pending = {15, 14, 10, 8, 30};
+
+            int maxValue = 40;
+            int groupWidth = chartWidth / months.length;
+            int barWidth = Math.max(70, groupWidth - 26);
+
+            for (int i = 0; i < months.length; i++) {
+                int xCenter = left + (i * groupWidth) + groupWidth / 2;
+                int x = xCenter - barWidth / 2;
+
+                int resolvedHeight = (int) ((resolved[i] / (double) maxValue) * chartHeight);
+                int pendingHeight = (int) ((pending[i] / (double) maxValue) * chartHeight);
+
+                int resolvedY = top + chartHeight - resolvedHeight;
+                int pendingY = resolvedY - pendingHeight;
+
+                g2.setColor(NAVY);
+                g2.fillRect(x, resolvedY, barWidth, resolvedHeight);
+
+                g2.setColor(EXPENSE_GRAY);
+                g2.fillRoundRect(x, pendingY, barWidth, pendingHeight + 12, 18, 18);
+                g2.fillRect(x, pendingY + 12, barWidth, pendingHeight);
+
+                g2.setColor(Color.BLACK);
+                g2.setFont(new Font(FONT, Font.PLAIN, 14));
+                g2.drawString(months[i], xCenter - 12, top + chartHeight + 25);
+            }
+        }
+    }
+
+    private Graphics2D setupGraphics(Graphics g) {
+        Graphics2D g2 = (Graphics2D) g;
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2.setFont(new Font(FONT, Font.PLAIN, 14));
+        return g2;
+    }
+
+    private void drawLineGrid(Graphics2D g2, String[] yLabels, int left, int top, int chartWidth, int chartHeight) {
+        for (int i = 0; i < yLabels.length; i++) {
+            int y = top + (i * chartHeight / (yLabels.length - 1));
+
+            g2.setColor(Color.BLACK);
+            g2.drawString(yLabels[i], 0, y + 5);
+
+            g2.setColor(GRID_GRAY);
+            g2.drawLine(left, y, left + chartWidth, y);
+        }
+    }
+
+    private void drawXLabels(Graphics2D g2, String[] xLabels, int left, int top, int chartWidth, int chartHeight) {
+        g2.setColor(Color.BLACK);
+
+        for (int i = 0; i < xLabels.length; i++) {
+            int x = left + (i * chartWidth / (xLabels.length - 1));
+            g2.drawString(xLabels[i], x - 28, top + chartHeight + 25);
+        }
+    }
+
+    private void drawDataLine(Graphics2D g2, int[] values, int left, int top,
+                              int chartWidth, int chartHeight, int maxValue, Color color) {
+        int[] x = new int[values.length];
+        int[] y = new int[values.length];
+
+        for (int i = 0; i < values.length; i++) {
+            x[i] = left + (i * chartWidth / (values.length - 1));
+            y[i] = top + chartHeight - (int) ((values[i] / (double) maxValue) * chartHeight);
+        }
+
         g2.setColor(color);
         g2.setStroke(new BasicStroke(5, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
 
-        for (int i = 0; i < x.length - 1; i++) {
+        for (int i = 0; i < values.length - 1; i++) {
             g2.drawLine(x[i], y[i], x[i + 1], y[i + 1]);
         }
 
-        for (int i = 0; i < x.length; i++) {
+        for (int i = 0; i < values.length; i++) {
             g2.fillOval(x[i] - 7, y[i] - 7, 14, 14);
         }
     }
 
-    private void drawLegend(Graphics2D g2, int x, int y) {
-        g2.setFont(new Font("SansSerif", Font.PLAIN, 14));
+    private void drawFinancialLegend(Graphics2D g2, int x, int y) {
+        g2.setFont(new Font(FONT, Font.PLAIN, 14));
 
         g2.setColor(NAVY);
         g2.fillOval(x, y, 14, 14);
         g2.setColor(Color.BLACK);
         g2.drawString("Revenue", x + 22, y + 12);
 
-        g2.setColor(new Color(150, 150, 150));
-        g2.fillOval(x + 102, y, 14, 14);
+        g2.setColor(EXPENSE_GRAY);
+        g2.fillOval(x + 115, y, 14, 14);
         g2.setColor(Color.BLACK);
-        g2.drawString("Total Expenses", x + 124, y + 12);
+        g2.drawString("Total Expenses", x + 137, y + 12);
+    }
+
+    private void drawITLegend(Graphics2D g2, int x, int y) {
+        g2.setFont(new Font(FONT, Font.PLAIN, 14));
+
+        g2.setColor(NAVY);
+        g2.fillOval(x, y, 14, 14);
+        g2.setColor(Color.BLACK);
+        g2.drawString("Resolved", x + 22, y + 12);
+
+        g2.setColor(EXPENSE_GRAY);
+        g2.fillOval(x + 100, y, 14, 14);
+        g2.setColor(Color.BLACK);
+        g2.drawString("Pending", x + 122, y + 12);
     }
 }

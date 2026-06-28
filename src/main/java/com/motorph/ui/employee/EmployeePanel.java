@@ -1,8 +1,11 @@
 package com.motorph.ui.employee;
 
 import com.motorph.model.Employee;
+import com.motorph.model.Role;
+import com.motorph.model.UserAccount;
 import com.motorph.service.EmployeeService;
 import com.motorph.util.AppContext;
+import com.motorph.util.Session;
 
 import java.awt.*;
 import java.awt.event.*;
@@ -43,9 +46,16 @@ public class EmployeePanel extends JPanel {
 
     private final List<Employee> allEmployees = new ArrayList<>();
 
+    private boolean canModifyEmployees;
+    private boolean canViewAllEmployees;
+    private boolean canOpenAnyoneDetails;
+    private String currentEmployeeId;
+
     public EmployeePanel() {
         setLayout(new BorderLayout());
         setBackground(Color.WHITE);
+
+        applyRBAC();
 
         cardLayout = new CardLayout();
         cardPanel = new JPanel(cardLayout);
@@ -65,11 +75,28 @@ public class EmployeePanel extends JPanel {
         loadEmployees();
     }
 
+    private void applyRBAC() {
+        UserAccount user = Session.getCurrentUser();
+        Role role = user == null ? null : user.getRole();
+
+        currentEmployeeId = user == null ? "" : String.valueOf(user.getEmployeeId());
+
+        canModifyEmployees = role == Role.ADMIN || role == Role.HR;
+        canViewAllEmployees = role == Role.ADMIN
+                || role == Role.HR
+                || role == Role.IT
+                || role == Role.FINANCE;
+
+        // Payroll role is currently represented as FINANCE in your project.
+        canOpenAnyoneDetails = role == Role.ADMIN
+                || role == Role.HR
+                || role == Role.FINANCE;
+    }
+
     private JPanel buildEmployeeListPanel() {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(Color.WHITE);
         panel.add(buildBody(), BorderLayout.CENTER);
-
         return panel;
     }
 
@@ -142,13 +169,15 @@ public class EmployeePanel extends JPanel {
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         buttons.setOpaque(false);
 
-        buttons.add(navyButton("+", "Add", 90, this::addEmployee));
-        buttons.add(navyButton("✎", "Update", 105, this::updateEmployee));
-        buttons.add(navyButton("🗑", "Delete", 105, this::deleteEmployee));
+        if (canModifyEmployees) {
+            buttons.add(navyButton("+", "Add", 90, this::addEmployee));
+            buttons.add(navyButton("✎", "Update", 105, this::updateEmployee));
+            buttons.add(navyButton("🗑", "Delete", 105, this::deleteEmployee));
+        }
+
         buttons.add(navyButton("⟳", "Refresh", 110, this::refreshTable));
 
         row.add(buttons, BorderLayout.EAST);
-
         return row;
     }
 
@@ -177,6 +206,15 @@ public class EmployeePanel extends JPanel {
         sorter = new TableRowSorter<>(tableModel);
         employeeTable.setRowSorter(sorter);
 
+        employeeTable.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2 && employeeTable.getSelectedRow() != -1) {
+                    openSelectedEmployeeDetails();
+                }
+            }
+        });
+
         styleHeader();
         styleColumns();
         styleCells();
@@ -195,6 +233,49 @@ public class EmployeePanel extends JPanel {
         tablePanel.add(scrollPane, BorderLayout.CENTER);
 
         return tablePanel;
+    }
+
+    private void openSelectedEmployeeDetails() {
+        Employee selectedEmployee = getSelectedEmployee();
+
+        if (selectedEmployee == null) {
+            JOptionPane.showMessageDialog(this, "Employee not found.");
+            return;
+        }
+
+        boolean isSelf = selectedEmployee.getEmployeeId().equals(currentEmployeeId);
+
+        if (!canOpenAnyoneDetails && !isSelf) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "You can only view your own employee details.",
+                    "Access Denied",
+                    JOptionPane.WARNING_MESSAGE
+            );
+            return;
+        }
+
+        formPanel.setViewMode(selectedEmployee);
+        cardLayout.show(cardPanel, EMPLOYEE_FORM);
+    }
+
+    private Employee getSelectedEmployee() {
+        int selectedRow = employeeTable.getSelectedRow();
+
+        if (selectedRow == -1) {
+            return null;
+        }
+
+        int modelRow = employeeTable.convertRowIndexToModel(selectedRow);
+        String employeeId = tableModel.getValueAt(modelRow, 0).toString();
+
+        for (Employee emp : allEmployees) {
+            if (emp.getEmployeeId().equals(employeeId)) {
+                return emp;
+            }
+        }
+
+        return null;
     }
 
     private void styleHeader() {
@@ -296,7 +377,20 @@ public class EmployeePanel extends JPanel {
 
     private void loadEmployees() {
         allEmployees.clear();
-        allEmployees.addAll(employeeService.getAllEmployees());
+
+        List<Employee> employees = employeeService.getAllEmployees();
+
+        if (canViewAllEmployees) {
+            allEmployees.addAll(employees);
+        } else {
+            for (Employee emp : employees) {
+                if (emp.getEmployeeId().equals(currentEmployeeId)) {
+                    allEmployees.add(emp);
+                    break;
+                }
+            }
+        }
+
         populateTable();
     }
 
@@ -352,49 +446,36 @@ public class EmployeePanel extends JPanel {
     }
 
     private void addEmployee() {
+        if (!canModifyEmployees) return;
+
         formPanel.setAddMode();
         cardLayout.show(cardPanel, EMPLOYEE_FORM);
     }
 
     private void updateEmployee() {
-        int selectedRow = employeeTable.getSelectedRow();
+        if (!canModifyEmployees) return;
 
-        if (selectedRow == -1) {
-            JOptionPane.showMessageDialog(this, "Please select an employee to update.");
-            return;
-        }
-
-        int modelRow = employeeTable.convertRowIndexToModel(selectedRow);
-        String employeeId = tableModel.getValueAt(modelRow, 0).toString();
-
-        Employee selectedEmployee = null;
-
-        for (Employee emp : allEmployees) {
-            if (emp.getEmployeeId().equals(employeeId)) {
-                selectedEmployee = emp;
-                break;
-            }
-        }
+        Employee selectedEmployee = getSelectedEmployee();
 
         if (selectedEmployee == null) {
-            JOptionPane.showMessageDialog(this, "Employee not found.");
+            JOptionPane.showMessageDialog(this, "Please select an employee to update.");
             return;
         }
 
         formPanel.setUpdateMode(selectedEmployee);
         cardLayout.show(cardPanel, EMPLOYEE_FORM);
     }
-
     private void deleteEmployee() {
-        int selectedRow = employeeTable.getSelectedRow();
+        if (!canModifyEmployees) return;
 
-        if (selectedRow == -1) {
+        Employee selectedEmployee = getSelectedEmployee();
+
+        if (selectedEmployee == null) {
             JOptionPane.showMessageDialog(this, "Please select an employee to delete.");
             return;
         }
 
-        int modelRow = employeeTable.convertRowIndexToModel(selectedRow);
-        String employeeId = tableModel.getValueAt(modelRow, 0).toString();
+        String employeeId = selectedEmployee.getEmployeeId();
 
         int confirm = JOptionPane.showConfirmDialog(
                 this,
@@ -409,9 +490,7 @@ public class EmployeePanel extends JPanel {
 
         try {
             employeeService.deleteEmployee(employeeId);
-
             JOptionPane.showMessageDialog(this, "Employee deleted successfully.");
-
             refreshTable();
 
         } catch (Exception ex) {
@@ -512,4 +591,5 @@ public class EmployeePanel extends JPanel {
             g2.dispose();
         }
     }
+   
 }

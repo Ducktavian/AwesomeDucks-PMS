@@ -12,7 +12,6 @@ import com.motorph.ui.attendance.AttendancePanel;
 import com.motorph.ui.dashboard.DashboardPanel;
 import com.motorph.ui.employee.EmployeePanel;
 import com.motorph.ui.helpcenter.HelpCenterPanel;
-import com.motorph.ui.it.ITDashboard;
 import com.motorph.ui.login.Login;
 import com.motorph.ui.payroll.PayrollPanel;
 import com.motorph.ui.request.RequestPanel;
@@ -169,34 +168,9 @@ public class MainFrame extends JFrame {
         JPanel dashboard = new JPanel(new BorderLayout());
         dashboard.setBackground(Color.WHITE);
 
-        CardLayout roleLayout = new CardLayout();
-        JPanel roleCards = new JPanel(roleLayout);
-        roleCards.setBackground(Color.WHITE);
+        dashboard.add(new DashboardPanel(), BorderLayout.CENTER);
 
-        roleCards.add(placeholderPanel("Employee Dashboard"), "Employee");
-        roleCards.add(placeholderPanel("Finance Dashboard"), "Finance");
-        roleCards.add(placeholderPanel("HR Dashboard"), "HR");
-        roleCards.add(new ITDashboard(), "IT");
-        roleCards.add(new DashboardPanel(), "Admin");
-
-        UserAccount user = Session.getCurrentUser();
-        String defaultCard = user != null ? roleToCard(user.getRole()) : "Employee";
-        roleLayout.show(roleCards, defaultCard);
-
-        dashboard.add(roleCards, BorderLayout.CENTER);
         return dashboard;
-    }
-
-    private String roleToCard(Role role) {
-        if (role == null) return "Employee";
-
-        return switch (role) {
-            case ADMIN -> "Admin";
-            case HR -> "HR";
-            case IT -> "IT";
-            case FINANCE -> "Finance";
-            default -> "Employee";
-        };
     }
 
     private JPanel buildSidebar() {

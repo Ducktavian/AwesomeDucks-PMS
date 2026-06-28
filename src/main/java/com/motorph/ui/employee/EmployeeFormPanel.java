@@ -30,6 +30,8 @@ public class EmployeeFormPanel extends JPanel {
     private JTextField sssField, philhealthField, pagibigField, tinField;
     private JTextField basicSalaryField, semiMonthlyRateField, hourlyRateField;
     private JTextField riceSubsidyField, phoneAllowanceField, clothingAllowanceField;
+    
+    private JButton submitButton;
 
     public EmployeeFormPanel(Runnable onBack) {
         this.onBack = onBack;
@@ -85,17 +87,17 @@ public class EmployeeFormPanel extends JPanel {
                 new String[]{"e.g., 50000.00", "e.g., 25000.00", "e.g., 300.00",
                     "e.g., 1500.00", "e.g., 1000.00", "e.g., 1000.00"});
 
-        JButton submit = new JButton("Submit");
-        submit.setName("submit");
-        submit.setBounds(830, 577, 113, 39);
-        submit.setBackground(NAVY);
-        submit.setForeground(Color.WHITE);
-        submit.setFocusPainted(false);
-        submit.setBorderPainted(false);
-        submit.setFont(new Font(FONT, Font.PLAIN, 14));
-        submit.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        submit.addActionListener(e -> saveEmployee());
-        main.add(submit);
+        submitButton = new JButton("Submit");
+        submitButton.setName("submit");
+        submitButton.setBounds(830, 577, 113, 39);
+        submitButton.setBackground(NAVY);
+        submitButton.setForeground(Color.WHITE);
+        submitButton.setFocusPainted(false);
+        submitButton.setBorderPainted(false);
+        submitButton.setFont(new Font(FONT, Font.PLAIN, 14));
+        submitButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        submitButton.addActionListener(e -> saveEmployee());
+        main.add(submitButton);
 
         return main;
     }
@@ -242,7 +244,13 @@ public class EmployeeFormPanel extends JPanel {
         selectedEmployee = null;
         clearFields();
         restorePlaceholders();
+        setFieldsEditable(true);
+
         employeeIdField.setEditable(true);
+
+        if (submitButton != null) {
+            submitButton.setVisible(true);
+        }
     }
 
     public void setUpdateMode(Employee employee) {
@@ -250,7 +258,34 @@ public class EmployeeFormPanel extends JPanel {
         selectedEmployee = employee;
         clearFields();
         populateFields(employee);
+        setFieldsEditable(true);
+
         employeeIdField.setEditable(false);
+
+        if (submitButton != null) {
+            submitButton.setVisible(true);
+        }
+    }
+    
+    public void setViewMode(Employee employee) {
+        updateMode = false;
+        selectedEmployee = employee;
+        clearFields();
+        populateFields(employee);
+        setFieldsEditable(false);
+
+        if (submitButton != null) {
+            submitButton.setVisible(false);
+        }
+    }
+    
+    private void setFieldsEditable(boolean editable) {
+        for (Component c : getAllComponents(this)) {
+            if (c instanceof JTextField field) {
+                field.setEditable(editable);
+                field.setFocusable(editable);
+            }
+        }
     }
 
     private void populateFields(Employee emp) {

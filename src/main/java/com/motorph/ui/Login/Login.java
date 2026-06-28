@@ -212,17 +212,6 @@ public class Login extends JFrame {
             AuthService authService = AppContext.getAuthService();
             UserAccount user = authService.login(username, password);
 
-            String otp = AppContext.getOtpService().generateOtp();
-
-            OtpDialog otpDialog = new OtpDialog(this, otp);
-            otpDialog.setVisible(true);
-
-            if (!otpDialog.isVerified()) {
-                passwordField.setText("");
-                passwordField.requestFocus();
-                return;
-            }
-
             Session.setCurrentUser(user);
             dispose();
 
