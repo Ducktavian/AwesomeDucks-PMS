@@ -52,50 +52,11 @@ public class RequestFormPanel extends JPanel {
         setLayout(new BorderLayout());
         setBackground(BG);
 
-        add(createTopBar(), BorderLayout.NORTH);
         add(createMainPanel(), BorderLayout.CENTER);
 
         if (existingData != null) {
             populateFields(existingData);
         }
-    }
-
-    private JPanel createTopBar() {
-        JPanel topBar = new JPanel(new BorderLayout());
-        topBar.setPreferredSize(new Dimension(0, 80));
-        topBar.setBackground(BG);
-        topBar.setBorder(new MatteBorder(0, 0, 1, 0, LINE_GRAY));
-
-        JPanel profile = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 16));
-        profile.setOpaque(false);
-        profile.setBorder(new EmptyBorder(0, 0, 0, 24));
-
-        JPanel textPanel = new JPanel();
-        textPanel.setOpaque(false);
-        textPanel.setLayout(new BoxLayout(textPanel, BoxLayout.Y_AXIS));
-
-        JLabel name = new JLabel("<html><u>Name</u></html>");
-        name.setForeground(NAVY);
-        name.setFont(new Font(FONT, Font.BOLD, 16));
-        name.setAlignmentX(Component.RIGHT_ALIGNMENT);
-
-        JLabel position = new JLabel("Position");
-        position.setForeground(Color.GRAY);
-        position.setFont(new Font(FONT, Font.PLAIN, 13));
-        position.setAlignmentX(Component.RIGHT_ALIGNMENT);
-
-        textPanel.add(name);
-        textPanel.add(position);
-
-        JLabel avatar = new JLabel();
-        avatar.setPreferredSize(new Dimension(47, 47));
-        avatar.setIcon(new CircleIcon(NAVY, 47));
-
-        profile.add(textPanel);
-        profile.add(avatar);
-
-        topBar.add(profile, BorderLayout.EAST);
-        return topBar;
     }
 
     private JPanel createMainPanel() {

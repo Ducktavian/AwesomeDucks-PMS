@@ -1,39 +1,21 @@
 package com.motorph.ui.main;
 
-import java.awt.BorderLayout;
-import java.awt.CardLayout;
-import java.awt.Color;
-import java.awt.Cursor;
-import java.awt.Dimension;
-import java.awt.FlowLayout;
-import java.awt.Font;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.Image;
-import java.awt.RenderingHints;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
+import java.awt.*;
+import java.awt.event.*;
 import java.io.File;
-
-import javax.swing.BoxLayout;
-import javax.swing.ImageIcon;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.SwingUtilities;
-import javax.swing.UIManager;
-import javax.swing.border.EmptyBorder;
+import javax.swing.*;
+import javax.swing.border.*;
 
 import com.motorph.model.Role;
 import com.motorph.model.UserAccount;
 import com.motorph.ui.attendance.AttendancePanel;
 import com.motorph.ui.dashboard.DashboardPanel;
 import com.motorph.ui.employee.EmployeePanel;
+import com.motorph.ui.helpcenter.HelpCenterPanel;
+import com.motorph.ui.it.ITDashboard;
+import com.motorph.ui.login.Login;
 import com.motorph.ui.payroll.PayrollPanel;
 import com.motorph.ui.request.RequestPanel;
-import com.motorph.ui.it.ITDashboard;
-import com.motorph.ui.helpcenter.HelpCenterPanel;
-import com.motorph.ui.login.Login;
 import com.motorph.ui.settings.SettingsPanel;
 import com.motorph.util.Session;
 
@@ -45,23 +27,24 @@ public class MainFrame extends JFrame {
     public static final Color ACCENT_W = Color.WHITE;
     public static final Color TEXT_MUTED = new Color(210, 218, 240);
     public static final Color CONTENT_BG = Color.WHITE;
+    public static final Color NAVY = new Color(5, 24, 108);
 
     private static final int SIDEBAR_WIDTH = 257;
     private static final int NAV_FONT_SIZE = 16;
     private static final int LOGO_FONT_SIZE = 26;
 
     private static final String[][] MAIN_NAV = {
-        { "Dashboard",  "Dashboard-Icon.png" },
-        { "Employees",  "Employees-Icon.png" },
-        { "Payroll",    "Payroll-Icon.png" },
-        { "Requests",   "Requests-icon.png" },
-        { "Attendance", "Attendance-Icon.png" },
+        {"Dashboard", "Dashboard-Icon.png"},
+        {"Employees", "Employees-Icon.png"},
+        {"Payroll", "Payroll-Icon.png"},
+        {"Requests", "Requests-icon.png"},
+        {"Attendance", "Attendance-Icon.png"},
     };
 
     private static final String[][] BOTTOM_NAV = {
-        { "Settings",    "Settings-Icon.png" },
-        { "Help Center", "HelpCenter-Icon.png" },
-        { "Log Out",     "Logout-icon.png" },
+        {"Settings", "Settings-Icon.png"},
+        {"Help Center", "HelpCenter-Icon.png"},
+        {"Log Out", "Logout-icon.png"},
     };
 
     private String activeNav = "Dashboard";
@@ -106,6 +89,17 @@ public class MainFrame extends JFrame {
         sidebarRoot = buildSidebar();
         root.add(sidebarRoot, BorderLayout.WEST);
 
+        root.add(buildRightArea(), BorderLayout.CENTER);
+
+        setVisible(true);
+    }
+
+    private JPanel buildRightArea() {
+        JPanel rightArea = new JPanel(new BorderLayout());
+        rightArea.setBackground(Color.WHITE);
+
+        rightArea.add(buildSharedTopBar(), BorderLayout.NORTH);
+
         cardLayout = new CardLayout();
         contentCards = new JPanel(cardLayout);
         contentCards.setBackground(Color.WHITE);
@@ -121,10 +115,54 @@ public class MainFrame extends JFrame {
         contentCards.add(new HelpCenterPanel(), "Help Center");
         contentCards.add(placeholderPanel("Log Out"), "Log Out");
 
-        root.add(contentCards, BorderLayout.CENTER);
+        rightArea.add(contentCards, BorderLayout.CENTER);
         cardLayout.show(contentCards, "Dashboard");
 
-        setVisible(true);
+        return rightArea;
+    }
+
+    private JPanel buildSharedTopBar() {
+        JPanel topBar = new JPanel(new BorderLayout());
+        topBar.setPreferredSize(new Dimension(0, 80));
+        topBar.setBackground(Color.WHITE);
+        topBar.setBorder(new MatteBorder(0, 0, 1, 0, new Color(190, 190, 190)));
+
+        JPanel profile = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 16));
+        profile.setOpaque(false);
+        profile.setBorder(new EmptyBorder(0, 0, 0, 24));
+
+        JPanel textPanel = new JPanel();
+        textPanel.setOpaque(false);
+        textPanel.setLayout(new BoxLayout(textPanel, BoxLayout.Y_AXIS));
+
+        JLabel name = new JLabel("<html><u>Name</u></html>");
+        name.setForeground(NAVY);
+        name.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        name.setAlignmentX(Component.RIGHT_ALIGNMENT);
+
+        JLabel position = new JLabel("Position");
+        position.setForeground(Color.GRAY);
+        position.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        position.setAlignmentX(Component.RIGHT_ALIGNMENT);
+
+        UserAccount user = Session.getCurrentUser();
+        if (user != null) {
+            name.setText("<html><u>" + user.getUsername() + "</u></html>");
+            position.setText(user.getRole() == null ? "Position" : user.getRole().toString());
+        }
+
+        textPanel.add(name);
+        textPanel.add(position);
+
+        JLabel avatar = new JLabel();
+        avatar.setPreferredSize(new Dimension(47, 47));
+        avatar.setIcon(new CircleIcon(NAVY, 47));
+
+        profile.add(textPanel);
+        profile.add(avatar);
+
+        topBar.add(profile, BorderLayout.EAST);
+        return topBar;
     }
 
     private JPanel buildDashboardPanel() {
@@ -308,11 +346,6 @@ public class MainFrame extends JFrame {
         return lbl;
     }
 
-    private boolean isAdminOrIT() {
-        UserAccount user = Session.getCurrentUser();
-        return user != null && (user.getRole() == Role.ADMIN || user.getRole() == Role.IT);
-    }
-
     private void rebuildNavPanels() {
         navPanel.removeAll();
 
@@ -340,6 +373,38 @@ public class MainFrame extends JFrame {
 
         p.add(lbl, BorderLayout.CENTER);
         return p;
+    }
+
+    private static class CircleIcon implements Icon {
+        private final Color color;
+        private final int size;
+
+        CircleIcon(Color color, int size) {
+            this.color = color;
+            this.size = size;
+        }
+
+        @Override
+        public void paintIcon(Component c, Graphics g, int x, int y) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(
+                    RenderingHints.KEY_ANTIALIASING,
+                    RenderingHints.VALUE_ANTIALIAS_ON
+            );
+            g2.setColor(color);
+            g2.fillOval(x, y, size, size);
+            g2.dispose();
+        }
+
+        @Override
+        public int getIconWidth() {
+            return size;
+        }
+
+        @Override
+        public int getIconHeight() {
+            return size;
+        }
     }
 
     public static void main(String[] args) {

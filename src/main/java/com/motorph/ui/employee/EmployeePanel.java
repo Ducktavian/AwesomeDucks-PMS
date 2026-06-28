@@ -68,46 +68,9 @@ public class EmployeePanel extends JPanel {
     private JPanel buildEmployeeListPanel() {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(Color.WHITE);
-
-        panel.add(buildTopBar(), BorderLayout.NORTH);
         panel.add(buildBody(), BorderLayout.CENTER);
 
         return panel;
-    }
-
-    private JPanel buildTopBar() {
-        JPanel topBar = new JPanel(new BorderLayout());
-        topBar.setBackground(Color.WHITE);
-        topBar.setPreferredSize(new Dimension(100, 80));
-        topBar.setBorder(new MatteBorder(0, 0, 1, 0, new Color(180, 180, 180)));
-
-        JPanel profile = new JPanel(new FlowLayout(FlowLayout.RIGHT, 14, 15));
-        profile.setOpaque(false);
-
-        JPanel text = new JPanel();
-        text.setOpaque(false);
-        text.setLayout(new BoxLayout(text, BoxLayout.Y_AXIS));
-
-        JLabel name = new JLabel("Name");
-        name.setFont(new Font("SansSerif", Font.BOLD, 16));
-        name.setForeground(NAVY);
-        name.setAlignmentX(Component.RIGHT_ALIGNMENT);
-
-        JLabel position = new JLabel("Position");
-        position.setFont(new Font("SansSerif", Font.PLAIN, 13));
-        position.setForeground(Color.GRAY);
-        position.setAlignmentX(Component.RIGHT_ALIGNMENT);
-
-        text.add(name);
-        text.add(position);
-
-        CircleAvatar avatar = new CircleAvatar(48);
-
-        profile.add(text);
-        profile.add(avatar);
-
-        topBar.add(profile, BorderLayout.EAST);
-        return topBar;
     }
 
     private JPanel buildBody() {

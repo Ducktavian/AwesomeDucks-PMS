@@ -36,15 +36,12 @@ public class AttendancePanel extends JPanel {
 
         setLayout(new BorderLayout());
         setBackground(Color.WHITE);
-
-        add(buildTopBar(), BorderLayout.NORTH);
         add(buildBody(), BorderLayout.CENTER);
     }
 
     private void showAttendanceList() {
         removeAll();
         setLayout(new BorderLayout());
-        add(buildTopBar(), BorderLayout.NORTH);
         add(buildBody(), BorderLayout.CENTER);
         revalidate();
         repaint();
@@ -56,39 +53,6 @@ public class AttendancePanel extends JPanel {
         attendanceRows.add(new Object[]{"10002", "Regular", "05/01/2026", "8:00 AM", "12:00 PM", "1:00 PM", "5:00 PM", "8 hrs", "Valid"});
         attendanceRows.add(new Object[]{"10003", "Overtime", "09/01/2026", "8:00 AM", "12:00 PM", "1:00 PM", "7:00 PM", "10 hrs", "Valid"});
         attendanceRows.add(new Object[]{"10004", "Holiday", "05/01/2026", "8:00 AM", "12:00 PM", "1:00 PM", "5:00 PM", "8 hrs", "Invalid"});
-    }
-
-    private JPanel buildTopBar() {
-        JPanel topBar = new JPanel(new BorderLayout());
-        topBar.setBackground(Color.WHITE);
-        topBar.setPreferredSize(new Dimension(100, 80));
-        topBar.setBorder(new MatteBorder(0, 0, 1, 0, new Color(180, 180, 180)));
-
-        JPanel profile = new JPanel(new FlowLayout(FlowLayout.RIGHT, 14, 15));
-        profile.setOpaque(false);
-
-        JPanel text = new JPanel();
-        text.setOpaque(false);
-        text.setLayout(new BoxLayout(text, BoxLayout.Y_AXIS));
-
-        JLabel name = new JLabel("Name");
-        name.setFont(new Font(FONT, Font.BOLD, 16));
-        name.setForeground(NAVY);
-        name.setAlignmentX(Component.RIGHT_ALIGNMENT);
-
-        JLabel position = new JLabel("Position");
-        position.setFont(new Font(FONT, Font.PLAIN, 13));
-        position.setForeground(Color.GRAY);
-        position.setAlignmentX(Component.RIGHT_ALIGNMENT);
-
-        text.add(name);
-        text.add(position);
-
-        profile.add(text);
-        profile.add(new CircleAvatar(48));
-
-        topBar.add(profile, BorderLayout.EAST);
-        return topBar;
     }
 
     private JPanel buildBody() {
