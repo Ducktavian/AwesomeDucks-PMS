@@ -1,5 +1,9 @@
 package com.motorph.ui.attendance;
 
+import com.motorph.model.Role;
+import com.motorph.model.UserAccount;
+import com.motorph.util.Session;
+
 import java.awt.*;
 import java.awt.event.*;
 import java.util.ArrayList;
@@ -28,10 +32,16 @@ public class AttendancePanel extends JPanel {
     private JTextField searchField;
     private TableRowSorter<DefaultTableModel> sorter;
 
+    private boolean canViewAllAttendance;
+    private boolean canAddAttendance;
+    private boolean canModifyAttendance;
+    private String currentEmployeeId;
+
     private int sortedColumn = -1;
     private SortOrder currentSortOrder = SortOrder.UNSORTED;
 
     public AttendancePanel() {
+        applyRBAC();
         loadSampleRows();
 
         setLayout(new BorderLayout());
@@ -39,9 +49,30 @@ public class AttendancePanel extends JPanel {
         add(buildBody(), BorderLayout.CENTER);
     }
 
+    private void applyRBAC() {
+        UserAccount user = Session.getCurrentUser();
+        Role role = user == null ? null : user.getRole();
+
+        currentEmployeeId = user == null ? "" : String.valueOf(user.getEmployeeId());
+
+        canViewAllAttendance = role == Role.ADMIN || role == Role.HR;
+        canModifyAttendance = role == Role.ADMIN || role == Role.HR;
+
+        canAddAttendance = role == Role.ADMIN
+                || role == Role.HR
+                || role == Role.IT
+                || role == Role.FINANCE
+                || role == Role.EMPLOYEE;
+    }
+
+    private boolean canSeeRow(String employeeId) {
+        return canViewAllAttendance || employeeId.equals(currentEmployeeId);
+    }
+
     private void showAttendanceList() {
         removeAll();
         setLayout(new BorderLayout());
+        applyRBAC();
         add(buildBody(), BorderLayout.CENTER);
         revalidate();
         repaint();
@@ -125,94 +156,18 @@ public class AttendancePanel extends JPanel {
         rightButtons.setOpaque(false);
 
         JButton addButton = navyButton("+", "Add", 90);
-        addButton.addActionListener(e -> {
-            removeAll();
-            setLayout(new BorderLayout());
-
-            add(new AttendanceFormPanel(
-                    this::showAttendanceList,
-                    rowData -> {
-                        attendanceRows.add(rowData);
-                        showAttendanceList();
-                    }
-            ), BorderLayout.CENTER);
-
-            revalidate();
-            repaint();
-        });
+        addButton.setVisible(canAddAttendance);
+        addButton.addActionListener(e -> openAddForm());
         rightButtons.add(addButton);
 
         JButton updateButton = navyButton("✎", "Update", 105);
-        updateButton.addActionListener(e -> {
-            int selectedRow = attendanceTable.getSelectedRow();
-
-            if (selectedRow == -1) {
-                JOptionPane.showMessageDialog(
-                        this,
-                        "Please select an attendance entry to update.",
-                        "No Entry Selected",
-                        JOptionPane.WARNING_MESSAGE
-                );
-                return;
-            }
-
-            int modelRow = attendanceTable.convertRowIndexToModel(selectedRow);
-            Object[] existingData = attendanceRows.get(modelRow);
-
-            removeAll();
-            setLayout(new BorderLayout());
-
-            add(new AttendanceFormPanel(
-                    this::showAttendanceList,
-                    existingData,
-                    updatedData -> {
-                        attendanceRows.set(modelRow, updatedData);
-                        showAttendanceList();
-                    }
-            ), BorderLayout.CENTER);
-
-            revalidate();
-            repaint();
-        });
+        updateButton.setVisible(canModifyAttendance);
+        updateButton.addActionListener(e -> openUpdateForm());
         rightButtons.add(updateButton);
 
         JButton deleteButton = navyButton("🗑", "Delete", 105);
-        deleteButton.addActionListener(e -> {
-            int selectedRow = attendanceTable.getSelectedRow();
-
-            if (selectedRow == -1) {
-                JOptionPane.showMessageDialog(
-                        this,
-                        "Please select an attendance entry to delete.",
-                        "No Entry Selected",
-                        JOptionPane.WARNING_MESSAGE
-                );
-                return;
-            }
-
-            int confirm = JOptionPane.showConfirmDialog(
-                    this,
-                    "Are you sure you want to delete this attendance entry?",
-                    "Confirm Delete",
-                    JOptionPane.YES_NO_OPTION,
-                    JOptionPane.WARNING_MESSAGE
-            );
-
-            if (confirm != JOptionPane.YES_OPTION) {
-                return;
-            }
-
-            int modelRow = attendanceTable.convertRowIndexToModel(selectedRow);
-            attendanceRows.remove(modelRow);
-            showAttendanceList();
-
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Attendance entry deleted successfully.",
-                    "Deleted",
-                    JOptionPane.INFORMATION_MESSAGE
-            );
-        });
+        deleteButton.setVisible(canModifyAttendance);
+        deleteButton.addActionListener(e -> deleteSelectedRow());
         rightButtons.add(deleteButton);
 
         JButton refreshButton = navyButton("⟳", "Refresh", 110);
@@ -224,6 +179,153 @@ public class AttendancePanel extends JPanel {
 
         row.add(rightButtons, BorderLayout.EAST);
         return row;
+    }
+
+    private void openAddForm() {
+        removeAll();
+        setLayout(new BorderLayout());
+
+        add(new AttendanceFormPanel(
+                this::showAttendanceList,
+                rowData -> {
+                    attendanceRows.add(rowData);
+                    showAttendanceList();
+                }
+        ), BorderLayout.CENTER);
+
+        revalidate();
+        repaint();
+    }
+
+    private void openUpdateForm() {
+        int selectedIndex = getSelectedAttendanceRowIndex();
+
+        if (selectedIndex == -1) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Please select an attendance entry to update.",
+                    "No Entry Selected",
+                    JOptionPane.WARNING_MESSAGE
+            );
+            return;
+        }
+
+        Object[] existingData = attendanceRows.get(selectedIndex);
+
+        removeAll();
+        setLayout(new BorderLayout());
+
+        add(new AttendanceFormPanel(
+                this::showAttendanceList,
+                existingData,
+                updatedData -> {
+                    attendanceRows.set(selectedIndex, updatedData);
+                    showAttendanceList();
+                }
+        ), BorderLayout.CENTER);
+
+        revalidate();
+        repaint();
+    }
+
+    private void openViewOnlyForm() {
+        int selectedIndex = getSelectedAttendanceRowIndex();
+
+        if (selectedIndex == -1) {
+            return;
+        }
+
+        Object[] existingData = attendanceRows.get(selectedIndex);
+
+        AttendanceFormPanel formPanel = new AttendanceFormPanel(
+                this::showAttendanceList,
+                existingData,
+                updatedData -> {
+                    // View-only mode. No update action.
+                }
+        );
+
+        setViewOnly(formPanel);
+
+        removeAll();
+        setLayout(new BorderLayout());
+        add(formPanel, BorderLayout.CENTER);
+        revalidate();
+        repaint();
+    }
+
+    private void deleteSelectedRow() {
+        int selectedIndex = getSelectedAttendanceRowIndex();
+
+        if (selectedIndex == -1) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Please select an attendance entry to delete.",
+                    "No Entry Selected",
+                    JOptionPane.WARNING_MESSAGE
+            );
+            return;
+        }
+
+        int confirm = JOptionPane.showConfirmDialog(
+                this,
+                "Are you sure you want to delete this attendance entry?",
+                "Confirm Delete",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE
+        );
+
+        if (confirm == JOptionPane.YES_OPTION) {
+            attendanceRows.remove(selectedIndex);
+            showAttendanceList();
+
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Attendance entry deleted successfully.",
+                    "Deleted",
+                    JOptionPane.INFORMATION_MESSAGE
+            );
+        }
+    }
+
+    private int getSelectedAttendanceRowIndex() {
+        int selectedRow = attendanceTable.getSelectedRow();
+
+        if (selectedRow == -1) {
+            return -1;
+        }
+
+        int modelRow = attendanceTable.convertRowIndexToModel(selectedRow);
+        Object[] selectedData = new Object[tableModel.getColumnCount()];
+
+        for (int i = 0; i < tableModel.getColumnCount(); i++) {
+            selectedData[i] = tableModel.getValueAt(modelRow, i);
+        }
+
+        for (int i = 0; i < attendanceRows.size(); i++) {
+            if (rowsMatch(attendanceRows.get(i), selectedData)) {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    private boolean rowsMatch(Object[] a, Object[] b) {
+        if (a == null || b == null || a.length != b.length) {
+            return false;
+        }
+
+        for (int i = 0; i < a.length; i++) {
+            String valueA = String.valueOf(a[i]);
+            String valueB = String.valueOf(b[i]);
+
+            if (!valueA.equals(valueB)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private JPanel buildTablePanel() {
@@ -239,7 +341,11 @@ public class AttendancePanel extends JPanel {
         };
 
         for (Object[] row : attendanceRows) {
-            tableModel.addRow(row);
+            String employeeId = String.valueOf(row[0]);
+
+            if (canSeeRow(employeeId)) {
+                tableModel.addRow(row);
+            }
         }
 
         attendanceTable = new JTable(tableModel);
@@ -251,6 +357,15 @@ public class AttendancePanel extends JPanel {
         attendanceTable.setBackground(Color.WHITE);
         attendanceTable.setFillsViewportHeight(true);
         attendanceTable.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
+
+        attendanceTable.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2 && attendanceTable.getSelectedRow() != -1) {
+                    openViewOnlyForm();
+                }
+            }
+        });
 
         sorter = new TableRowSorter<>(tableModel);
         attendanceTable.setRowSorter(sorter);
@@ -339,6 +454,37 @@ public class AttendancePanel extends JPanel {
         }
 
         sorter.setRowFilter(RowFilter.regexFilter("(?i)" + java.util.regex.Pattern.quote(query)));
+    }
+
+    private void setViewOnly(Container container) {
+        for (Component component : container.getComponents()) {
+            if (component instanceof JTextField) {
+                ((JTextField) component).setEditable(false);
+            } else if (component instanceof JTextArea) {
+                ((JTextArea) component).setEditable(false);
+            } else if (component instanceof JComboBox) {
+                component.setEnabled(false);
+            } else if (component instanceof JCheckBox) {
+                component.setEnabled(false);
+            } else if (component instanceof JRadioButton) {
+                component.setEnabled(false);
+            } else if (component instanceof JButton) {
+                JButton button = (JButton) component;
+                String text = button.getText() == null ? "" : button.getText().trim();
+
+                if (text.equalsIgnoreCase("Submit")
+                        || text.equalsIgnoreCase("Save")
+                        || text.equalsIgnoreCase("Confirm")
+                        || text.equalsIgnoreCase("Add")
+                        || text.equalsIgnoreCase("Update")) {
+                    button.setVisible(false);
+                }
+            }
+
+            if (component instanceof Container) {
+                setViewOnly((Container) component);
+            }
+        }
     }
 
     private JButton navyButton(String icon, String text, int width) {

@@ -401,4 +401,53 @@ public class PayrollFormPanel extends JPanel {
 
         parent.add(field, fieldGbc);
     }
+    
+    public PayrollFormPanel(Runnable onBack, boolean viewOnly) {
+        this(onBack);
+
+        if (viewOnly) {
+            hideSubmitButton();
+            setFieldsEditable(false);
+        }
+    }
+    
+    private void hideSubmitButton() {
+        hideButtonRecursive(this, "Submit");
+    }
+
+    private void hideButtonRecursive(Component component, String buttonText) {
+        if (component instanceof JButton) {
+            JButton button = (JButton) component;
+
+            if (button.getText() != null && button.getText().equalsIgnoreCase(buttonText)) {
+                button.setVisible(false);
+            }
+        }
+
+        if (component instanceof Container) {
+            for (Component child : ((Container) component).getComponents()) {
+                hideButtonRecursive(child, buttonText);
+            }
+        }
+    }
+
+    private void setFieldsEditable(boolean editable) {
+        setEditableRecursive(this, editable);
+    }
+
+    private void setEditableRecursive(Component component, boolean editable) {
+        if (component instanceof JTextField) {
+            ((JTextField) component).setEditable(editable);
+        } else if (component instanceof JTextArea) {
+            ((JTextArea) component).setEditable(editable);
+        } else if (component instanceof JComboBox) {
+            component.setEnabled(editable);
+        }
+
+        if (component instanceof Container) {
+            for (Component child : ((Container) component).getComponents()) {
+                setEditableRecursive(child, editable);
+            }
+        }
+    }
 }

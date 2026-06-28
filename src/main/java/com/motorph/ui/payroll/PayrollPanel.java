@@ -1,5 +1,9 @@
 package com.motorph.ui.payroll;
 
+import com.motorph.model.Role;
+import com.motorph.model.UserAccount;
+import com.motorph.util.Session;
+
 import java.awt.*;
 import java.awt.event.*;
 import java.util.ArrayList;
@@ -18,15 +22,40 @@ public class PayrollPanel extends JPanel {
     private DefaultTableModel tableModel;
     private TableRowSorter<DefaultTableModel> sorter;
 
+    private JButton addButton;
+    private JButton updateButton;
+    private JButton deleteButton;
+    private JButton refreshButton;
+
+    private boolean canModifyPayroll;
+    private boolean canViewAllPayroll;
+    private String currentEmployeeId;
+
     private int sortedColumn = -1;
     private SortOrder currentSortOrder = SortOrder.UNSORTED;
 
     public PayrollPanel() {
+        applyRBAC();
+
         setLayout(new BorderLayout());
         setBackground(Color.WHITE);
         add(createContentPanel(), BorderLayout.CENTER);
     }
-    
+
+    private void applyRBAC() {
+        UserAccount user = Session.getCurrentUser();
+        Role role = user == null ? null : user.getRole();
+
+        currentEmployeeId = user == null ? "" : String.valueOf(user.getEmployeeId());
+
+        canModifyPayroll = role == Role.ADMIN || role == Role.FINANCE;
+        canViewAllPayroll = role == Role.ADMIN || role == Role.FINANCE;
+    }
+
+    private boolean canSeeRow(String employeeId) {
+        return canViewAllPayroll || employeeId.equals(currentEmployeeId);
+    }
+
     private JPanel createContentPanel() {
         JPanel content = new JPanel(new BorderLayout());
         content.setBackground(Color.WHITE);
@@ -45,6 +74,37 @@ public class PayrollPanel extends JPanel {
                 new EmptyBorder(0, 12, 0, 12)
         ));
 
+        searchField.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyReleased(KeyEvent e) {
+                String text = searchField.getText().trim();
+
+                if (text.equalsIgnoreCase("Search") || text.isEmpty()) {
+                    sorter.setRowFilter(null);
+                } else {
+                    sorter.setRowFilter(RowFilter.regexFilter("(?i)" + text));
+                }
+            }
+        });
+
+        searchField.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusGained(FocusEvent e) {
+                if (searchField.getText().equals("Search")) {
+                    searchField.setText("");
+                    searchField.setForeground(Color.BLACK);
+                }
+            }
+
+            @Override
+            public void focusLost(FocusEvent e) {
+                if (searchField.getText().trim().isEmpty()) {
+                    searchField.setText("Search");
+                    searchField.setForeground(new Color(180, 180, 180));
+                }
+            }
+        });
+
         JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         searchPanel.setOpaque(false);
         searchPanel.add(searchField);
@@ -52,32 +112,54 @@ public class PayrollPanel extends JPanel {
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 62));
         buttonPanel.setOpaque(false);
 
-        JButton addButton = button("+  Add");
-        JButton updateButton = button("✎  Update");
-        JButton deleteButton = button("🗑  Delete");
-        JButton refreshButton = button("⟳  Refresh");
+        addButton = button("+  Add");
+        updateButton = button("✎  Update");
+        deleteButton = button("🗑  Delete");
+        refreshButton = button("⟳  Refresh");
+
+        addButton.setVisible(canModifyPayroll);
+        updateButton.setVisible(canModifyPayroll);
+        deleteButton.setVisible(canModifyPayroll);
 
         buttonPanel.add(addButton);
         buttonPanel.add(updateButton);
         buttonPanel.add(deleteButton);
         buttonPanel.add(refreshButton);
 
-        /* ---------- OPEN PAYROLL FORM ---------- */
-        addButton.addActionListener(e -> {
-            removeAll();
-            setLayout(new BorderLayout());
-            add(new PayrollFormPanel(() -> {
-                removeAll();
-                setLayout(new BorderLayout());
-                add(createContentPanel(), BorderLayout.CENTER);
-                revalidate();
-                repaint();
-            }), BorderLayout.CENTER);
+        addButton.addActionListener(e -> openPayrollForm(false));
 
-            revalidate();
-            repaint();
+        updateButton.addActionListener(e -> {
+            if (payrollTable.getSelectedRow() == -1) {
+                JOptionPane.showMessageDialog(this, "Please select a payroll entry to update.");
+                return;
+            }
+
+            openPayrollForm(false);
         });
-        
+
+        deleteButton.addActionListener(e -> {
+            int selectedRow = payrollTable.getSelectedRow();
+
+            if (selectedRow == -1) {
+                JOptionPane.showMessageDialog(this, "Please select a payroll entry to delete.");
+                return;
+            }
+
+            int confirm = JOptionPane.showConfirmDialog(
+                    this,
+                    "Are you sure you want to delete this payroll entry?",
+                    "Confirm Delete",
+                    JOptionPane.YES_NO_OPTION
+            );
+
+            if (confirm == JOptionPane.YES_OPTION) {
+                int modelRow = payrollTable.convertRowIndexToModel(selectedRow);
+                tableModel.removeRow(modelRow);
+            }
+        });
+
+        refreshButton.addActionListener(e -> addSampleRows());
+
         topControls.add(searchPanel, BorderLayout.WEST);
         topControls.add(buttonPanel, BorderLayout.EAST);
 
@@ -143,10 +225,35 @@ public class PayrollPanel extends JPanel {
         payrollTable.setBackground(Color.WHITE);
         payrollTable.setBorder(BorderFactory.createEmptyBorder());
 
+        payrollTable.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2 && payrollTable.getSelectedRow() != -1) {
+                    openPayrollForm(true);
+                }
+            }
+        });
+
         styleHeader();
         styleCells();
-
         addSampleRows();
+    }
+
+    private void openPayrollForm(boolean viewOnly) {
+        removeAll();
+        setLayout(new BorderLayout());
+
+        add(new PayrollFormPanel(() -> {
+            removeAll();
+            setLayout(new BorderLayout());
+            applyRBAC();
+            add(createContentPanel(), BorderLayout.CENTER);
+            revalidate();
+            repaint();
+        }, viewOnly), BorderLayout.CENTER);
+
+        revalidate();
+        repaint();
     }
 
     private void styleHeader() {
@@ -158,8 +265,6 @@ public class PayrollPanel extends JPanel {
         header.setBackground(Color.WHITE);
         header.setForeground(Color.BLACK);
         header.setFont(new Font("SansSerif", Font.BOLD, 13));
-
-        // This creates one continuous black line under the whole table header.
         header.setBorder(new MatteBorder(0, 0, 3, 0, Color.BLACK));
         header.setDefaultRenderer(new HeaderFilterRenderer());
 
@@ -231,10 +336,20 @@ public class PayrollPanel extends JPanel {
     }
 
     private void addSampleRows() {
-        tableModel.addRow(new Object[]{"PS-001", "10001", "06/01/2026", "06/15/2026", "25000", "3000", "1500", "23500"});
-        tableModel.addRow(new Object[]{"PS-002", "10002", "06/01/2026", "06/15/2026", "22000", "2500", "1200", "20700"});
-        tableModel.addRow(new Object[]{"PS-003", "10003", "06/01/2026", "06/15/2026", "28000", "3500", "1600", "26100"});
-        tableModel.addRow(new Object[]{"PS-004", "10004", "06/01/2026", "06/15/2026", "20000", "2200", "1000", "18800"});
+        tableModel.setRowCount(0);
+
+        addPayrollRow(new Object[]{"PS-001", "10001", "06/01/2026", "06/15/2026", "25000", "3000", "1500", "23500"});
+        addPayrollRow(new Object[]{"PS-002", "10002", "06/01/2026", "06/15/2026", "22000", "2500", "1200", "20700"});
+        addPayrollRow(new Object[]{"PS-003", "10003", "06/01/2026", "06/15/2026", "28000", "3500", "1600", "26100"});
+        addPayrollRow(new Object[]{"PS-004", "10004", "06/01/2026", "06/15/2026", "20000", "2200", "1000", "18800"});
+    }
+
+    private void addPayrollRow(Object[] row) {
+        String employeeId = String.valueOf(row[1]);
+
+        if (canSeeRow(employeeId)) {
+            tableModel.addRow(row);
+        }
     }
 
     private class HeaderFilterRenderer extends JPanel implements TableCellRenderer {
@@ -287,6 +402,7 @@ public class PayrollPanel extends JPanel {
     }
 
     private static class CircleIcon implements Icon {
+
         private final Color color;
         private final int size;
 

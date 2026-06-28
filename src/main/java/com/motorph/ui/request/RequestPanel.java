@@ -1,8 +1,13 @@
 package com.motorph.ui.request;
 
+import com.motorph.model.Role;
+import com.motorph.model.UserAccount;
+import com.motorph.util.Session;
+
 import java.awt.*;
 import java.awt.event.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import javax.swing.*;
 import javax.swing.border.*;
@@ -16,9 +21,12 @@ public class RequestPanel extends JPanel {
     private static final Color SELECTED_ROW = new Color(225, 230, 245);
     private static final String FONT = "Segoe UI";
 
+    private static final int STATUS_COL = 9;
+    private static final int EMPLOYEE_ID_COL = 10;
+
     private static final String[] COLUMNS = {
         "Name", "Department", "Request Type", "Start Date", "End Date",
-        "Start Time", "End Time", "Reason", "Notes", "Status"
+        "Start Time", "End Time", "Reason", "Notes", "Status", "Employee ID"
     };
 
     private final List<Object[]> requestRows = new ArrayList<>();
@@ -28,10 +36,14 @@ public class RequestPanel extends JPanel {
     private JTextField searchField;
     private TableRowSorter<DefaultTableModel> sorter;
 
+    private boolean canViewAllRequests;
+    private String currentEmployeeId;
+
     private int sortedColumn = -1;
     private SortOrder currentSortOrder = SortOrder.UNSORTED;
 
     public RequestPanel() {
+        applyRBAC();
         loadSampleRows();
 
         setLayout(new BorderLayout());
@@ -39,9 +51,38 @@ public class RequestPanel extends JPanel {
         add(buildBody(), BorderLayout.CENTER);
     }
 
+    private void applyRBAC() {
+        UserAccount user = Session.getCurrentUser();
+        Role role = user == null ? null : user.getRole();
+
+        currentEmployeeId = user == null ? "" : String.valueOf(user.getEmployeeId());
+
+        canViewAllRequests = role == Role.ADMIN || role == Role.HR;
+    }
+
+    private boolean canSeeRow(String employeeId) {
+        return canViewAllRequests || employeeId.equals(currentEmployeeId);
+    }
+
+    private boolean isPending(Object[] row) {
+        return row != null
+                && row.length > STATUS_COL
+                && "Pending".equalsIgnoreCase(String.valueOf(row[STATUS_COL]));
+    }
+
+    private boolean canModifyRequest(Object[] row) {
+        if (canViewAllRequests) {
+            return true;
+        }
+
+        String employeeId = String.valueOf(row[EMPLOYEE_ID_COL]);
+        return employeeId.equals(currentEmployeeId) && isPending(row);
+    }
+
     private void showRequestList() {
         removeAll();
         setLayout(new BorderLayout());
+        applyRBAC();
         add(buildBody(), BorderLayout.CENTER);
         revalidate();
         repaint();
@@ -49,12 +90,12 @@ public class RequestPanel extends JPanel {
 
     private void loadSampleRows() {
         requestRows.clear();
-        requestRows.add(new Object[]{"Juan Dela Cruz", "IT", "Overtime", "03/01/2026", "03/01/2026", "5:00 PM", "7:00 PM", "Project work", "", "Pending"});
-        requestRows.add(new Object[]{"Maria Santos", "HR", "Leave", "03/03/2026", "03/05/2026", "", "", "Vacation", "", "Pending"});
-        requestRows.add(new Object[]{"Pedro Reyes", "Finance", "Undertime", "03/04/2026", "03/04/2026", "3:00 PM", "5:00 PM", "Personal", "", "Rejected"});
-        requestRows.add(new Object[]{"Ana Lopez", "IT", "Overtime", "03/07/2026", "03/07/2026", "6:00 PM", "9:00 PM", "System update", "", "Approved"});
-        requestRows.add(new Object[]{"Carlos Mendez", "HR", "Leave", "03/10/2026", "03/11/2026", "", "", "Family event", "", "Pending"});
-        requestRows.add(new Object[]{"Lisa Tan", "Employee", "Overtime", "03/12/2026", "03/12/2026", "5:00 PM", "8:00 PM", "Reports", "", "Pending"});
+        requestRows.add(new Object[]{"Juan Dela Cruz", "IT", "Overtime", "03/01/2026", "03/01/2026", "5:00 PM", "7:00 PM", "Project work", "", "Pending", "10001"});
+        requestRows.add(new Object[]{"Maria Santos", "HR", "Leave", "03/03/2026", "03/05/2026", "", "", "Vacation", "", "Pending", "10002"});
+        requestRows.add(new Object[]{"Pedro Reyes", "Finance", "Undertime", "03/04/2026", "03/04/2026", "3:00 PM", "5:00 PM", "Personal", "", "Rejected", "10003"});
+        requestRows.add(new Object[]{"Ana Lopez", "IT", "Overtime", "03/07/2026", "03/07/2026", "6:00 PM", "9:00 PM", "System update", "", "Approved", "10004"});
+        requestRows.add(new Object[]{"Carlos Mendez", "HR", "Leave", "03/10/2026", "03/11/2026", "", "", "Family event", "", "Pending", "10005"});
+        requestRows.add(new Object[]{"Lisa Tan", "Employee", "Overtime", "03/12/2026", "03/12/2026", "5:00 PM", "8:00 PM", "Reports", "", "Pending", "10006"});
     }
 
     private JPanel buildBody() {
@@ -127,95 +168,15 @@ public class RequestPanel extends JPanel {
         buttons.setOpaque(false);
 
         JButton addButton = navyButton("+", "Add", 90);
-        addButton.addActionListener(e -> {
-            removeAll();
-            setLayout(new BorderLayout());
-
-            add(new RequestFormPanel(
-                    this::showRequestList,
-                    null,
-                    rowData -> {
-                        requestRows.add(rowData);
-                        showRequestList();
-                    }
-            ), BorderLayout.CENTER);
-
-            revalidate();
-            repaint();
-        });
+        addButton.addActionListener(e -> openAddForm());
         buttons.add(addButton);
 
         JButton updateButton = navyButton("✎", "Update", 105);
-        updateButton.addActionListener(e -> {
-            int selectedRow = requestTable.getSelectedRow();
-
-            if (selectedRow == -1) {
-                JOptionPane.showMessageDialog(
-                        this,
-                        "Please select a request to update.",
-                        "No Request Selected",
-                        JOptionPane.WARNING_MESSAGE
-                );
-                return;
-            }
-
-            int modelRow = requestTable.convertRowIndexToModel(selectedRow);
-            Object[] existingData = requestRows.get(modelRow);
-
-            removeAll();
-            setLayout(new BorderLayout());
-
-            add(new RequestFormPanel(
-                    this::showRequestList,
-                    existingData,
-                    updatedData -> {
-                        requestRows.set(modelRow, updatedData);
-                        showRequestList();
-                    }
-            ), BorderLayout.CENTER);
-
-            revalidate();
-            repaint();
-        });
+        updateButton.addActionListener(e -> openUpdateForm());
         buttons.add(updateButton);
 
         JButton deleteButton = navyButton("🗑", "Delete", 105);
-        deleteButton.addActionListener(e -> {
-            int selectedRow = requestTable.getSelectedRow();
-
-            if (selectedRow == -1) {
-                JOptionPane.showMessageDialog(
-                        this,
-                        "Please select a request to delete.",
-                        "No Request Selected",
-                        JOptionPane.WARNING_MESSAGE
-                );
-                return;
-            }
-
-            int confirm = JOptionPane.showConfirmDialog(
-                    this,
-                    "Are you sure you want to delete this request?",
-                    "Confirm Delete",
-                    JOptionPane.YES_NO_OPTION,
-                    JOptionPane.WARNING_MESSAGE
-            );
-
-            if (confirm != JOptionPane.YES_OPTION) {
-                return;
-            }
-
-            int modelRow = requestTable.convertRowIndexToModel(selectedRow);
-            requestRows.remove(modelRow);
-            tableModel.removeRow(modelRow);
-
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Request deleted successfully.",
-                    "Deleted",
-                    JOptionPane.INFORMATION_MESSAGE
-            );
-        });
+        deleteButton.addActionListener(e -> deleteSelectedRequest());
         buttons.add(deleteButton);
 
         JButton refreshButton = navyButton("⟳", "Refresh", 110);
@@ -227,6 +188,116 @@ public class RequestPanel extends JPanel {
 
         row.add(buttons, BorderLayout.EAST);
         return row;
+    }
+
+    private void openAddForm() {
+        removeAll();
+        setLayout(new BorderLayout());
+
+        add(new RequestFormPanel(
+                this::showRequestList,
+                null,
+                rowData -> {
+                    requestRows.add(attachCurrentEmployeeId(rowData));
+                    showRequestList();
+                }
+        ), BorderLayout.CENTER);
+
+        revalidate();
+        repaint();
+    }
+
+    private void openUpdateForm() {
+        int selectedIndex = getSelectedRequestRowIndex();
+
+        if (selectedIndex == -1) {
+            JOptionPane.showMessageDialog(this, "Please select a request to update.");
+            return;
+        }
+
+        Object[] selectedRow = requestRows.get(selectedIndex);
+
+        if (!canModifyRequest(selectedRow)) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "You can only update your own pending requests.",
+                    "Access Denied",
+                    JOptionPane.WARNING_MESSAGE
+            );
+            return;
+        }
+
+        Object[] existingData = toFormData(selectedRow);
+
+        removeAll();
+        setLayout(new BorderLayout());
+
+        add(new RequestFormPanel(
+                this::showRequestList,
+                existingData,
+                updatedData -> {
+                    String employeeId = String.valueOf(selectedRow[EMPLOYEE_ID_COL]);
+                    requestRows.set(selectedIndex, attachEmployeeId(updatedData, employeeId));
+                    showRequestList();
+                }
+        ), BorderLayout.CENTER);
+
+        revalidate();
+        repaint();
+    }
+
+    private void openViewOnlyForm() {
+        int selectedIndex = getSelectedRequestRowIndex();
+
+        if (selectedIndex == -1) return;
+
+        RequestFormPanel formPanel = new RequestFormPanel(
+                this::showRequestList,
+                toFormData(requestRows.get(selectedIndex)),
+                updatedData -> { }
+        );
+
+        setViewOnly(formPanel);
+
+        removeAll();
+        setLayout(new BorderLayout());
+        add(formPanel, BorderLayout.CENTER);
+        revalidate();
+        repaint();
+    }
+
+    private void deleteSelectedRequest() {
+        int selectedIndex = getSelectedRequestRowIndex();
+
+        if (selectedIndex == -1) {
+            JOptionPane.showMessageDialog(this, "Please select a request to delete.");
+            return;
+        }
+
+        Object[] selectedRow = requestRows.get(selectedIndex);
+
+        if (!canModifyRequest(selectedRow)) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "You can only delete your own pending requests.",
+                    "Access Denied",
+                    JOptionPane.WARNING_MESSAGE
+            );
+            return;
+        }
+
+        int confirm = JOptionPane.showConfirmDialog(
+                this,
+                "Are you sure you want to delete this request?",
+                "Confirm Delete",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE
+        );
+
+        if (confirm == JOptionPane.YES_OPTION) {
+            requestRows.remove(selectedIndex);
+            showRequestList();
+        }
     }
 
     private JPanel buildTablePanel() {
@@ -242,7 +313,9 @@ public class RequestPanel extends JPanel {
         };
 
         for (Object[] row : requestRows) {
-            tableModel.addRow(row);
+            if (canSeeRow(String.valueOf(row[EMPLOYEE_ID_COL]))) {
+                tableModel.addRow(row);
+            }
         }
 
         requestTable = new JTable(tableModel);
@@ -255,8 +328,19 @@ public class RequestPanel extends JPanel {
         requestTable.setFillsViewportHeight(true);
         requestTable.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
 
+        requestTable.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2 && requestTable.getSelectedRow() != -1) {
+                    openViewOnlyForm();
+                }
+            }
+        });
+
         sorter = new TableRowSorter<>(tableModel);
         requestTable.setRowSorter(sorter);
+
+        hideEmployeeIdColumn();
 
         styleHeader();
         styleColumns();
@@ -276,6 +360,46 @@ public class RequestPanel extends JPanel {
         tablePanel.add(scrollPane, BorderLayout.CENTER);
 
         return tablePanel;
+    }
+
+    private void hideEmployeeIdColumn() {
+        TableColumn column = requestTable.getColumnModel().getColumn(EMPLOYEE_ID_COL);
+        requestTable.getColumnModel().removeColumn(column);
+    }
+
+    private int getSelectedRequestRowIndex() {
+        int selectedRow = requestTable.getSelectedRow();
+
+        if (selectedRow == -1) return -1;
+
+        int modelRow = requestTable.convertRowIndexToModel(selectedRow);
+        Object[] selectedData = new Object[tableModel.getColumnCount()];
+
+        for (int i = 0; i < tableModel.getColumnCount(); i++) {
+            selectedData[i] = tableModel.getValueAt(modelRow, i);
+        }
+
+        for (int i = 0; i < requestRows.size(); i++) {
+            if (Arrays.equals(requestRows.get(i), selectedData)) {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    private Object[] toFormData(Object[] fullRow) {
+        return Arrays.copyOf(fullRow, EMPLOYEE_ID_COL);
+    }
+
+    private Object[] attachCurrentEmployeeId(Object[] formData) {
+        return attachEmployeeId(formData, currentEmployeeId);
+    }
+
+    private Object[] attachEmployeeId(Object[] formData, String employeeId) {
+        Object[] fullData = Arrays.copyOf(formData, EMPLOYEE_ID_COL + 1);
+        fullData[EMPLOYEE_ID_COL] = employeeId;
+        return fullData;
     }
 
     private void styleHeader() {
@@ -302,11 +426,9 @@ public class RequestPanel extends JPanel {
     }
 
     private void toggleColumnSort(int column) {
-        if (sortedColumn == column && currentSortOrder == SortOrder.ASCENDING) {
-            currentSortOrder = SortOrder.DESCENDING;
-        } else {
-            currentSortOrder = SortOrder.ASCENDING;
-        }
+        currentSortOrder = sortedColumn == column && currentSortOrder == SortOrder.ASCENDING
+                ? SortOrder.DESCENDING
+                : SortOrder.ASCENDING;
 
         sortedColumn = column;
 
@@ -329,7 +451,7 @@ public class RequestPanel extends JPanel {
 
     private void styleCells() {
         for (int i = 0; i < requestTable.getColumnCount(); i++) {
-            if (i == 9) {
+            if (requestTable.convertColumnIndexToModel(i) == STATUS_COL) {
                 requestTable.getColumnModel().getColumn(i).setCellRenderer(new StatusRenderer());
             } else {
                 requestTable.getColumnModel().getColumn(i).setCellRenderer(new DefaultRequestCellRenderer());
@@ -350,6 +472,37 @@ public class RequestPanel extends JPanel {
         sorter.setRowFilter(RowFilter.regexFilter("(?i)" + java.util.regex.Pattern.quote(query)));
     }
 
+    private void setViewOnly(Container container) {
+        for (Component component : container.getComponents()) {
+            if (component instanceof JTextField) {
+                ((JTextField) component).setEditable(false);
+            } else if (component instanceof JTextArea) {
+                ((JTextArea) component).setEditable(false);
+            } else if (component instanceof JComboBox) {
+                component.setEnabled(false);
+            } else if (component instanceof JCheckBox) {
+                component.setEnabled(false);
+            } else if (component instanceof JRadioButton) {
+                component.setEnabled(false);
+            } else if (component instanceof JButton) {
+                JButton button = (JButton) component;
+                String text = button.getText() == null ? "" : button.getText().trim();
+
+                if (text.equalsIgnoreCase("Submit")
+                        || text.equalsIgnoreCase("Save")
+                        || text.equalsIgnoreCase("Confirm")
+                        || text.equalsIgnoreCase("Add")
+                        || text.equalsIgnoreCase("Update")) {
+                    button.setVisible(false);
+                }
+            }
+
+            if (component instanceof Container) {
+                setViewOnly((Container) component);
+            }
+        }
+    }
+
     private JButton navyButton(String icon, String text, int width) {
         JButton button = new JButton(icon + "  " + text);
         button.setPreferredSize(new Dimension(width, 37));
@@ -365,8 +518,8 @@ public class RequestPanel extends JPanel {
 
     private class HeaderFilterRenderer extends JPanel implements TableCellRenderer {
 
-        private final JLabel titleLabel;
-        private final JLabel filterLabel;
+        private final JLabel titleLabel = new JLabel();
+        private final JLabel filterLabel = new JLabel("⇅");
 
         HeaderFilterRenderer() {
             setLayout(new BorderLayout(6, 0));
@@ -374,11 +527,9 @@ public class RequestPanel extends JPanel {
             setBackground(Color.WHITE);
             setBorder(new EmptyBorder(0, 14, 10, 14));
 
-            titleLabel = new JLabel();
             titleLabel.setFont(new Font(FONT, Font.BOLD, 12));
             titleLabel.setForeground(Color.BLACK);
 
-            filterLabel = new JLabel("⇅");
             filterLabel.setFont(new Font(FONT, Font.BOLD, 12));
             filterLabel.setForeground(new Color(130, 130, 130));
             filterLabel.setHorizontalAlignment(SwingConstants.RIGHT);
@@ -389,24 +540,17 @@ public class RequestPanel extends JPanel {
 
         @Override
         public Component getTableCellRendererComponent(
-                JTable table,
-                Object value,
-                boolean isSelected,
-                boolean hasFocus,
-                int row,
-                int column) {
+                JTable table, Object value, boolean isSelected,
+                boolean hasFocus, int row, int column) {
 
             int modelColumn = table.convertColumnIndexToModel(column);
             titleLabel.setText(value == null ? "" : value.toString());
 
-            if (modelColumn == sortedColumn) {
-                filterLabel.setText(currentSortOrder == SortOrder.ASCENDING ? "▲" : "▼");
-                filterLabel.setForeground(NAVY);
-            } else {
-                filterLabel.setText("⇅");
-                filterLabel.setForeground(new Color(130, 130, 130));
-            }
+            filterLabel.setText(modelColumn == sortedColumn
+                    ? currentSortOrder == SortOrder.ASCENDING ? "▲" : "▼"
+                    : "⇅");
 
+            filterLabel.setForeground(modelColumn == sortedColumn ? NAVY : new Color(130, 130, 130));
             return this;
         }
     }
