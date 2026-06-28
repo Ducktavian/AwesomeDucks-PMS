@@ -21,6 +21,8 @@ public class RequestPanel extends JPanel {
         "Start Time", "End Time", "Reason", "Notes", "Status"
     };
 
+    private final List<Object[]> requestRows = new ArrayList<>();
+
     private DefaultTableModel tableModel;
     private JTable requestTable;
     private JTextField searchField;
@@ -30,11 +32,32 @@ public class RequestPanel extends JPanel {
     private SortOrder currentSortOrder = SortOrder.UNSORTED;
 
     public RequestPanel() {
+        loadSampleRows();
+
         setLayout(new BorderLayout());
         setBackground(Color.WHITE);
 
         add(buildTopBar(), BorderLayout.NORTH);
         add(buildBody(), BorderLayout.CENTER);
+    }
+
+    private void showRequestList() {
+        removeAll();
+        setLayout(new BorderLayout());
+        add(buildTopBar(), BorderLayout.NORTH);
+        add(buildBody(), BorderLayout.CENTER);
+        revalidate();
+        repaint();
+    }
+
+    private void loadSampleRows() {
+        requestRows.clear();
+        requestRows.add(new Object[]{"Juan Dela Cruz", "IT", "Overtime", "03/01/2026", "03/01/2026", "5:00 PM", "7:00 PM", "Project work", "", "Pending"});
+        requestRows.add(new Object[]{"Maria Santos", "HR", "Leave", "03/03/2026", "03/05/2026", "", "", "Vacation", "", "Pending"});
+        requestRows.add(new Object[]{"Pedro Reyes", "Finance", "Undertime", "03/04/2026", "03/04/2026", "3:00 PM", "5:00 PM", "Personal", "", "Rejected"});
+        requestRows.add(new Object[]{"Ana Lopez", "IT", "Overtime", "03/07/2026", "03/07/2026", "6:00 PM", "9:00 PM", "System update", "", "Approved"});
+        requestRows.add(new Object[]{"Carlos Mendez", "HR", "Leave", "03/10/2026", "03/11/2026", "", "", "Family event", "", "Pending"});
+        requestRows.add(new Object[]{"Lisa Tan", "Employee", "Overtime", "03/12/2026", "03/12/2026", "5:00 PM", "8:00 PM", "Reports", "", "Pending"});
     }
 
     private JPanel buildTopBar() {
@@ -139,10 +162,104 @@ public class RequestPanel extends JPanel {
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         buttons.setOpaque(false);
 
-        buttons.add(navyButton("+", "Add", 90));
-        buttons.add(navyButton("✎", "Update", 105));
-        buttons.add(navyButton("🗑", "Delete", 105));
-        buttons.add(navyButton("⟳", "Refresh", 110));
+        JButton addButton = navyButton("+", "Add", 90);
+        addButton.addActionListener(e -> {
+            removeAll();
+            setLayout(new BorderLayout());
+
+            add(new RequestFormPanel(
+                    this::showRequestList,
+                    null,
+                    rowData -> {
+                        requestRows.add(rowData);
+                        showRequestList();
+                    }
+            ), BorderLayout.CENTER);
+
+            revalidate();
+            repaint();
+        });
+        buttons.add(addButton);
+
+        JButton updateButton = navyButton("✎", "Update", 105);
+        updateButton.addActionListener(e -> {
+            int selectedRow = requestTable.getSelectedRow();
+
+            if (selectedRow == -1) {
+                JOptionPane.showMessageDialog(
+                        this,
+                        "Please select a request to update.",
+                        "No Request Selected",
+                        JOptionPane.WARNING_MESSAGE
+                );
+                return;
+            }
+
+            int modelRow = requestTable.convertRowIndexToModel(selectedRow);
+            Object[] existingData = requestRows.get(modelRow);
+
+            removeAll();
+            setLayout(new BorderLayout());
+
+            add(new RequestFormPanel(
+                    this::showRequestList,
+                    existingData,
+                    updatedData -> {
+                        requestRows.set(modelRow, updatedData);
+                        showRequestList();
+                    }
+            ), BorderLayout.CENTER);
+
+            revalidate();
+            repaint();
+        });
+        buttons.add(updateButton);
+
+        JButton deleteButton = navyButton("🗑", "Delete", 105);
+        deleteButton.addActionListener(e -> {
+            int selectedRow = requestTable.getSelectedRow();
+
+            if (selectedRow == -1) {
+                JOptionPane.showMessageDialog(
+                        this,
+                        "Please select a request to delete.",
+                        "No Request Selected",
+                        JOptionPane.WARNING_MESSAGE
+                );
+                return;
+            }
+
+            int confirm = JOptionPane.showConfirmDialog(
+                    this,
+                    "Are you sure you want to delete this request?",
+                    "Confirm Delete",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE
+            );
+
+            if (confirm != JOptionPane.YES_OPTION) {
+                return;
+            }
+
+            int modelRow = requestTable.convertRowIndexToModel(selectedRow);
+            requestRows.remove(modelRow);
+            tableModel.removeRow(modelRow);
+
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Request deleted successfully.",
+                    "Deleted",
+                    JOptionPane.INFORMATION_MESSAGE
+            );
+        });
+        buttons.add(deleteButton);
+
+        JButton refreshButton = navyButton("⟳", "Refresh", 110);
+        refreshButton.addActionListener(e -> {
+            loadSampleRows();
+            showRequestList();
+        });
+        buttons.add(refreshButton);
 
         row.add(buttons, BorderLayout.EAST);
         return row;
@@ -160,6 +277,10 @@ public class RequestPanel extends JPanel {
             }
         };
 
+        for (Object[] row : requestRows) {
+            tableModel.addRow(row);
+        }
+
         requestTable = new JTable(tableModel);
         requestTable.setRowHeight(56);
         requestTable.setShowGrid(false);
@@ -176,7 +297,6 @@ public class RequestPanel extends JPanel {
         styleHeader();
         styleColumns();
         styleCells();
-        addSampleRows();
 
         JScrollPane scrollPane = new JScrollPane(requestTable);
         scrollPane.setColumnHeaderView(null);
@@ -251,15 +371,6 @@ public class RequestPanel extends JPanel {
                 requestTable.getColumnModel().getColumn(i).setCellRenderer(new DefaultRequestCellRenderer());
             }
         }
-    }
-
-    private void addSampleRows() {
-        tableModel.addRow(new Object[]{"Juan Dela Cruz", "IT", "Overtime", "03/01/2026", "03/01/2026", "5:00 PM", "7:00 PM", "Project work", "", "Pending"});
-        tableModel.addRow(new Object[]{"Maria Santos", "HR", "Leave", "03/03/2026", "03/05/2026", "", "", "Vacation", "", "Pending"});
-        tableModel.addRow(new Object[]{"Pedro Reyes", "Finance", "Undertime", "03/04/2026", "03/04/2026", "3:00 PM", "5:00 PM", "Personal", "", "Rejected"});
-        tableModel.addRow(new Object[]{"Ana Lopez", "IT", "Overtime", "03/07/2026", "03/07/2026", "6:00 PM", "9:00 PM", "System update", "", "Approved"});
-        tableModel.addRow(new Object[]{"Carlos Mendez", "HR", "Leave", "03/10/2026", "03/11/2026", "", "", "Family event", "", "Pending"});
-        tableModel.addRow(new Object[]{"Lisa Tan", "Employee", "Overtime", "03/12/2026", "03/12/2026", "5:00 PM", "8:00 PM", "Reports", "", "Pending"});
     }
 
     private void applySearchFilter() {
