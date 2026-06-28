@@ -6,6 +6,7 @@ import com.motorph.model.Role;
 import com.motorph.model.UserAccount;
 import com.motorph.util.PasswordUtil;
 import com.motorph.util.Session;
+import com.motorph.model.Role;
 
 import java.util.List;
 
@@ -57,9 +58,8 @@ public class UserService {
 
     public void changeRole(int userId, Role newRole) {
         authorizeAdmin();
-        UserAccount user = findByIdOrThrow(userId);
-        user.setRole(newRole);
-        userDAO.update(user);
+        findByIdOrThrow(userId);
+        userDAO.changeRole(userId, newRole);
     }
 
     public void deactivateUser(int userId) {

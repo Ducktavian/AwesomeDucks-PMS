@@ -203,6 +203,40 @@ public class JdbcUserAccountDAO implements UserAccountDAO {
             throw new RuntimeException("delete failed for id: " + id, e);
         }
     }
+    
+    @Override
+    public void changeRole(int userId, Role newRole) {
+        String deleteSql = "DELETE FROM account_role WHERE user_account_id = ?";
+        String insertSql = """
+                INSERT INTO account_role (user_account_id, role_id, created_at)
+                VALUES (?, ?, NOW())
+                """;
+
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            conn.setAutoCommit(false);
+
+            try (PreparedStatement deletePs = conn.prepareStatement(deleteSql);
+                 PreparedStatement insertPs = conn.prepareStatement(insertSql)) {
+
+                deletePs.setInt(1, userId);
+                deletePs.executeUpdate();
+
+                insertPs.setInt(1, userId);
+                insertPs.setInt(2, newRole.getRoleId());
+                insertPs.executeUpdate();
+
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to change role for userId=" + userId, e);
+        }
+    }
 
     
     // Private helpers    
