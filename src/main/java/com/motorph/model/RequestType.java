@@ -11,6 +11,7 @@ public enum RequestType {
 
     public static RequestType fromDbValue(String dbValue) {
         return switch (dbValue.toLowerCase()) {
+            case "leave"  -> LEAVE;
             case "overtime"  -> OVERTIME;
             case "undertime" -> UNDERTIME;
             default -> throw new IllegalArgumentException("Unknown request_type: " + dbValue);

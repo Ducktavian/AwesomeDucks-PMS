@@ -27,7 +27,7 @@ public class EmployeePanel extends JPanel {
 
     private static final String[] COLUMNS = {
         "Employee No.", "Name", "Status", "Position",
-        "Immediate Supervisor", "Role"
+        "Immediate Supervisor"
     };
 
     private final EmployeeService employeeService = AppContext.getEmployeeService();
@@ -319,7 +319,7 @@ public class EmployeePanel extends JPanel {
     }
 
     private void styleColumns() {
-        int[] widths = {135, 170, 115, 175, 210, 120};
+        int[] widths = {135, 190, 120, 210, 240};
         TableColumnModel columns = employeeTable.getColumnModel();
 
         for (int i = 0; i < widths.length; i++) {
@@ -423,11 +423,10 @@ public class EmployeePanel extends JPanel {
             emp.getFullName(),
             emp.getStatus(),
             emp.getPosition(),
-            emp.getImmediateSupervisor(),
-            ""
+            emp.getImmediateSupervisor()
         };
     }
-
+    
     private void refreshTable() {
         searchField.setText("Search");
         searchField.setForeground(new Color(200, 200, 200));

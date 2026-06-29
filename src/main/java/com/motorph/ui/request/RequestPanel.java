@@ -1,25 +1,25 @@
 package com.motorph.ui.request;
 
-import com.motorph.model.Employee;            
-import com.motorph.model.LeaveRequest;         
-import com.motorph.model.OvertimeRequest;      
-import com.motorph.model.Request;             
+import com.motorph.model.Employee;
+import com.motorph.model.LeaveRequest;
+import com.motorph.model.OvertimeRequest;
+import com.motorph.model.Request;
 import com.motorph.model.Role;
-import com.motorph.model.UndertimeRequest;     
+import com.motorph.model.UndertimeRequest;
 import com.motorph.model.UserAccount;
-import com.motorph.service.EmployeeService;    
-import com.motorph.service.RequestService;     
-import com.motorph.util.AppContext;            
+import com.motorph.service.EmployeeService;
+import com.motorph.service.RequestService;
+import com.motorph.util.AppContext;
 import com.motorph.util.Session;
 
 import java.awt.*;
 import java.awt.event.*;
-import java.time.format.DateTimeFormatter;     
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;                       
+import java.util.HashMap;
 import java.util.List;
-import java.util.Map;                         
+import java.util.Map;
 import javax.swing.*;
 import javax.swing.border.*;
 import javax.swing.table.*;
@@ -36,7 +36,7 @@ public class RequestPanel extends JPanel {
     private static final int EMPLOYEE_ID_COL = 10;
 
     private static final String[] COLUMNS = {
-        "Name", "Department", "Request Type", "Start Date", "End Date",
+        "Name", "Position", "Request Type", "Start Date", "End Date",
         "Start Time", "End Time", "Reason", "Notes", "Status", "Employee ID"
     };
 
@@ -53,15 +53,15 @@ public class RequestPanel extends JPanel {
     private int sortedColumn = -1;
     private SortOrder currentSortOrder = SortOrder.UNSORTED;
 
-    // NEW: connections to the database via service -> dao
     private final RequestService requestService = AppContext.getRequestService();
     private final EmployeeService employeeService = AppContext.getEmployeeService();
-    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("MM/dd/yyyy"); // NEW
-    private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("h:mm a");      // NEW
+
+    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("MM/dd/yyyy");
+    private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("h:mm a");
 
     public RequestPanel() {
         applyRBAC();
-        loadSampleRows();
+        loadRequestRows();
 
         setLayout(new BorderLayout());
         setBackground(Color.WHITE);
@@ -73,7 +73,6 @@ public class RequestPanel extends JPanel {
         Role role = user == null ? null : user.getRole();
 
         currentEmployeeId = user == null ? "" : String.valueOf(user.getEmployeeId());
-
         canViewAllRequests = role == Role.ADMIN || role == Role.HR;
     }
 
@@ -105,14 +104,12 @@ public class RequestPanel extends JPanel {
         repaint();
     }
 
-    // NEW: loads requests from the database (service -> dao)
-    // Privileged roles pull every request; everyone else only pulls their own.
-    // dito rin pala same with Attendance
-    private void loadSampleRows() {
+    private void loadRequestRows() {
         requestRows.clear();
 
         try {
             List<Request> requests;
+
             if (canViewAllRequests) {
                 requests = requestService.findAll();
             } else if (!currentEmployeeId.isBlank()) {
@@ -121,12 +118,12 @@ public class RequestPanel extends JPanel {
                 requests = new ArrayList<>();
             }
 
-            // Cache employee lookups so we don't hit the DB once per request row.
             Map<String, Employee> employeeCache = new HashMap<>();
 
-            for (Request r : requests) {
-                requestRows.add(toTableRow(r, employeeCache));
+            for (Request request : requests) {
+                requestRows.add(toTableRow(request, employeeCache));
             }
+
         } catch (Exception ex) {
             ex.printStackTrace();
             JOptionPane.showMessageDialog(
@@ -138,54 +135,59 @@ public class RequestPanel extends JPanel {
         }
     }
 
-    // NEW: maps one Request (any subtype) into the table-row format this panel expects.
-    // Notes are not stored on the request yet, so blank
-    private Object[] toTableRow(Request r, Map<String, Employee> employeeCache) {
-        String employeeId = String.valueOf(r.getEmployeeId());
+    private Object[] toTableRow(Request request, Map<String, Employee> employeeCache) {
+        String employeeId = String.valueOf(request.getEmployeeId());
 
-        Employee emp = employeeCache.computeIfAbsent(
-                employeeId, id -> employeeService.findEmployee(id));
+        Employee employee = employeeCache.computeIfAbsent(
+                employeeId,
+                id -> employeeService.findEmployee(id)
+        );
 
-        String name = emp == null ? "" : emp.getFullName();
-        String department = emp == null ? "" : emp.getDepartment();
+        String name = employee == null ? "" : employee.getFullName();
+        String position = employee == null ? "" : employee.getPosition();
 
         String startDate = "";
         String endDate = "";
         String startTime = "";
         String endTime = "";
 
-        if (r instanceof LeaveRequest leave) {
+        if (request instanceof LeaveRequest leave) {
             startDate = leave.getStartDate() == null ? "" : leave.getStartDate().format(DATE_FMT);
             endDate = leave.getEndDate() == null ? "" : leave.getEndDate().format(DATE_FMT);
-        } else if (r instanceof OvertimeRequest ot) {
-            startDate = ot.getOvertimeDate() == null ? "" : ot.getOvertimeDate().format(DATE_FMT);
+
+        } else if (request instanceof OvertimeRequest overtime) {
+            startDate = overtime.getOvertimeDate() == null ? "" : overtime.getOvertimeDate().format(DATE_FMT);
             endDate = startDate;
-            startTime = ot.getStartTime() == null ? "" : ot.getStartTime().format(TIME_FMT);
-            endTime = ot.getEndTime() == null ? "" : ot.getEndTime().format(TIME_FMT);
-        } else if (r instanceof UndertimeRequest ut) {
-            startDate = ut.getUndertimeDate() == null ? "" : ut.getUndertimeDate().format(DATE_FMT);
+            startTime = overtime.getStartTime() == null ? "" : overtime.getStartTime().format(TIME_FMT);
+            endTime = overtime.getEndTime() == null ? "" : overtime.getEndTime().format(TIME_FMT);
+
+        } else if (request instanceof UndertimeRequest undertime) {
+            startDate = undertime.getUndertimeDate() == null ? "" : undertime.getUndertimeDate().format(DATE_FMT);
             endDate = startDate;
-            startTime = ut.getStartTime() == null ? "" : ut.getStartTime().format(TIME_FMT);
-            endTime = ut.getEndTime() == null ? "" : ut.getEndTime().format(TIME_FMT);
+            startTime = undertime.getStartTime() == null ? "" : undertime.getStartTime().format(TIME_FMT);
+            endTime = undertime.getEndTime() == null ? "" : undertime.getEndTime().format(TIME_FMT);
         }
 
         return new Object[]{
             name,
-            department,
-            r.getRequestType() == null ? "" : pretty(r.getRequestType().name()),
+            position,
+            request.getRequestType() == null ? "" : pretty(request.getRequestType().name()),
             startDate,
             endDate,
             startTime,
             endTime,
-            r.getReason() == null ? "" : r.getReason(),
-            "",                                                   // Notes (not modeled yet)
-            r.getStatus() == null ? "" : pretty(r.getStatus().name()),
+            request.getReason() == null ? "" : request.getReason(),
+            "",
+            request.getStatus() == null ? "" : pretty(request.getStatus().name()),
             employeeId
         };
     }
 
-    // NEW: "LEAVE" -> "Leave", "APPROVED" -> "Approved" for display.
     private String pretty(String enumName) {
+        if (enumName == null || enumName.isBlank()) {
+            return "";
+        }
+
         String lower = enumName.toLowerCase();
         return Character.toUpperCase(lower.charAt(0)) + lower.substring(1);
     }
@@ -273,7 +275,7 @@ public class RequestPanel extends JPanel {
 
         JButton refreshButton = navyButton("⟳", "Refresh", 110);
         refreshButton.addActionListener(e -> {
-            loadSampleRows();
+            loadRequestRows();
             showRequestList();
         });
         buttons.add(refreshButton);
@@ -341,12 +343,15 @@ public class RequestPanel extends JPanel {
     private void openViewOnlyForm() {
         int selectedIndex = getSelectedRequestRowIndex();
 
-        if (selectedIndex == -1) return;
+        if (selectedIndex == -1) {
+            return;
+        }
 
         RequestFormPanel formPanel = new RequestFormPanel(
                 this::showRequestList,
                 toFormData(requestRows.get(selectedIndex)),
-                updatedData -> { }
+                updatedData -> {
+                }
         );
 
         setViewOnly(formPanel);
@@ -462,7 +467,9 @@ public class RequestPanel extends JPanel {
     private int getSelectedRequestRowIndex() {
         int selectedRow = requestTable.getSelectedRow();
 
-        if (selectedRow == -1) return -1;
+        if (selectedRow == -1) {
+            return -1;
+        }
 
         int modelRow = requestTable.convertRowIndexToModel(selectedRow);
         Object[] selectedData = new Object[tableModel.getColumnCount()];
@@ -509,7 +516,10 @@ public class RequestPanel extends JPanel {
             @Override
             public void mouseClicked(MouseEvent e) {
                 int viewColumn = header.columnAtPoint(e.getPoint());
-                if (viewColumn < 0) return;
+
+                if (viewColumn < 0) {
+                    return;
+                }
 
                 int modelColumn = requestTable.convertColumnIndexToModel(viewColumn);
                 toggleColumnSort(modelColumn);
@@ -533,7 +543,7 @@ public class RequestPanel extends JPanel {
     }
 
     private void styleColumns() {
-        int[] widths = {120, 120, 120, 105, 105, 95, 95, 130, 120, 105};
+        int[] widths = {120, 145, 120, 105, 105, 95, 95, 130, 120, 105};
         TableColumnModel columns = requestTable.getColumnModel();
 
         for (int i = 0; i < widths.length; i++) {
@@ -552,7 +562,9 @@ public class RequestPanel extends JPanel {
     }
 
     private void applySearchFilter() {
-        if (sorter == null || searchField == null) return;
+        if (sorter == null || searchField == null) {
+            return;
+        }
 
         String query = searchField.getText().trim();
 
@@ -566,18 +578,17 @@ public class RequestPanel extends JPanel {
 
     private void setViewOnly(Container container) {
         for (Component component : container.getComponents()) {
-            if (component instanceof JTextField) {
-                ((JTextField) component).setEditable(false);
-            } else if (component instanceof JTextArea) {
-                ((JTextArea) component).setEditable(false);
-            } else if (component instanceof JComboBox) {
+            if (component instanceof JTextField textField) {
+                textField.setEditable(false);
+            } else if (component instanceof JTextArea textArea) {
+                textArea.setEditable(false);
+            } else if (component instanceof JComboBox<?>) {
                 component.setEnabled(false);
             } else if (component instanceof JCheckBox) {
                 component.setEnabled(false);
             } else if (component instanceof JRadioButton) {
                 component.setEnabled(false);
-            } else if (component instanceof JButton) {
-                JButton button = (JButton) component;
+            } else if (component instanceof JButton button) {
                 String text = button.getText() == null ? "" : button.getText().trim();
 
                 if (text.equalsIgnoreCase("Submit")
@@ -589,8 +600,8 @@ public class RequestPanel extends JPanel {
                 }
             }
 
-            if (component instanceof Container) {
-                setViewOnly((Container) component);
+            if (component instanceof Container child) {
+                setViewOnly(child);
             }
         }
     }
@@ -632,8 +643,12 @@ public class RequestPanel extends JPanel {
 
         @Override
         public Component getTableCellRendererComponent(
-                JTable table, Object value, boolean isSelected,
-                boolean hasFocus, int row, int column) {
+                JTable table,
+                Object value,
+                boolean isSelected,
+                boolean hasFocus,
+                int row,
+                int column) {
 
             int modelColumn = table.convertColumnIndexToModel(column);
             titleLabel.setText(value == null ? "" : value.toString());
@@ -642,12 +657,16 @@ public class RequestPanel extends JPanel {
                     ? currentSortOrder == SortOrder.ASCENDING ? "▲" : "▼"
                     : "⇅");
 
-            filterLabel.setForeground(modelColumn == sortedColumn ? NAVY : new Color(130, 130, 130));
+            filterLabel.setForeground(modelColumn == sortedColumn
+                    ? NAVY
+                    : new Color(130, 130, 130));
+
             return this;
         }
     }
 
     private static class DefaultRequestCellRenderer extends DefaultTableCellRenderer {
+
         @Override
         public Component getTableCellRendererComponent(
                 JTable table,
@@ -705,7 +724,10 @@ public class RequestPanel extends JPanel {
             super.paintComponent(g);
 
             Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setRenderingHint(
+                    RenderingHints.KEY_ANTIALIASING,
+                    RenderingHints.VALUE_ANTIALIAS_ON
+            );
 
             Color pillColor;
 
@@ -738,6 +760,7 @@ public class RequestPanel extends JPanel {
     }
 
     static class CircleAvatar extends JPanel {
+
         private final int size;
 
         CircleAvatar(int size) {
@@ -751,7 +774,10 @@ public class RequestPanel extends JPanel {
             super.paintComponent(g);
 
             Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setRenderingHint(
+                    RenderingHints.KEY_ANTIALIASING,
+                    RenderingHints.VALUE_ANTIALIAS_ON
+            );
 
             g2.setColor(NAVY);
             g2.fillOval(0, 0, size - 1, size - 1);
@@ -760,6 +786,7 @@ public class RequestPanel extends JPanel {
     }
 
     static class RoundedBorder extends AbstractBorder {
+
         private final int radius;
         private final Color color;
 
@@ -771,7 +798,10 @@ public class RequestPanel extends JPanel {
         @Override
         public void paintBorder(Component c, Graphics g, int x, int y, int width, int height) {
             Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setRenderingHint(
+                    RenderingHints.KEY_ANTIALIASING,
+                    RenderingHints.VALUE_ANTIALIAS_ON
+            );
             g2.setColor(color);
             g2.drawRoundRect(x, y, width - 1, height - 1, radius, radius);
             g2.dispose();
