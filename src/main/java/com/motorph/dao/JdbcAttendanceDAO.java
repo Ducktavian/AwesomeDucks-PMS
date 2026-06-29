@@ -31,11 +31,11 @@ public class JdbcAttendanceDAO implements AttendanceDAO {
             BASE_SELECT + "WHERE a.employee_id = ? AND a.attendance_date = CURDATE() AND a.time_out IS NULL";
 
     private static final String INSERT =
-            "INSERT INTO attendance (employee_id, attendance_date, time_in, attendance_status_id) " +
-            "VALUES (?, ?, ?, ?)";
+            "INSERT INTO attendance (employee_id, attendance_date, time_in, time_out, attendance_status_id) " +
+            "VALUES (?, ?, ?, ?, ?)";
 
     private static final String UPDATE =
-            "UPDATE attendance SET time_out = ?, attendance_status_id = ? " +
+            "UPDATE attendance SET attendance_date = ?, time_in = ?, time_out = ?, attendance_status_id = ? " +
             "WHERE attendance_id = ?";
 
     private static final String DELETE =
@@ -114,10 +114,15 @@ public class JdbcAttendanceDAO implements AttendanceDAO {
             ps.setInt(1, Integer.parseInt(attendance.getEmployeeId()));
             ps.setDate(2, Date.valueOf(attendance.getDate()));
             ps.setTime(3, Time.valueOf(attendance.getLogIn()));
-            if (attendance.getAttendanceStatusId() != null) {
-                ps.setInt(4, attendance.getAttendanceStatusId());
+            if (attendance.getLogOut() != null) {
+                ps.setTime(4, Time.valueOf(attendance.getLogOut()));
             } else {
-                ps.setNull(4, Types.INTEGER);
+                ps.setNull(4, Types.TIME);
+            }
+            if (attendance.getAttendanceStatusId() != null) {
+                ps.setInt(5, attendance.getAttendanceStatusId());
+            } else {
+                ps.setNull(5, Types.INTEGER);
             }
             ps.executeUpdate();
         } catch (SQLException e) {
@@ -133,17 +138,19 @@ public class JdbcAttendanceDAO implements AttendanceDAO {
     public void update(Attendance attendance) {
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(UPDATE)) {
+            ps.setDate(1, Date.valueOf(attendance.getDate()));
+            ps.setTime(2, Time.valueOf(attendance.getLogIn()));
             if (attendance.getLogOut() != null) {
-                ps.setTime(1, Time.valueOf(attendance.getLogOut()));
+                ps.setTime(3, Time.valueOf(attendance.getLogOut()));
             } else {
-                ps.setNull(1, Types.TIME);
+                ps.setNull(3, Types.TIME);
             }
             if (attendance.getAttendanceStatusId() != null) {
-                ps.setInt(2, attendance.getAttendanceStatusId());
+                ps.setInt(4, attendance.getAttendanceStatusId());
             } else {
-                ps.setNull(2, Types.INTEGER);
+                ps.setNull(4, Types.INTEGER);
             }
-            ps.setInt(3, attendance.getAttendanceId());
+            ps.setInt(5, attendance.getAttendanceId());
             ps.executeUpdate();
         } catch (SQLException e) {
             throw new RuntimeException("update(Attendance) failed for id=" + attendance.getAttendanceId(), e);

@@ -38,9 +38,9 @@ public class PayrollPanel extends JPanel {
     private int sortedColumn = -1;
     private SortOrder currentSortOrder = SortOrder.UNSORTED;
 
-    // NEW: connection to the database via service -> dao
+    // connection to the database via service -> dao
     private final PayrollService payrollService = AppContext.getPayrollService();
-    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("MM/dd/yyyy"); // NEW
+    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("MM/dd/yyyy");
 
     public PayrollPanel() {
         applyRBAC();
@@ -161,8 +161,21 @@ public class PayrollPanel extends JPanel {
             );
 
             if (confirm == JOptionPane.YES_OPTION) {
+                // delete the payslip from the database, then reload
                 int modelRow = payrollTable.convertRowIndexToModel(selectedRow);
-                tableModel.removeRow(modelRow);
+                String payslipId = String.valueOf(tableModel.getValueAt(modelRow, 0));
+                try {
+                    payrollService.deletePayslip(payslipId);
+                    addSampleRows();
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                    JOptionPane.showMessageDialog(
+                            this,
+                            "Failed to delete payslip:\n" + ex.getMessage(),
+                            "Delete Error",
+                            JOptionPane.ERROR_MESSAGE
+                    );
+                }
             }
         });
 

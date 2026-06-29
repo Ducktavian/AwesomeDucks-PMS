@@ -146,6 +146,11 @@ public class PayrollService {
         return payslipDAO.findAll();
     }
 
+    // NEW: delete a generated payslip by its id.
+    public void deletePayslip(String payslipId) {
+        payslipDAO.delete(payslipId);
+    }
+
     // Divide allowances by 2 (semi-monthly)
     private AllowanceBreakdown computeAllowances(Employee employee) {
         return new AllowanceBreakdown(

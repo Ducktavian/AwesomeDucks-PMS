@@ -31,7 +31,11 @@ public class AttendancePanel extends JPanel {
 
     private final List<Object[]> attendanceRows = new ArrayList<>();
 
-    // NEW: connection to the database via service -> dao
+    // backing records aligned 1:1 with attendanceRows, so a selected row
+    // can be resolved to its real attendance id for update/delete
+    private final List<Attendance> records = new ArrayList<>();
+
+    // connection to the database via service -> dao
     private final AttendanceService attendanceService = AppContext.getAttendanceService();
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("MM/dd/yyyy");
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("h:mm a");     
@@ -82,6 +86,7 @@ public class AttendancePanel extends JPanel {
         removeAll();
         setLayout(new BorderLayout());
         applyRBAC();
+        loadSampleRows(); // reload from the database whenever the list is shown
         add(buildBody(), BorderLayout.CENTER);
         revalidate();
         repaint();
@@ -92,13 +97,15 @@ public class AttendancePanel extends JPanel {
     // kala ko may toggle dito for all vs own records?
     private void loadSampleRows() {
         attendanceRows.clear();
+        records.clear();
 
         try {
-            List<Attendance> records = canViewAllAttendance
+            List<Attendance> loaded = canViewAllAttendance
                     ? attendanceService.getAllAttendance()
                     : attendanceService.getAllAttendance(currentEmployeeId);
 
-            for (Attendance record : records) {
+            for (Attendance record : loaded) {
+                records.add(record);
                 attendanceRows.add(toTableRow(record));
             }
         } catch (Exception ex) {
@@ -217,10 +224,7 @@ public class AttendancePanel extends JPanel {
         rightButtons.add(deleteButton);
 
         JButton refreshButton = navyButton("⟳", "Refresh", 110);
-        refreshButton.addActionListener(e -> {
-            loadSampleRows();
-            showAttendanceList();
-        });
+        refreshButton.addActionListener(e -> showAttendanceList()); // reloads from DB
         rightButtons.add(refreshButton);
 
         row.add(rightButtons, BorderLayout.EAST);
@@ -231,13 +235,8 @@ public class AttendancePanel extends JPanel {
         removeAll();
         setLayout(new BorderLayout());
 
-        add(new AttendanceFormPanel(
-                this::showAttendanceList,
-                rowData -> {
-                    attendanceRows.add(rowData);
-                    showAttendanceList();
-                }
-        ), BorderLayout.CENTER);
+        // the form persists the new record itself; showAttendanceList reloads from DB
+        add(new AttendanceFormPanel(this::showAttendanceList), BorderLayout.CENTER);
 
         revalidate();
         repaint();
@@ -257,17 +256,17 @@ public class AttendancePanel extends JPanel {
         }
 
         Object[] existingData = attendanceRows.get(selectedIndex);
+        int attendanceId = records.get(selectedIndex).getAttendanceId(); // real id for the update
 
         removeAll();
         setLayout(new BorderLayout());
 
+        // the form persists the update itself; showAttendanceList reloads from DB
         add(new AttendanceFormPanel(
                 this::showAttendanceList,
                 existingData,
-                updatedData -> {
-                    attendanceRows.set(selectedIndex, updatedData);
-                    showAttendanceList();
-                }
+                attendanceId,
+                null
         ), BorderLayout.CENTER);
 
         revalidate();
@@ -322,15 +321,27 @@ public class AttendancePanel extends JPanel {
         );
 
         if (confirm == JOptionPane.YES_OPTION) {
-            attendanceRows.remove(selectedIndex);
-            showAttendanceList();
+            try {
+                // delete from the database, then reload the list
+                int attendanceId = records.get(selectedIndex).getAttendanceId();
+                attendanceService.deleteAttendance(String.valueOf(attendanceId));
+                showAttendanceList();
 
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Attendance entry deleted successfully.",
-                    "Deleted",
-                    JOptionPane.INFORMATION_MESSAGE
-            );
+                JOptionPane.showMessageDialog(
+                        this,
+                        "Attendance entry deleted successfully.",
+                        "Deleted",
+                        JOptionPane.INFORMATION_MESSAGE
+                );
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                JOptionPane.showMessageDialog(
+                        this,
+                        "Failed to delete attendance:\n" + ex.getMessage(),
+                        "Delete Error",
+                        JOptionPane.ERROR_MESSAGE
+                );
+            }
         }
     }
 

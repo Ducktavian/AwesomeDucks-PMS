@@ -4,6 +4,8 @@ import com.motorph.model.Employee;
 import com.motorph.model.LeaveRequest;
 import com.motorph.model.OvertimeRequest;
 import com.motorph.model.Request;
+import com.motorph.model.RequestStatus;
+import com.motorph.model.RequestType;
 import com.motorph.model.Role;
 import com.motorph.model.UndertimeRequest;
 import com.motorph.model.UserAccount;
@@ -14,6 +16,8 @@ import com.motorph.util.Session;
 
 import java.awt.*;
 import java.awt.event.*;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -41,6 +45,10 @@ public class RequestPanel extends JPanel {
     };
 
     private final List<Object[]> requestRows = new ArrayList<>();
+
+    // backing requests aligned 1:1 with requestRows, so a selected row can be
+    // resolved to its real request (id + type) for update/delete
+    private final List<Request> requests = new ArrayList<>();
 
     private DefaultTableModel tableModel;
     private JTable requestTable;
@@ -99,6 +107,7 @@ public class RequestPanel extends JPanel {
         removeAll();
         setLayout(new BorderLayout());
         applyRBAC();
+        loadRequestRows(); // reload from the database whenever the list is shown
         add(buildBody(), BorderLayout.CENTER);
         revalidate();
         repaint();
@@ -106,21 +115,23 @@ public class RequestPanel extends JPanel {
 
     private void loadRequestRows() {
         requestRows.clear();
+        requests.clear();
 
         try {
-            List<Request> requests;
+            List<Request> loaded;
 
             if (canViewAllRequests) {
-                requests = requestService.findAll();
+                loaded = requestService.findAll();
             } else if (!currentEmployeeId.isBlank()) {
-                requests = requestService.findByEmployee(Integer.parseInt(currentEmployeeId));
+                loaded = requestService.findByEmployee(Integer.parseInt(currentEmployeeId));
             } else {
-                requests = new ArrayList<>();
+                loaded = new ArrayList<>();
             }
 
             Map<String, Employee> employeeCache = new HashMap<>();
 
-            for (Request request : requests) {
+            for (Request request : loaded) {
+                requests.add(request);
                 requestRows.add(toTableRow(request, employeeCache));
             }
 
@@ -274,10 +285,7 @@ public class RequestPanel extends JPanel {
         buttons.add(deleteButton);
 
         JButton refreshButton = navyButton("⟳", "Refresh", 110);
-        refreshButton.addActionListener(e -> {
-            loadRequestRows();
-            showRequestList();
-        });
+        refreshButton.addActionListener(e -> showRequestList()); // reloads from DB
         buttons.add(refreshButton);
 
         row.add(buttons, BorderLayout.EAST);
@@ -288,14 +296,8 @@ public class RequestPanel extends JPanel {
         removeAll();
         setLayout(new BorderLayout());
 
-        add(new RequestFormPanel(
-                this::showRequestList,
-                null,
-                rowData -> {
-                    requestRows.add(attachCurrentEmployeeId(rowData));
-                    showRequestList();
-                }
-        ), BorderLayout.CENTER);
+        // the form submits the new request to the DB itself; just reload on back
+        add(new RequestFormPanel(this::showRequestList), BorderLayout.CENTER);
 
         revalidate();
         repaint();
@@ -322,16 +324,17 @@ public class RequestPanel extends JPanel {
         }
 
         Object[] existingData = toFormData(selectedRow);
+        Request original = requests.get(selectedIndex); // real request behind the row
 
         removeAll();
         setLayout(new BorderLayout());
 
+        // persist the edit to the DB, keeping the original request's identity/type
         add(new RequestFormPanel(
                 this::showRequestList,
                 existingData,
                 updatedData -> {
-                    String employeeId = String.valueOf(selectedRow[EMPLOYEE_ID_COL]);
-                    requestRows.set(selectedIndex, attachEmployeeId(updatedData, employeeId));
+                    persistUpdate(original, updatedData);
                     showRequestList();
                 }
         ), BorderLayout.CENTER);
@@ -392,8 +395,86 @@ public class RequestPanel extends JPanel {
         );
 
         if (confirm == JOptionPane.YES_OPTION) {
-            requestRows.remove(selectedIndex);
-            showRequestList();
+            try {
+                // delete from the database using the real request id + type
+                Request original = requests.get(selectedIndex);
+                requestService.delete(original.getRequestId(), original.getRequestType());
+                showRequestList();
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                JOptionPane.showMessageDialog(
+                        this,
+                        "Failed to delete request:\n" + ex.getMessage(),
+                        "Delete Error",
+                        JOptionPane.ERROR_MESSAGE
+                );
+            }
+        }
+    }
+
+    // NEW: rebuild the request from the edited row (keeping its original id, type,
+    // approver, and date filed) and persist it. Type is not changed on update.
+    private void persistUpdate(Request original, Object[] row) {
+        RequestStatus status = parseStatus(String.valueOf(row[STATUS_COL]));
+        String reason = String.valueOf(row[7]);
+        LocalDate startDate = parseDate(String.valueOf(row[3]));
+        LocalDate endDate = parseDate(String.valueOf(row[4]));
+        LocalTime startTime = parseTime(String.valueOf(row[5]));
+        LocalTime endTime = parseTime(String.valueOf(row[6]));
+
+        Request updated;
+        RequestType type = original.getRequestType();
+
+        if (type == RequestType.LEAVE) {
+            updated = new LeaveRequest(
+                    original.getRequestId(), original.getEmployeeId(), status,
+                    original.getApproverId(), reason, original.getDateFiled(),
+                    startDate, endDate, ((LeaveRequest) original).getLeaveType());
+        } else if (type == RequestType.OVERTIME) {
+            updated = new OvertimeRequest(
+                    original.getRequestId(), original.getEmployeeId(), status,
+                    original.getApproverId(), reason, original.getDateFiled(),
+                    startDate, startTime, endTime);
+        } else {
+            updated = new UndertimeRequest(
+                    original.getRequestId(), original.getEmployeeId(), status,
+                    original.getApproverId(), reason, original.getDateFiled(),
+                    startDate, startTime, endTime);
+        }
+
+        requestService.update(updated);
+    }
+
+    private RequestStatus parseStatus(String text) {
+        if (text == null || text.isBlank()) {
+            return RequestStatus.PENDING;
+        }
+        try {
+            return RequestStatus.fromDbValue(text.trim());
+        } catch (Exception ex) {
+            return RequestStatus.PENDING;
+        }
+    }
+
+    private LocalDate parseDate(String text) {
+        if (text == null || text.isBlank()) {
+            return null;
+        }
+        try {
+            return LocalDate.parse(text.trim(), DATE_FMT);
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    private LocalTime parseTime(String text) {
+        if (text == null || text.isBlank()) {
+            return null;
+        }
+        try {
+            return LocalTime.parse(text.trim().toUpperCase(), TIME_FMT);
+        } catch (Exception ex) {
+            return null;
         }
     }
 
@@ -489,16 +570,6 @@ public class RequestPanel extends JPanel {
 
     private Object[] toFormData(Object[] fullRow) {
         return Arrays.copyOf(fullRow, EMPLOYEE_ID_COL);
-    }
-
-    private Object[] attachCurrentEmployeeId(Object[] formData) {
-        return attachEmployeeId(formData, currentEmployeeId);
-    }
-
-    private Object[] attachEmployeeId(Object[] formData, String employeeId) {
-        Object[] fullData = Arrays.copyOf(formData, EMPLOYEE_ID_COL + 1);
-        fullData[EMPLOYEE_ID_COL] = employeeId;
-        return fullData;
     }
 
     private void styleHeader() {

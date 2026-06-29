@@ -35,6 +35,7 @@ public class AttendanceFormPanel extends JPanel {
     private final Runnable onBack;
     private final SubmitHandler onSubmit;
     private final Object[] existingData;
+    private final Integer editingAttendanceId; // id of the record being edited (null when creating)
 
     private final boolean restrictedRole;
     private final boolean adminOrHrRole;
@@ -63,8 +64,14 @@ public class AttendanceFormPanel extends JPanel {
     }
 
     public AttendanceFormPanel(Runnable onBack, Object[] existingData, SubmitHandler onSubmit) {
+        this(onBack, existingData, null, onSubmit);
+    }
+
+    // NEW: editing constructor — carries the attendance id so an update targets the right row.
+    public AttendanceFormPanel(Runnable onBack, Object[] existingData, Integer attendanceId, SubmitHandler onSubmit) {
         this.onBack = onBack;
         this.existingData = existingData;
+        this.editingAttendanceId = attendanceId;
         this.onSubmit = onSubmit;
 
         this.restrictedRole = isRestrictedAttendanceRole();
@@ -336,7 +343,7 @@ public class AttendanceFormPanel extends JPanel {
             LocalTime timeOut = parseButtonTime(timeOutButton);
 
             Attendance attendance = new Attendance(
-                    0,
+                    editingAttendanceId == null ? 0 : editingAttendanceId,
                     employeeId,
                     "",
                     "",
@@ -346,7 +353,13 @@ public class AttendanceFormPanel extends JPanel {
                     1
             );
 
-            attendanceService.validateAttendanceForCurrentUser(attendance);
+            // persist to the database (both calls validate internally)
+            if (editingAttendanceId == null) {
+                attendanceService.submitAttendance(attendance);
+            } else {
+                attendanceService.updateAttendance(attendance);
+            }
+
             calculateTotalHours();
 
             Object[] rowData = {

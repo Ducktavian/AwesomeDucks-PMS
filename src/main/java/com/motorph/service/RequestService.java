@@ -108,6 +108,16 @@ public class RequestService {
         requestDAO.delete(requestId, type);
     }
 
+    // NEW: persist edits to an existing request. Like approve/reject, this does not
+    // re-run submit-time validation (which would reject a request whose date is now
+    // in the past), so an existing request can be edited or re-statused.
+    public void update(Request request) {
+        if (request == null) {
+            throw new IllegalArgumentException("Request is required.");
+        }
+        requestDAO.update(request);
+    }
+
     private void validate(Request request) {
         if (request == null) {
             throw new IllegalArgumentException("Request is required.");
