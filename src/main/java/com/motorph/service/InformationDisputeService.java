@@ -51,15 +51,15 @@ public class InformationDisputeService {
     }
 
    
-    // Marks a dispute as resolved. Only HR or Admin may do this.
+    // Marks a dispute as resolved. HR, IT, or Admin may do this.
     public void resolveDispute(InformationDispute dispute) {
         UserAccount reviewer = Session.getCurrentUser();
         if (reviewer == null) {
             throw new IllegalStateException("No active session.");
         }
         Role role = reviewer.getRole();
-        if (role != Role.HR && role != Role.ADMIN) {
-            throw new SecurityException("Only HR or Admin can resolve disputes.");
+        if (role != Role.HR && role != Role.ADMIN && role != Role.IT) {
+            throw new SecurityException("Only HR, IT, or Admin can resolve information disputes.");
         }
         if (dispute.getStatus() == DisputeStatus.RESOLVED) {
             throw new IllegalStateException("Dispute is already resolved.");
@@ -69,6 +69,15 @@ public class InformationDisputeService {
         dispute.setReviewedById(reviewer.getEmployeeId());
         dispute.setDateReviewed(LocalDate.now());
         disputeDAO.update(dispute);
+    }
+
+    // Deletes a dispute record. Admin only.
+    public void deleteDispute(String disputeId) {
+        UserAccount current = Session.getCurrentUser();
+        if (current == null || current.getRole() != Role.ADMIN) {
+            throw new SecurityException("Only Admin can delete disputes.");
+        }
+        disputeDAO.delete(disputeId);
     }
 
 
