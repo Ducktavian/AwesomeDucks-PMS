@@ -36,9 +36,9 @@ public class Main {
         List<Employee> employeeList = empService.getAllEmployees();
         
         try {
-            LocalDate from = LocalDate.parse("2024-06-01");
-            generatePayrollHistory(employeeList, from, LocalDate.now());
-            exportPayrollSeedSQL(employeeList, from, LocalDate.now());
+           // LocalDate from = LocalDate.parse("2024-06-01");
+            //generatePayrollHistory(employeeList, from, LocalDate.now());
+            //exportPayrollSeedSQL(employeeList, from, LocalDate.now());
         } catch (Exception e) {
             e.printStackTrace();
         }

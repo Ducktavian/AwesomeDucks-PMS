@@ -59,6 +59,7 @@ public class RequestPanel extends JPanel {
     private TableRowSorter<DefaultTableModel> sorter;
 
     private boolean canViewAllRequests;
+    private boolean canModifyAllRequests;
     private String currentEmployeeId;
 
     // scope toggle: true = everyone's requests, false = only the logged-in user's
@@ -89,6 +90,7 @@ public class RequestPanel extends JPanel {
 
         currentEmployeeId = user == null ? "" : String.valueOf(user.getEmployeeId());
         canViewAllRequests = role == Role.ADMIN || role == Role.HR;
+        canModifyAllRequests = role == Role.ADMIN || role == Role.HR;
     }
 
     private boolean canSeeRow(String employeeId) {
@@ -290,10 +292,12 @@ public class RequestPanel extends JPanel {
         buttons.add(addButton);
 
         JButton updateButton = navyButton("✎", "Update", 105);
+        updateButton.setVisible(canModifyAllRequests);
         updateButton.addActionListener(e -> openUpdateForm());
         buttons.add(updateButton);
 
         JButton deleteButton = navyButton("🗑", "Delete", 105);
+        deleteButton.setVisible(canModifyAllRequests);
         deleteButton.addActionListener(e -> deleteSelectedRequest());
         buttons.add(deleteButton);
 

@@ -238,7 +238,9 @@ public class MainFrame extends JFrame {
 
         switch (label) {
             case "Employees":
-                return role == Role.ADMIN || role == Role.HR;
+                // All roles can access the Employees tab; the panel itself restricts
+                // what each role can see (view-all vs view-mine) and do (edit vs read-only).
+                return true;
             case "Users":
                 return role == Role.ADMIN || role == Role.IT;
             default:

@@ -94,10 +94,11 @@ public class EmployeePanel extends JPanel {
                 || role == Role.IT
                 || role == Role.FINANCE;
 
-        // Payroll role is currently represented as FINANCE in your project.
+        // Finance and IT can view all employees but cannot edit them.
         canOpenAnyoneDetails = role == Role.ADMIN
                 || role == Role.HR
-                || role == Role.FINANCE;
+                || role == Role.FINANCE
+                || role == Role.IT;
     }
 
     private JPanel buildEmployeeListPanel() {
