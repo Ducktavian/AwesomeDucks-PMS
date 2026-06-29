@@ -35,6 +35,13 @@ public class PayrollPanel extends JPanel {
     private boolean canViewAllPayroll;
     private String currentEmployeeId;
 
+    // scope toggle: true = everyone's payslips, false = only the logged-in user's
+    private JComboBox<String> scopeFilter;
+    private boolean viewAllSelected = true;
+
+    private static final String VIEW_ALL = "View All";
+    private static final String VIEW_MINE = "View Mine";
+
     private int sortedColumn = -1;
     private SortOrder currentSortOrder = SortOrder.UNSORTED;
 
@@ -61,7 +68,8 @@ public class PayrollPanel extends JPanel {
     }
 
     private boolean canSeeRow(String employeeId) {
-        return canViewAllPayroll || employeeId.equals(currentEmployeeId);
+        boolean showAll = canViewAllPayroll && viewAllSelected;
+        return showAll || employeeId.equals(currentEmployeeId);
     }
 
     private JPanel createContentPanel() {
@@ -116,6 +124,17 @@ public class PayrollPanel extends JPanel {
         JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         searchPanel.setOpaque(false);
         searchPanel.add(searchField);
+
+        JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        filterPanel.setOpaque(false);
+        filterPanel.add(buildScopeFilter());
+
+        JPanel leftColumn = new JPanel();
+        leftColumn.setOpaque(false);
+        leftColumn.setLayout(new BoxLayout(leftColumn, BoxLayout.Y_AXIS));
+        leftColumn.add(searchPanel);
+        leftColumn.add(Box.createVerticalStrut(12));
+        leftColumn.add(filterPanel);
 
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 62));
         buttonPanel.setOpaque(false);
@@ -181,7 +200,7 @@ public class PayrollPanel extends JPanel {
 
         refreshButton.addActionListener(e -> addSampleRows());
 
-        topControls.add(searchPanel, BorderLayout.WEST);
+        topControls.add(leftColumn, BorderLayout.WEST);
         topControls.add(buttonPanel, BorderLayout.EAST);
 
         createTable();
@@ -203,6 +222,29 @@ public class PayrollPanel extends JPanel {
         content.add(tablePanel, BorderLayout.CENTER);
 
         return content;
+    }
+
+    // NEW: builds the View All / View Mine scope dropdown. Privileged roles can
+    // switch between everyone's payslips and their own; everyone else is locked
+    // to their own payslips.
+    private JComboBox<String> buildScopeFilter() {
+        scopeFilter = new JComboBox<>(new String[]{ VIEW_ALL, VIEW_MINE });
+        scopeFilter.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        scopeFilter.setPreferredSize(new Dimension(140, 37));
+        scopeFilter.setBackground(Color.WHITE);
+
+        if (canViewAllPayroll) {
+            scopeFilter.setSelectedItem(viewAllSelected ? VIEW_ALL : VIEW_MINE);
+            scopeFilter.addActionListener(e -> {
+                viewAllSelected = VIEW_ALL.equals(scopeFilter.getSelectedItem());
+                addSampleRows();
+            });
+        } else {
+            scopeFilter.setSelectedItem(VIEW_MINE);
+            scopeFilter.setEnabled(false);
+        }
+
+        return scopeFilter;
     }
 
     private JButton button(String text) {
