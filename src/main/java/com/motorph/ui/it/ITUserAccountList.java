@@ -1,10 +1,12 @@
 package com.motorph.ui.it;
 
 import com.motorph.model.Employee;
+import com.motorph.model.Role;
 import com.motorph.model.UserAccount;
 import com.motorph.service.EmployeeService;
 import com.motorph.service.UserService;
 import com.motorph.util.AppContext;
+import com.motorph.util.Session;
 
 import java.awt.*;
 import java.awt.event.*;
@@ -213,8 +215,15 @@ public class ITUserAccountList extends JPanel {
 
     // ---- data loading ----
 
-    // NEW: pulls accounts from the DB and joins each with its employee record.
+    // Pulls accounts from the DB and joins each with its employee record.
+    // Only IT and Admin may load this data; other roles skip silently.
     private void loadData() {
+        UserAccount currentUser = Session.getCurrentUser();
+        Role role = currentUser == null ? null : currentUser.getRole();
+        if (role != Role.ADMIN && role != Role.IT) {
+            return;
+        }
+
         allEntries.clear();
 
         try {
