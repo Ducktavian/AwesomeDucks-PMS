@@ -1,6 +1,6 @@
 <!-- Created with Jaspersoft Studio version 7.0.6.final using JasperReports Library version 7.0.6-5d2a603fdc6b3db8f842a83383e594f41891534d  -->
 <jasperReport name="Payslip" language="java" pageWidth="595" pageHeight="842" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20" uuid="dc26bc78-da41-489c-a85f-2ab50ced2207">
-	<property name="com.jaspersoft.studio.data.defaultdataadapter" value="Updated AOOP"/>
+	<property name="com.jaspersoft.studio.data.defaultdataadapter" value="Final AOOP"/>
 	<property name="com.jaspersoft.studio.data.sql.tables" value=""/>
 	<property name="com.jaspersoft.studio.unit." value="pixel"/>
 	<property name="com.jaspersoft.studio.unit.pageHeight" value="pixel"/>
@@ -174,10 +174,10 @@ ORDER BY pr.payroll_id DESC]]></query>
 	<columnHeader splitType="Stretch"/>
 	<detail>
 		<band height="780" splitType="Stretch">
-			<element kind="image" uuid="71081b9c-f23e-4c61-862f-09f23d58241a" x="120" y="-8" width="100" height="100" scaleImage="RetainShape" onErrorType="Blank">
+			<element kind="image" uuid="71081b9c-f23e-4c61-862f-09f23d58241a" x="120" y="-7" width="100" height="100" scaleImage="RetainShape" onErrorType="Blank">
 				<expression><![CDATA[$P{LOGO}]]></expression>
 			</element>
-			<element kind="staticText" uuid="11111111-2222-3333-4444-555555555555" x="230" y="0" width="220" height="38" forecolor="#03135F" fontName="SansSerif" fontSize="30.0" italic="true" bold="true" vTextAlign="Middle">
+			<element kind="staticText" uuid="11111111-2222-3333-4444-555555555555" x="230" y="0" width="220" height="38" forecolor="#03135F" fontName="SansSerif" fontSize="30.0" bold="true" italic="true" vTextAlign="Middle">
 				<text><![CDATA[MotorPH]]></text>
 			</element>
 			<element kind="staticText" uuid="c4042fef-bc56-46fd-812e-e44807c3749a" x="230" y="42" width="350" height="12" vTextAlign="Middle" style="CompanyInfo">
