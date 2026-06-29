@@ -1,11 +1,24 @@
 package com.motorph.ui.request;
 
+import com.motorph.model.LeaveRequest;
+import com.motorph.model.Request;
+import com.motorph.model.UserAccount;
+import com.motorph.service.RequestService;
+import com.motorph.util.AppContext;
+import com.motorph.util.Session;
+
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.lang.reflect.Method;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.Date;
+import java.util.List;
 import javax.swing.*;
 import javax.swing.border.*;
 
@@ -17,28 +30,54 @@ public class RequestFormPanel extends JPanel {
 
     private static final Color NAVY = new Color(5, 24, 108);
     private static final Color BG = Color.WHITE;
-    private static final Color LINE_GRAY = new Color(190, 190, 190);
     private static final Color FIELD_BORDER = new Color(150, 150, 150);
     private static final Color TEXT_DARK = new Color(25, 25, 25);
     private static final String FONT = "Segoe UI";
 
+    private static final int MAX_SICK_LEAVE = 15;
+    private static final int MAX_VACATION_LEAVE = 15;
+
+    private static final String VACATION_LEAVE = "Vacation Leave";
+    private static final String SICK_LEAVE = "Sick Leave";
+    private static final String UNDERTIME = "Undertime";
+    private static final String OVERTIME = "Overtime";
+
+    private static final String[] REQUEST_TYPES = {
+        VACATION_LEAVE,
+        SICK_LEAVE,
+        UNDERTIME,
+        OVERTIME
+    };
+
+    private static final String[] WORK_TIMES = {
+        "9:00 AM",
+        "10:00 AM",
+        "11:00 AM",
+        "12:00 PM",
+        "1:00 PM",
+        "2:00 PM",
+        "3:00 PM",
+        "4:00 PM",
+        "5:00 PM"
+    };
+
     private final Runnable onBack;
     private final Object[] existingData;
     private final SubmitHandler onSubmit;
+    private final RequestService requestService = AppContext.getRequestService();
 
     private JTextField nameField;
-    private JTextField departmentField;
+    private JTextField positionField;
     private JComboBox<String> requestTypeCombo;
     private JSpinner startDateSpinner;
     private JSpinner endDateSpinner;
-    private JSpinner startTimeSpinner;
-    private JSpinner endTimeSpinner;
+    private JComboBox<String> startTimeCombo;
+    private JComboBox<String> endTimeCombo;
     private JTextArea reasonArea;
     private JTextArea notesArea;
     private JComboBox<String> statusCombo;
 
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy");
-    private final SimpleDateFormat timeFormat = new SimpleDateFormat("hh:mm a");
 
     public RequestFormPanel(Runnable onBack) {
         this(onBack, null, null);
@@ -128,18 +167,18 @@ public class RequestFormPanel extends JPanel {
         int row = 0;
 
         nameField = createTextField();
-        departmentField = createTextField();
+        positionField = createTextField();
         requestTypeCombo = createRequestTypeComboBox();
         startDateSpinner = createDatePicker();
         endDateSpinner = createDatePicker();
-        startTimeSpinner = createTimePicker();
-        endTimeSpinner = createTimePicker();
+        startTimeCombo = createTimeComboBox();
+        endTimeCombo = createTimeComboBox();
 
         addStackedField(col, row++, "Name", nameField);
-        addStackedField(col, row++, "Department", departmentField);
+        addStackedField(col, row++, "Position", positionField);
         addStackedField(col, row++, "Request Type", requestTypeCombo);
         addTwoFields(col, row++, "Start Date", startDateSpinner, "End Date", endDateSpinner);
-        addTwoFields(col, row++, "Start Time", startTimeSpinner, "End Time", endTimeSpinner);
+        addTwoFields(col, row++, "Start Time", startTimeCombo, "End Time", endTimeCombo);
 
         addVerticalGlue(col, row);
         return col;
@@ -270,11 +309,7 @@ public class RequestFormPanel extends JPanel {
     }
 
     private JComboBox<String> createRequestTypeComboBox() {
-        return createRoundedComboBox(new String[]{
-            "Leave",
-            "Undertime",
-            "Overtime"
-        });
+        return createRoundedComboBox(REQUEST_TYPES);
     }
 
     private JComboBox<String> createStatusComboBox() {
@@ -283,6 +318,10 @@ public class RequestFormPanel extends JPanel {
             "Approved",
             "Rejected"
         });
+    }
+
+    private JComboBox<String> createTimeComboBox() {
+        return createRoundedComboBox(WORK_TIMES);
     }
 
     private JComboBox<String> createRoundedComboBox(String[] items) {
@@ -300,13 +339,6 @@ public class RequestFormPanel extends JPanel {
         SpinnerDateModel model = new SpinnerDateModel(new Date(), null, null, java.util.Calendar.DAY_OF_MONTH);
         JSpinner spinner = createRoundedSpinner(model);
         spinner.setEditor(new JSpinner.DateEditor(spinner, "MM/dd/yyyy"));
-        return spinner;
-    }
-
-    private JSpinner createTimePicker() {
-        SpinnerDateModel model = new SpinnerDateModel(new Date(), null, null, java.util.Calendar.MINUTE);
-        JSpinner spinner = createRoundedSpinner(model);
-        spinner.setEditor(new JSpinner.DateEditor(spinner, "hh:mm a"));
         return spinner;
     }
 
@@ -341,20 +373,19 @@ public class RequestFormPanel extends JPanel {
         JButton submit = navyButton(existingData == null ? "Submit" : "Update");
 
         submit.addActionListener(e -> {
-            Object[] rowData = collectFormData();
+            String validationError = validateRequestForm();
 
-            if (rowData[0].toString().isBlank()
-                    || rowData[1].toString().isBlank()
-                    || rowData[7].toString().isBlank()) {
-
+            if (!validationError.isBlank()) {
                 JOptionPane.showMessageDialog(
                         this,
-                        "Please fill out all required fields: Name, Department, and Reason.",
-                        "Missing Information",
+                        validationError,
+                        "Validation Error",
                         JOptionPane.WARNING_MESSAGE
                 );
                 return;
             }
+
+            Object[] rowData = collectFormData();
 
             if (onSubmit != null) {
                 onSubmit.onSubmit(rowData);
@@ -374,15 +405,241 @@ public class RequestFormPanel extends JPanel {
         return row;
     }
 
+    private String validateRequestForm() {
+        StringBuilder errors = new StringBuilder();
+
+        String name = nameField.getText().trim();
+        String position = positionField.getText().trim();
+        String requestType = String.valueOf(requestTypeCombo.getSelectedItem());
+        String reason = reasonArea.getText().trim();
+
+        LocalDate startDate = getSpinnerLocalDate(startDateSpinner);
+        LocalDate endDate = getSpinnerLocalDate(endDateSpinner);
+        LocalDate today = LocalDate.now();
+
+        LocalTime startTime = parseTime(String.valueOf(startTimeCombo.getSelectedItem()));
+        LocalTime endTime = parseTime(String.valueOf(endTimeCombo.getSelectedItem()));
+
+        if (name.isBlank()) {
+            errors.append("Name is required.\n");
+        }
+
+        if (position.isBlank()) {
+            errors.append("Position is required.\n");
+        }
+
+        if (reason.isBlank()) {
+            errors.append("Reason is required.\n");
+        }
+
+        if (startDate.isBefore(today)) {
+            errors.append("Start Date cannot be a past date.\n");
+        }
+
+        if (endDate.isBefore(today)) {
+            errors.append("End Date cannot be a past date.\n");
+        }
+
+        if (endDate.isBefore(startDate)) {
+            errors.append("End Date cannot be earlier than Start Date.\n");
+        }
+
+        if (isTimeBasedRequest(requestType)) {
+            if (!startDate.equals(endDate)) {
+                errors.append("For Undertime and Overtime, Start Date and End Date must be the same.\n");
+            }
+
+            if (startTime.equals(endTime)) {
+                errors.append("For Undertime and Overtime, Start Time and End Time must not be the same.\n");
+            }
+        }
+
+        if (SICK_LEAVE.equals(requestType) || VACATION_LEAVE.equals(requestType)) {
+            long requestedDays = ChronoUnit.DAYS.between(startDate, endDate) + 1;
+
+            if (requestedDays <= 0) {
+                errors.append("Leave request must be at least 1 day.\n");
+            } else {
+                int maxAllowed = SICK_LEAVE.equals(requestType)
+                        ? MAX_SICK_LEAVE
+                        : MAX_VACATION_LEAVE;
+
+                int usedLeaves = getUsedLeaveDays(requestType);
+                int existingLeaveDays = getExistingLeaveDaysToExclude(requestType);
+
+                int adjustedUsedLeaves = Math.max(0, usedLeaves - existingLeaveDays);
+                long remainingLeaves = maxAllowed - adjustedUsedLeaves;
+
+                if (requestedDays > remainingLeaves) {
+                    errors.append(requestType)
+                            .append(" exceeds available balance. Remaining: ")
+                            .append(remainingLeaves)
+                            .append(" day(s).\n");
+                }
+            }
+        }
+
+        return errors.toString();
+    }
+
+    private boolean isTimeBasedRequest(String requestType) {
+        return UNDERTIME.equals(requestType) || OVERTIME.equals(requestType);
+    }
+
+    private LocalDate getSpinnerLocalDate(JSpinner spinner) {
+        Date date = (Date) spinner.getValue();
+        return date.toInstant()
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate();
+    }
+
+    private LocalTime parseTime(String text) {
+        try {
+            Date parsed = new SimpleDateFormat("h:mm a").parse(text);
+            return parsed.toInstant()
+                    .atZone(ZoneId.systemDefault())
+                    .toLocalTime()
+                    .withSecond(0)
+                    .withNano(0);
+        } catch (Exception ex) {
+            return LocalTime.of(9, 0);
+        }
+    }
+
+    private int getUsedLeaveDays(String leaveType) {
+        try {
+            UserAccount user = Session.getCurrentUser();
+
+            if (user == null) {
+                return 0;
+            }
+
+            int employeeId = user.getEmployeeId();
+            List<Request> requests = requestService.findByEmployee(employeeId);
+
+            int total = 0;
+
+            for (Request request : requests) {
+                if (!(request instanceof LeaveRequest leave)) {
+                    continue;
+                }
+
+                String status = request.getStatus() == null ? "" : request.getStatus().name();
+
+                if ("REJECTED".equalsIgnoreCase(status)) {
+                    continue;
+                }
+
+                String currentLeaveType = getLeaveTypeDisplayName(leave);
+
+                if (!leaveType.equalsIgnoreCase(currentLeaveType)) {
+                    continue;
+                }
+
+                if (leave.getStartDate() == null || leave.getEndDate() == null) {
+                    continue;
+                }
+
+                total += (int) ChronoUnit.DAYS.between(
+                        leave.getStartDate(),
+                        leave.getEndDate()
+                ) + 1;
+            }
+
+            return total;
+
+        } catch (Exception ex) {
+            return 0;
+        }
+    }
+
+    private int getExistingLeaveDaysToExclude(String selectedLeaveType) {
+        if (existingData == null) {
+            return 0;
+        }
+
+        String oldRequestType = value(existingData, 2);
+
+        if (!selectedLeaveType.equalsIgnoreCase(oldRequestType)) {
+            return 0;
+        }
+
+        try {
+            LocalDate oldStart = parseDateText(value(existingData, 3));
+            LocalDate oldEnd = parseDateText(value(existingData, 4));
+
+            if (oldStart == null || oldEnd == null) {
+                return 0;
+            }
+
+            return (int) ChronoUnit.DAYS.between(oldStart, oldEnd) + 1;
+
+        } catch (Exception ex) {
+            return 0;
+        }
+    }
+
+    private LocalDate parseDateText(String text) {
+        if (text == null || text.isBlank()) {
+            return null;
+        }
+
+        try {
+            Date date = dateFormat.parse(text);
+            return date.toInstant()
+                    .atZone(ZoneId.systemDefault())
+                    .toLocalDate();
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    private String getLeaveTypeDisplayName(LeaveRequest leave) {
+        try {
+            Method method = leave.getClass().getMethod("getLeaveType");
+            Object value = method.invoke(leave);
+
+            if (value == null) {
+                return "";
+            }
+
+            String raw = value.toString().replace("_", " ").trim().toLowerCase();
+
+            if (raw.contains("sick")) {
+                return SICK_LEAVE;
+            }
+
+            if (raw.contains("vacation")) {
+                return VACATION_LEAVE;
+            }
+
+        } catch (Exception ignored) {
+        }
+
+        String requestType = leave.getRequestType() == null
+                ? ""
+                : leave.getRequestType().name().replace("_", " ").toLowerCase();
+
+        if (requestType.contains("sick")) {
+            return SICK_LEAVE;
+        }
+
+        if (requestType.contains("vacation")) {
+            return VACATION_LEAVE;
+        }
+
+        return "";
+    }
+
     private Object[] collectFormData() {
         return new Object[]{
             nameField.getText().trim(),
-            departmentField.getText().trim(),
+            positionField.getText().trim(),
             requestTypeCombo.getSelectedItem().toString(),
             dateFormat.format((Date) startDateSpinner.getValue()),
             dateFormat.format((Date) endDateSpinner.getValue()),
-            timeFormat.format((Date) startTimeSpinner.getValue()),
-            timeFormat.format((Date) endTimeSpinner.getValue()),
+            startTimeCombo.getSelectedItem().toString(),
+            endTimeCombo.getSelectedItem().toString(),
             reasonArea.getText().trim(),
             notesArea.getText().trim(),
             statusCombo.getSelectedItem().toString()
@@ -391,23 +648,48 @@ public class RequestFormPanel extends JPanel {
 
     private void populateFields(Object[] data) {
         nameField.setText(value(data, 0));
-        departmentField.setText(value(data, 1));
-        requestTypeCombo.setSelectedItem(value(data, 2));
+        positionField.setText(value(data, 1));
+
+        String requestType = value(data, 2);
+
+        if ("Leave".equalsIgnoreCase(requestType)) {
+            requestTypeCombo.setSelectedItem(VACATION_LEAVE);
+        } else {
+            requestTypeCombo.setSelectedItem(requestType);
+        }
 
         setSpinnerDate(startDateSpinner, value(data, 3), dateFormat);
         setSpinnerDate(endDateSpinner, value(data, 4), dateFormat);
-        setSpinnerDate(startTimeSpinner, value(data, 5), timeFormat);
-        setSpinnerDate(endTimeSpinner, value(data, 6), timeFormat);
+
+        setComboValue(startTimeCombo, value(data, 5), "9:00 AM");
+        setComboValue(endTimeCombo, value(data, 6), "5:00 PM");
 
         reasonArea.setText(value(data, 7));
         notesArea.setText(value(data, 8));
         statusCombo.setSelectedItem(value(data, 9));
     }
 
+    private void setComboValue(JComboBox<String> combo, String value, String fallback) {
+        if (value == null || value.isBlank()) {
+            combo.setSelectedItem(fallback);
+            return;
+        }
+
+        for (int i = 0; i < combo.getItemCount(); i++) {
+            if (combo.getItemAt(i).equalsIgnoreCase(value.trim())) {
+                combo.setSelectedIndex(i);
+                return;
+            }
+        }
+
+        combo.setSelectedItem(fallback);
+    }
+
     private String value(Object[] data, int index) {
         if (data == null || index >= data.length || data[index] == null) {
             return "";
         }
+
         return data[index].toString();
     }
 
@@ -465,39 +747,8 @@ public class RequestFormPanel extends JPanel {
         return button;
     }
 
-    private static class CircleIcon implements Icon {
-        private final Color color;
-        private final int size;
-
-        CircleIcon(Color color, int size) {
-            this.color = color;
-            this.size = size;
-        }
-
-        @Override
-        public void paintIcon(Component c, Graphics g, int x, int y) {
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(
-                    RenderingHints.KEY_ANTIALIASING,
-                    RenderingHints.VALUE_ANTIALIAS_ON
-            );
-            g2.setColor(color);
-            g2.fillOval(x, y, size, size);
-            g2.dispose();
-        }
-
-        @Override
-        public int getIconWidth() {
-            return size;
-        }
-
-        @Override
-        public int getIconHeight() {
-            return size;
-        }
-    }
-
     private static class RoundedBorder extends AbstractBorder {
+
         private final int radius;
         private final Color color;
 
