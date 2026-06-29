@@ -4,15 +4,7 @@ import com.motorph.model.Employee;
 import com.motorph.model.Role;
 import com.motorph.model.UserAccount;
 
-/**
- * View/transfer object for the IT Users screen.
- *
- * NEW: this used to be an in-memory-only record built from hardcoded sample rows.
- * It is now backed by real data — it carries the identity needed to talk to the
- * database (userId / employeeId) plus read-only employee details for display and
- * the editable account fields (username, role, active, and an optional new
- * password) that the create/update dialog produces.
- */
+
 public class UserAccountEntry {
 
     // Identity
