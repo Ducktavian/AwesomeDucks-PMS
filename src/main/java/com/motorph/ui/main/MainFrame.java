@@ -26,6 +26,7 @@ public class MainFrame extends JFrame {
     public static final Color SIDEBAR_BG = new Color(5, 22, 103);
     public static final Color ACCENT_W = Color.WHITE;
     public static final Color TEXT_MUTED = new Color(210, 218, 240);
+    public static final Color TEXT_DISABLED = new Color(95, 108, 150);
     public static final Color CONTENT_BG = Color.WHITE;
     public static final Color NAVY = new Color(5, 24, 108);
 
@@ -204,9 +205,7 @@ public class MainFrame extends JFrame {
         navPanel.setBorder(new EmptyBorder(28, 0, 0, 0));
 
         for (String[] item : MAIN_NAV) {
-            if (canSeeNavItem(item[0])) { // NEW: hide role-restricted items
-                navPanel.add(buildNavItem(item[0], item[1]));
-            }
+            navPanel.add(buildNavItem(item[0], item[1]));
         }
 
         bottomNavPanel = new JPanel();
@@ -229,14 +228,22 @@ public class MainFrame extends JFrame {
         return sidebar;
     }
 
-    // NEW: returns false for nav items that the logged-in user's role cannot access.
-    // "Users" is IT user-account management — only ADMIN and IT should see it.
-    private boolean canSeeNavItem(String label) {
-        if (!"Users".equals(label)) return true;
+    // NEW: tells whether the logged-in user's role may open a given nav tab.
+    // Tabs the role can't open stay visible but are shown disabled (greyed out,
+    // not clickable) rather than removed, so the sidebar layout never shifts.
+    // Employees is HR/Admin territory; Users is IT user-account management.
+    private boolean canAccessNavItem(String label) {
         UserAccount user = Session.getCurrentUser();
-        if (user == null) return false;
-        Role role = user.getRole();
-        return role == Role.ADMIN || role == Role.IT;
+        Role role = user == null ? null : user.getRole();
+
+        switch (label) {
+            case "Employees":
+                return role == Role.ADMIN || role == Role.HR;
+            case "Users":
+                return role == Role.ADMIN || role == Role.IT;
+            default:
+                return true;
+        }
     }
 
     private JPanel buildNavItem(String label, String iconFile) {
@@ -257,17 +264,24 @@ public class MainFrame extends JFrame {
             }
         };
 
+        boolean accessible = canAccessNavItem(label);
+
         item.setOpaque(false);
         item.setMaximumSize(new Dimension(SIDEBAR_WIDTH, 40));
         item.setPreferredSize(new Dimension(SIDEBAR_WIDTH, 40));
-        item.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        item.setCursor(Cursor.getPredefinedCursor(
+                accessible ? Cursor.HAND_CURSOR : Cursor.DEFAULT_CURSOR));
+
+        if (!accessible) {
+            item.setToolTipText("Your role doesn't have access to " + label + ".");
+        }
 
         JLabel icon = loadIcon(iconFile);
         icon.setPreferredSize(new Dimension(22, 22));
 
         JLabel textLbl = new JLabel(label);
         textLbl.setFont(new Font("Segoe UI", isActive ? Font.BOLD : Font.PLAIN, NAV_FONT_SIZE));
-        textLbl.setForeground(isActive ? ACCENT_W : TEXT_MUTED);
+        textLbl.setForeground(!accessible ? TEXT_DISABLED : isActive ? ACCENT_W : TEXT_MUTED);
 
         JPanel content = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         content.setOpaque(false);
@@ -279,18 +293,25 @@ public class MainFrame extends JFrame {
         item.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
-                textLbl.setForeground(ACCENT_W);
+                if (accessible) {
+                    textLbl.setForeground(ACCENT_W);
+                }
             }
 
             @Override
             public void mouseExited(MouseEvent e) {
-                if (!label.equals(activeNav)) {
+                if (accessible && !label.equals(activeNav)) {
                     textLbl.setForeground(TEXT_MUTED);
                 }
             }
 
             @Override
             public void mouseClicked(MouseEvent e) {
+                // Disabled tabs stay put but ignore clicks.
+                if (!accessible) {
+                    return;
+                }
+
                 if ("Log Out".equals(label)) {
                     Session.clear();
                     dispose();
@@ -339,9 +360,7 @@ public class MainFrame extends JFrame {
         navPanel.removeAll();
 
         for (String[] item : MAIN_NAV) {
-            if (canSeeNavItem(item[0])) { // NEW: hide role-restricted items
-                navPanel.add(buildNavItem(item[0], item[1]));
-            }
+            navPanel.add(buildNavItem(item[0], item[1]));
         }
 
         bottomNavPanel.removeAll();

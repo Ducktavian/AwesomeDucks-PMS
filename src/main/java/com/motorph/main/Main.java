@@ -23,7 +23,6 @@ public class Main {
 
     public static void main(String[] args) {
         
-        
         // TESTING
         PayrollService payrollService = AppContext.getPayrollService();
         
@@ -62,6 +61,9 @@ public class Main {
             
     }
     
+    //////////////////////////////////////////////////////////////////////////////////////////////////////
+    // FOR TESTING //
+    //////////////////////////////////////////////////////////////////////////////////////////////////////
     public static void exportPayrollSeedSQL(List<Employee> employees, LocalDate from, LocalDate to) {
         AttendanceService attendanceService = AppContext.getAttendanceService();
         PayrollService payrollService = AppContext.getPayrollService();
@@ -206,8 +208,11 @@ public class Main {
             ex.printStackTrace();
         }
     }
-
-     public static void generatePayrollHistory(List<Employee> employees, LocalDate from, LocalDate to) {
+    
+    //////////////////////////////////////////////////////////////////////////////////////////////////////
+    // FOR TESTING //
+    //////////////////////////////////////////////////////////////////////////////////////////////////////
+    public static void generatePayrollHistory(List<Employee> employees, LocalDate from, LocalDate to) {
         AttendanceService attendanceService = AppContext.getAttendanceService();
         PayrollService payrollService = AppContext.getPayrollService();
         LocalDate cursor = from.withDayOfMonth(1);

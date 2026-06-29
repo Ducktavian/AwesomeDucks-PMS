@@ -39,6 +39,9 @@ public class RequestPanel extends JPanel {
     private static final int STATUS_COL = 9;
     private static final int EMPLOYEE_ID_COL = 10;
 
+    private static final String VIEW_ALL = "View All";
+    private static final String VIEW_MINE = "View Mine";
+
     private static final String[] COLUMNS = {
         "Name", "Position", "Request Type", "Start Date", "End Date",
         "Start Time", "End Time", "Reason", "Notes", "Status", "Employee ID"
@@ -57,6 +60,10 @@ public class RequestPanel extends JPanel {
 
     private boolean canViewAllRequests;
     private String currentEmployeeId;
+
+    // scope toggle: true = everyone's requests, false = only the logged-in user's
+    private JComboBox<String> scopeFilter;
+    private boolean viewAllSelected = true;
 
     private int sortedColumn = -1;
     private SortOrder currentSortOrder = SortOrder.UNSORTED;
@@ -120,7 +127,9 @@ public class RequestPanel extends JPanel {
         try {
             List<Request> loaded;
 
-            if (canViewAllRequests) {
+            boolean showAll = canViewAllRequests && viewAllSelected;
+
+            if (showAll) {
                 loaded = requestService.findAll();
             } else if (!currentEmployeeId.isBlank()) {
                 loaded = requestService.findByEmployee(Integer.parseInt(currentEmployeeId));
@@ -269,6 +278,10 @@ public class RequestPanel extends JPanel {
         row.setAlignmentX(Component.LEFT_ALIGNMENT);
         row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
 
+        JPanel leftControls = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        leftControls.setOpaque(false);
+        leftControls.add(buildScopeFilter());
+
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         buttons.setOpaque(false);
 
@@ -288,8 +301,49 @@ public class RequestPanel extends JPanel {
         refreshButton.addActionListener(e -> showRequestList()); // reloads from DB
         buttons.add(refreshButton);
 
+        row.add(leftControls, BorderLayout.WEST);
         row.add(buttons, BorderLayout.EAST);
         return row;
+    }
+
+    // NEW: builds the View All / View Mine scope dropdown. Privileged roles can
+    // switch between everyone's requests and their own; everyone else is locked
+    // to their own records.
+    private JComboBox<String> buildScopeFilter() {
+        scopeFilter = new JComboBox<>(new String[]{ VIEW_ALL, VIEW_MINE });
+        scopeFilter.setFont(new Font(FONT, Font.PLAIN, 13));
+        scopeFilter.setPreferredSize(new Dimension(140, 37));
+        scopeFilter.setBackground(Color.WHITE);
+
+        if (canViewAllRequests) {
+            scopeFilter.setSelectedItem(viewAllSelected ? VIEW_ALL : VIEW_MINE);
+            scopeFilter.addActionListener(e -> {
+                viewAllSelected = VIEW_ALL.equals(scopeFilter.getSelectedItem());
+                loadRequestRows();
+                refreshTableRows();
+            });
+        } else {
+            scopeFilter.setSelectedItem(VIEW_MINE);
+            scopeFilter.setEnabled(false);
+        }
+
+        return scopeFilter;
+    }
+
+    // NEW: repopulate the table from the currently loaded rows. Used when the
+    // scope dropdown changes so the whole panel doesn't have to be rebuilt.
+    private void refreshTableRows() {
+        if (tableModel == null) {
+            return;
+        }
+
+        tableModel.setRowCount(0);
+
+        for (Object[] row : requestRows) {
+            if (canSeeRow(String.valueOf(row[EMPLOYEE_ID_COL]))) {
+                tableModel.addRow(row);
+            }
+        }
     }
 
     private void openAddForm() {

@@ -25,6 +25,9 @@ public class EmployeePanel extends JPanel {
     private static final String EMPLOYEE_LIST = "EMPLOYEE_LIST";
     private static final String EMPLOYEE_FORM = "EMPLOYEE_FORM";
 
+    private static final String VIEW_ALL = "View All";
+    private static final String VIEW_MINE = "View Mine";
+
     private static final String[] COLUMNS = {
         "Employee No.", "Name", "Status", "Position",
         "Immediate Supervisor"
@@ -50,6 +53,10 @@ public class EmployeePanel extends JPanel {
     private boolean canViewAllEmployees;
     private boolean canOpenAnyoneDetails;
     private String currentEmployeeId;
+
+    // scope toggle: true = all employees, false = only the logged-in user's record
+    private JComboBox<String> scopeFilter;
+    private boolean viewAllSelected = true;
 
     public EmployeePanel() {
         setLayout(new BorderLayout());
@@ -166,6 +173,10 @@ public class EmployeePanel extends JPanel {
         row.setAlignmentX(Component.LEFT_ALIGNMENT);
         row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
 
+        JPanel leftControls = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        leftControls.setOpaque(false);
+        leftControls.add(buildScopeFilter());
+
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         buttons.setOpaque(false);
 
@@ -177,8 +188,32 @@ public class EmployeePanel extends JPanel {
 
         buttons.add(navyButton("⟳", "Refresh", 110, this::refreshTable));
 
+        row.add(leftControls, BorderLayout.WEST);
         row.add(buttons, BorderLayout.EAST);
         return row;
+    }
+
+    // NEW: builds the View All / View Mine scope dropdown. Privileged roles can
+    // switch between all employees and just their own record; everyone else is
+    // locked to their own record.
+    private JComboBox<String> buildScopeFilter() {
+        scopeFilter = new JComboBox<>(new String[]{ VIEW_ALL, VIEW_MINE });
+        scopeFilter.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        scopeFilter.setPreferredSize(new Dimension(140, 37));
+        scopeFilter.setBackground(Color.WHITE);
+
+        if (canViewAllEmployees) {
+            scopeFilter.setSelectedItem(viewAllSelected ? VIEW_ALL : VIEW_MINE);
+            scopeFilter.addActionListener(e -> {
+                viewAllSelected = VIEW_ALL.equals(scopeFilter.getSelectedItem());
+                loadEmployees();
+            });
+        } else {
+            scopeFilter.setSelectedItem(VIEW_MINE);
+            scopeFilter.setEnabled(false);
+        }
+
+        return scopeFilter;
     }
 
     private JPanel buildTablePanel() {
@@ -380,7 +415,9 @@ public class EmployeePanel extends JPanel {
 
         List<Employee> employees = employeeService.getAllEmployees();
 
-        if (canViewAllEmployees) {
+        boolean showAll = canViewAllEmployees && viewAllSelected;
+
+        if (showAll) {
             allEmployees.addAll(employees);
         } else {
             for (Employee emp : employees) {
