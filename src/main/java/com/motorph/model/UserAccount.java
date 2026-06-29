@@ -30,6 +30,11 @@ public class UserAccount {
     public void setRole(Role role) { this.role = role; }
     public void setActive(boolean active) { this.active = active; }
 
+    // NEW: needed so the DAO can write back the generated PK after an insert,
+    // and so the Users screen can edit the username on update.
+    public void setUserId(int userId) { this.userId = userId; }
+    public void setUsername(String username) { this.username = username; }
+
     @Override
     public String toString() {
         return "UserAccount{userId=" + userId + ", employeeId=" + employeeId

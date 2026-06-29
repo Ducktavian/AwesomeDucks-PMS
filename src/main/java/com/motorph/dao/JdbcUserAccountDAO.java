@@ -121,13 +121,9 @@ public class JdbcUserAccountDAO implements UserAccountDAO {
 
             try (ResultSet keys = ps.getGeneratedKeys()) {
                 if (keys.next()) {
-                    // Reflect the new PK back — userId is private/final-by-convention
-                    // but we expose it through the getter; a setter would be ideal.
-                    // For now, just document the generated id.
-                    int generatedId = keys.getInt(1);
-                    // If UserAccount had a setUserId(), call it here.
-                    // user.setUserId(generatedId);
-                    System.out.println("Inserted user_account with id=" + generatedId);
+                    // NEW: write the generated PK back so callers (e.g. UserService.createUser)
+                    // can immediately assign the account's role via account_role.
+                    user.setUserId(keys.getInt(1));
                 }
             }
         } catch (SQLException e) {

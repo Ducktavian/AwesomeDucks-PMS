@@ -1,87 +1,101 @@
 package com.motorph.ui.it;
 
+import com.motorph.model.Employee;
+import com.motorph.model.Role;
+import com.motorph.model.UserAccount;
+
 /**
- * In-memory user account record for the IT Users screen.
+ * View/transfer object for the IT Users screen.
+ *
+ * NEW: this used to be an in-memory-only record built from hardcoded sample rows.
+ * It is now backed by real data — it carries the identity needed to talk to the
+ * database (userId / employeeId) plus read-only employee details for display and
+ * the editable account fields (username, role, active, and an optional new
+ * password) that the create/update dialog produces.
  */
 public class UserAccountEntry {
 
+    // Identity
+    private int userId;        // 0 when creating a brand-new account
+    private int employeeId;
+
+    // Read-only employee details (sourced from the employee table)
     private String employeeNo;
-    private String firstName;
-    private String lastName;
-    private String username;
-    private String supervisor;
+    private String fullName;
     private String position;
+    private String supervisor;
     private String employmentStatus;
-    private String accountStatus;
-    private String role;
+
+    // Editable account fields
+    private String username;
+    private String newPassword; // null/blank = leave the existing password unchanged
+    private Role role;
+    private boolean active = true;
 
     public UserAccountEntry() {}
 
-    public UserAccountEntry(String employeeNo, String firstName, String lastName,
-            String username, String supervisor, String position,
-            String employmentStatus, String accountStatus, String role) {
-        this.employeeNo = employeeNo;
-        this.firstName = firstName;
-        this.lastName = lastName;
-        this.username = username;
-        this.supervisor = supervisor;
-        this.position = position;
-        this.employmentStatus = employmentStatus;
-        this.accountStatus = accountStatus;
-        this.role = role;
+    // NEW: build a display entry from a persisted account + its employee record.
+    public static UserAccountEntry fromAccount(UserAccount account, Employee employee) {
+        UserAccountEntry entry = new UserAccountEntry();
+        entry.userId = account.getUserId();
+        entry.employeeId = account.getEmployeeId();
+        entry.employeeNo = String.valueOf(account.getEmployeeId());
+        entry.username = account.getUsername();
+        entry.role = account.getRole();
+        entry.active = account.isActive();
+
+        if (employee != null) {
+            entry.fullName = employee.getFullName();
+            entry.position = employee.getPosition();
+            entry.supervisor = employee.getImmediateSupervisor();
+            entry.employmentStatus = employee.getStatus();
+        }
+        return entry;
     }
 
-    public static UserAccountEntry fromSampleRow(String[] row) {
-        String[] nameParts = row[1].split(" ", 2);
-        String first = nameParts.length > 0 ? nameParts[0] : row[1];
-        String last  = nameParts.length > 1 ? nameParts[1] : "";
-
-        String acctStatus = "Inactive".equalsIgnoreCase(row[2]) ? "Deactive" : "Active";
-        String username = (first + "." + last.replace(" ", ""))
-                .toLowerCase().replaceAll("[^a-z.]", "");
-
-        return new UserAccountEntry(
-            row[0], first, last, username,
-            row[4], row[3], "Regular", acctStatus, row[5]
-        );
-    }
-
+    // NEW: row for the Users table — matches the column order
+    // { Employee No., Name, Status, Position, Immediate Supervisor, Role }.
     public String[] toTableRow() {
-        String displayStatus = "Deactive".equalsIgnoreCase(accountStatus) ? "Inactive" : "Active";
         return new String[] {
             employeeNo,
-            firstName + " " + lastName,
-            displayStatus,
-            position,
-            supervisor,
-            role
+            fullName == null ? "" : fullName,
+            active ? "Active" : "Inactive",
+            position == null ? "" : position,
+            supervisor == null ? "" : supervisor,
+            role == null ? "" : role.getRoleName()
         };
     }
+
+    public int getUserId() { return userId; }
+    public void setUserId(int userId) { this.userId = userId; }
+
+    public int getEmployeeId() { return employeeId; }
+    public void setEmployeeId(int employeeId) { this.employeeId = employeeId; }
 
     public String getEmployeeNo() { return employeeNo; }
     public void setEmployeeNo(String employeeNo) { this.employeeNo = employeeNo; }
 
-    public String getFirstName() { return firstName; }
-    public void setFirstName(String firstName) { this.firstName = firstName; }
-
-    public String getLastName() { return lastName; }
-    public void setLastName(String lastName) { this.lastName = lastName; }
-
-    public String getUsername() { return username; }
-    public void setUsername(String username) { this.username = username; }
-
-    public String getSupervisor() { return supervisor; }
-    public void setSupervisor(String supervisor) { this.supervisor = supervisor; }
+    public String getFullName() { return fullName; }
+    public void setFullName(String fullName) { this.fullName = fullName; }
 
     public String getPosition() { return position; }
     public void setPosition(String position) { this.position = position; }
 
+    public String getSupervisor() { return supervisor; }
+    public void setSupervisor(String supervisor) { this.supervisor = supervisor; }
+
     public String getEmploymentStatus() { return employmentStatus; }
     public void setEmploymentStatus(String employmentStatus) { this.employmentStatus = employmentStatus; }
 
-    public String getAccountStatus() { return accountStatus; }
-    public void setAccountStatus(String accountStatus) { this.accountStatus = accountStatus; }
+    public String getUsername() { return username; }
+    public void setUsername(String username) { this.username = username; }
 
-    public String getRole() { return role; }
-    public void setRole(String role) { this.role = role; }
+    public String getNewPassword() { return newPassword; }
+    public void setNewPassword(String newPassword) { this.newPassword = newPassword; }
+
+    public Role getRole() { return role; }
+    public void setRole(Role role) { this.role = role; }
+
+    public boolean isActive() { return active; }
+    public void setActive(boolean active) { this.active = active; }
 }

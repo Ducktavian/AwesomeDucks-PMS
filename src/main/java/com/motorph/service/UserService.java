@@ -30,14 +30,33 @@ public class UserService {
     }
 
     public void createUser(int employeeId, String username, String password, Role role) {
+        createUser(employeeId, username, password, role, true);
+    }
+
+    // NEW: full create — also persists the role (account_role) and the active flag.
+    // The plain save() only writes the user_account row; the role lives in a
+    // separate table, so we set it via changeRole() once we have the new PK.
+    public void createUser(int employeeId, String username, String password, Role role, boolean active) {
         authorizeAdmin();
 
         String hash = hashOrThrow(password);
-        UserAccount newUser = new UserAccount(0, employeeId, username, hash, role, true);
-        userDAO.save(newUser);
+        UserAccount newUser = new UserAccount(0, employeeId, username, hash, role, active);
+        userDAO.save(newUser); // save() writes the generated id back into newUser
+
+        if (role != null) {
+            userDAO.changeRole(newUser.getUserId(), role);
+        }
+    }
+
+    // NEW: delete a user account (account_role rows cascade via FK).
+    public void deleteUser(int userId) {
+        authorizeAdmin();
+        UserAccount user = findByIdOrThrow(userId);
+        userDAO.delete(user);
     }
 
     public void updateUser(UserAccount user) {
+        authorizeAdmin();
         userDAO.update(user);
     }
 
