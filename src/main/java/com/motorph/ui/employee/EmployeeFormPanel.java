@@ -23,14 +23,14 @@ public class EmployeeFormPanel extends JPanel {
     private boolean updateMode = false;
     private Employee selectedEmployee;
 
-    private JTextField employeeIdField, firstNameField, lastNameField, departmentField;
-    private JTextField positionField, supervisorField, roleField, statusField;
-    private JTextField genderField, birthdateField, cellphoneField, telephoneField;
+    private JTextField employeeIdField, firstNameField, lastNameField;
+    private JTextField positionField, supervisorField, statusField;
+    private JTextField birthdateField, cellphoneField;
     private JTextField emailField, addressField;
     private JTextField sssField, philhealthField, pagibigField, tinField;
     private JTextField basicSalaryField, semiMonthlyRateField, hourlyRateField;
     private JTextField riceSubsidyField, phoneAllowanceField, clothingAllowanceField;
-    
+
     private JButton submitButton;
 
     public EmployeeFormPanel(Runnable onBack) {
@@ -65,27 +65,42 @@ public class EmployeeFormPanel extends JPanel {
         main.add(back);
 
         addSection(main, "Basic Information", 64, 111,
-                new String[]{"Employee ID", "First Name", "Last Name", "Department",
-                    "Position", "Immediate Supervisor", "Role", "Status"},
-                new String[]{"e.g., 10001", "e.g., Juan", "e.g., Dela Cruz", "e.g., IT",
-                    "e.g., Software Engineer", "e.g., Maria Santos", "e.g., Employee", "e.g., Regular"});
+                new String[]{
+                    "Employee ID", "First Name", "Last Name",
+                    "Position", "Immediate Supervisor", "Status"
+                },
+                new String[]{
+                    "e.g., 10001", "e.g., Juan", "e.g., Dela Cruz",
+                    "e.g., Software Engineer", "e.g., Maria Santos", "e.g., Regular"
+                });
 
         addSection(main, "Personal Detail", 290, 111,
-                new String[]{"Gender", "Birthdate", "Cellphone No.",
-                    "Telephone No.", "E-mail", "Address"},
-                new String[]{"e.g., Male", "MM-DD-YYYY", "e.g., 0917-123-4567",
-                    "e.g., 8123-4567", "e.g., juan@email.com", "e.g., Quezon City"});
+                new String[]{
+                    "Birthdate", "Cellphone No.", "E-mail", "Address"
+                },
+                new String[]{
+                    "MM-DD-YYYY", "e.g., 0917-123-4567",
+                    "e.g., juan@email.com", "e.g., Quezon City"
+                });
 
         addSection(main, "Government ID", 516, 111,
-                new String[]{"SSS No.", "PhilHealth No.", "PAG-IBIG No.", "TIN"},
-                new String[]{"XX-XXXXXXX-Y", "XX-XXXXXXXXX-X",
-                    "XXXX-XXXX-XXXX", "XXX-XXX-XXX-XXX"});
+                new String[]{
+                    "SSS No.", "PhilHealth No.", "PAG-IBIG No.", "TIN"
+                },
+                new String[]{
+                    "XX-XXXXXXX-Y", "XX-XXXXXXXXX-X",
+                    "XXXX-XXXX-XXXX", "XXX-XXX-XXX-XXX"
+                });
 
         addSection(main, "Compensation", 742, 111,
-                new String[]{"Basic Salary", "Gross Semi-Monthly Rate", "Hourly Rate",
-                    "Rice Subsidy", "Phone Allowance", "Clothing Allowance"},
-                new String[]{"e.g., 50000.00", "e.g., 25000.00", "e.g., 300.00",
-                    "e.g., 1500.00", "e.g., 1000.00", "e.g., 1000.00"});
+                new String[]{
+                    "Basic Salary", "Gross Semi-Monthly Rate", "Hourly Rate",
+                    "Rice Subsidy", "Phone Allowance", "Clothing Allowance"
+                },
+                new String[]{
+                    "e.g., 50000.00", "e.g., 25000.00", "e.g., 300.00",
+                    "e.g., 1500.00", "e.g., 1000.00", "e.g., 1000.00"
+                });
 
         submitButton = new JButton("Submit");
         submitButton.setName("submit");
@@ -144,20 +159,16 @@ public class EmployeeFormPanel extends JPanel {
                 case 0 -> employeeIdField = field;
                 case 1 -> firstNameField = field;
                 case 2 -> lastNameField = field;
-                case 3 -> departmentField = field;
-                case 4 -> positionField = field;
-                case 5 -> supervisorField = field;
-                case 6 -> roleField = field;
-                case 7 -> statusField = field;
+                case 3 -> positionField = field;
+                case 4 -> supervisorField = field;
+                case 5 -> statusField = field;
             }
         } else if (sectionIndex == 1) {
             switch (fieldIndex) {
-                case 0 -> genderField = field;
-                case 1 -> birthdateField = field;
-                case 2 -> cellphoneField = field;
-                case 3 -> telephoneField = field;
-                case 4 -> emailField = field;
-                case 5 -> addressField = field;
+                case 0 -> birthdateField = field;
+                case 1 -> cellphoneField = field;
+                case 2 -> emailField = field;
+                case 3 -> addressField = field;
             }
         } else if (sectionIndex == 2) {
             switch (fieldIndex) {
@@ -208,12 +219,10 @@ public class EmployeeFormPanel extends JPanel {
         employee.setEmployeeId(getValue(employeeIdField));
         employee.setFirstName(getValue(firstNameField));
         employee.setLastName(getValue(lastNameField));
-        employee.setDepartment(getValue(departmentField));
         employee.setPosition(getValue(positionField));
         employee.setImmediateSupervisor(getValue(supervisorField));
         employee.setStatus(getValue(statusField));
 
-        employee.setGender(getValue(genderField));
         employee.setBirthday(parseDate(getValue(birthdateField)));
         employee.setPhoneNumber(getValue(cellphoneField));
         employee.setEmail(getValue(emailField));
@@ -266,7 +275,7 @@ public class EmployeeFormPanel extends JPanel {
             submitButton.setVisible(true);
         }
     }
-    
+
     public void setViewMode(Employee employee) {
         updateMode = false;
         selectedEmployee = employee;
@@ -278,7 +287,7 @@ public class EmployeeFormPanel extends JPanel {
             submitButton.setVisible(false);
         }
     }
-    
+
     private void setFieldsEditable(boolean editable) {
         for (Component c : getAllComponents(this)) {
             if (c instanceof JTextField field) {
@@ -292,16 +301,12 @@ public class EmployeeFormPanel extends JPanel {
         employeeIdField.setText(safe(emp.getEmployeeId()));
         firstNameField.setText(safe(emp.getFirstName()));
         lastNameField.setText(safe(emp.getLastName()));
-        departmentField.setText(safe(emp.getDepartment()));
         positionField.setText(safe(emp.getPosition()));
         supervisorField.setText(safe(emp.getImmediateSupervisor()));
-        roleField.setText("");
         statusField.setText(safe(emp.getStatus()));
 
-        genderField.setText(safe(emp.getGender()));
         birthdateField.setText(emp.getBirthday() == null ? "" : emp.getBirthday().format(DateTimeFormatter.ofPattern("MM-dd-yyyy")));
         cellphoneField.setText(safe(emp.getPhoneNumber()));
-        telephoneField.setText("");
         emailField.setText(safe(emp.getEmail()));
         addressField.setText(safe(emp.getAddress()));
 
