@@ -9,6 +9,7 @@ import java.util.List;
  */
 public interface PayslipDAO extends BaseDAO {
     Payslip findById(String payslipId);
+    Payslip findByPayrollId(int payrollId);
     List<Payslip> findByEmployeeId(String employeeId);
     List<Payslip> findAll();
     void save(Payslip payslip);

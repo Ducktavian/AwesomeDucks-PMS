@@ -127,5 +127,27 @@ public class Payslip {
             return PayrollPeriod.SECOND_PERIOD;
         }
     }
+    
+    @Override
+    public String toString() {
+        return "Payslip{" +
+                "payslipId='" + payslipId + '\'' +
+                ", payrollId=" + payrollId +
+                ", employeeNumber='" + employeeNumber + '\'' +
+                ", employeeName='" + employeeName + '\'' +
+                ", position='" + position + '\'' +
+                ", periodStart=" + periodStart +
+                ", periodEnd=" + periodEnd +
+                ", totalHours=" + totalHours +
+                ", hourlyRate=" + hourlyRate +
+                ", grossPay=" + grossPay +
+                ", allowanceBreakdown=" + allowanceBreakdown +
+                ", totalAllowances=" + getAllowances() +
+                ", deductionBreakdown=" + deductionBreakdown +
+                ", totalDeductions=" + getTotalDeductions() +
+                ", netPay=" + netPay +
+                ", payrollPeriod=" + getPayrollPeriod() +
+                '}';
+    }
 
 }

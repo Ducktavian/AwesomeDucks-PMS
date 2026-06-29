@@ -42,6 +42,20 @@ public class JdbcPayslipDAO implements PayslipDAO {
     }
 
     @Override
+    public Payslip findByPayrollId(int payrollId) {
+        String sql = SELECT_BASE + " WHERE payroll_id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, payrollId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next() ? mapRow(rs) : null;
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to find payslip for payroll_id " + payrollId, e);
+        }
+    }
+
+    @Override
     public List<Payslip> findByEmployeeId(String employeeId) {
         String sql = SELECT_BASE + " WHERE employee_id = ? ORDER BY period_start_date DESC";
         List<Payslip> payslips = new ArrayList<>();
