@@ -6,8 +6,10 @@ import java.io.File;
 import javax.swing.*;
 import javax.swing.border.*;
 
+import com.motorph.model.Employee;
 import com.motorph.model.Role;
 import com.motorph.model.UserAccount;
+import com.motorph.service.EmployeeService;
 import com.motorph.ui.attendance.AttendancePanel;
 import com.motorph.ui.dashboard.DashboardPanel;
 import com.motorph.ui.employee.EmployeePanel;
@@ -17,6 +19,7 @@ import com.motorph.ui.login.Login;
 import com.motorph.ui.payroll.PayrollPanel;
 import com.motorph.ui.request.RequestPanel;
 import com.motorph.ui.settings.SettingsPanel;
+import com.motorph.util.AppContext;
 import com.motorph.util.Session;
 
 public class MainFrame extends JFrame {
@@ -150,8 +153,12 @@ public class MainFrame extends JFrame {
 
         UserAccount user = Session.getCurrentUser();
         if (user != null) {
-            name.setText("<html><u>" + user.getUsername() + "</u></html>");
-            position.setText(user.getRole() == null ? "Position" : user.getRole().toString());
+            Employee emp = AppContext.getEmployeeService()
+                    .findEmployee(String.valueOf(user.getEmployeeId()));
+            String fullName = emp != null ? emp.getFullName() : user.getUsername();
+            String pos = emp != null ? emp.getPosition() : (user.getRole() == null ? "" : user.getRole().toString());
+            name.setText("<html><u>" + fullName + "</u></html>");
+            position.setText(pos);
         }
 
         textPanel.add(name);
@@ -238,7 +245,9 @@ public class MainFrame extends JFrame {
 
         switch (label) {
             case "Employees":
-                return role == Role.ADMIN || role == Role.HR;
+                // All roles can access the Employees tab; the panel itself restricts
+                // what each role can see (view-all vs view-mine) and do (edit vs read-only).
+                return true;
             case "Users":
                 return role == Role.ADMIN || role == Role.IT;
             default:

@@ -36,17 +36,47 @@ public class Main {
         List<Employee> employeeList = empService.getAllEmployees();
         
         try {
-            LocalDate from = LocalDate.parse("2024-06-01");
-            generatePayrollHistory(employeeList, from, LocalDate.now());
-            exportPayrollSeedSQL(employeeList, from, LocalDate.now());
+           // LocalDate from = LocalDate.parse("2024-06-01");
+            //generatePayrollHistory(employeeList, from, LocalDate.now());
+            //exportPayrollSeedSQL(employeeList, from, LocalDate.now());
         } catch (Exception e) {
             e.printStackTrace();
         }
         
         
                 
-        
-        
+
+        // ── TEST DATA: 8 dispute seed inserts (mirrors Help Center hardcoded sample) ─────
+        // Run these SQL statements in MySQL Workbench before launching to populate test data.
+        // Employee IDs: 10001=Admin, 10003=Finance, 10005=IT, 10007=HR, 10016=Employee
+        /*
+        INSERT INTO dispute (employee_id, dispute_type, reason, dispute_status, date_filed, category, target_field)
+        VALUES (10005, 'INFORMATION_DISPUTE', 'Cannot access payroll portal', 'UNRESOLVED', '2026-03-15', 'System Access', 'portal_access');
+
+        INSERT INTO dispute (employee_id, dispute_type, reason, dispute_status, date_filed, category, target_field)
+        VALUES (10016, 'INFORMATION_DISPUTE', 'Password reset request', 'UNRESOLVED', '2026-03-14', 'Password Reset', 'login_password');
+
+        INSERT INTO dispute (employee_id, dispute_type, reason, dispute_status, date_filed, category, target_field)
+        VALUES (10007, 'INFORMATION_DISPUTE', 'Leave balance discrepancy', 'UNRESOLVED', '2026-03-13', 'Leave Balance', 'leave_balance');
+
+        INSERT INTO dispute (employee_id, dispute_type, reason, dispute_status, reviewed_by_id, date_filed, date_reviewed, payslip_number)
+        VALUES (10003, 'PAYROLL_DISPUTE', 'Payslip amount incorrect', 'RESOLVED', 10001, '2026-03-12', '2026-03-20', 'PS-2024-07-0003');
+
+        INSERT INTO dispute (employee_id, dispute_type, reason, dispute_status, date_filed, category, target_field)
+        VALUES (10005, 'INFORMATION_DISPUTE', 'VPN connection failure', 'UNRESOLVED', '2026-03-11', 'Email & VPN', 'vpn_access');
+
+        INSERT INTO dispute (employee_id, dispute_type, reason, dispute_status, reviewed_by_id, date_filed, date_reviewed, category, target_field)
+        VALUES (10016, 'INFORMATION_DISPUTE', 'Email account locked', 'RESOLVED', 10005, '2026-03-10', '2026-03-18', 'Email & VPN', 'email_account');
+
+        INSERT INTO dispute (employee_id, dispute_type, reason, dispute_status, date_filed, category, target_field)
+        VALUES (10016, 'INFORMATION_DISPUTE', 'Attendance record missing for March 5-7', 'UNRESOLVED', '2026-03-09', 'Attendance Record', 'attendance_log');
+
+        INSERT INTO dispute (employee_id, dispute_type, reason, dispute_status, reviewed_by_id, date_filed, date_reviewed, category, target_field)
+        VALUES (10007, 'INFORMATION_DISPUTE', 'System login timeout issue', 'RESOLVED', 10005, '2026-03-08', '2026-03-15', 'System Access', 'session_timeout');
+        */
+        // ─────────────────────────────────────────────────────────────────────────────────
+
+
         // Use invokeLater to ensure thread safety for Swing components
         java.awt.EventQueue.invokeLater(() -> {
             Login loginFrame = new Login(null);

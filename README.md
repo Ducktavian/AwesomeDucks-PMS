@@ -66,17 +66,51 @@ mvn compile exec:java
 
 ### Role permissions
 
-| Feature              | Admin | HR | Finance | IT | Employee |
-|----------------------|-------|----|---------|----|----------|
-| View all employees   | ✓     | ✓  |         |    |          |
-| View all payroll     | ✓     |    | ✓       |    |          |
-| View all attendance  | ✓     | ✓  |         |    |          |
-| View all requests    | ✓     | ✓  |         |    |          |
-| Manage user accounts | ✓     |    |         | ✓  |          |
-| Modify payroll       | ✓     |    | ✓       |    |          |
-| View own data only   | ✓     | ✓  | ✓       | ✓  | ✓        |
+#### Dashboard views
+| Dashboard | Admin | HR | Finance | IT | Employee |
+|-----------|-------|----|---------|----|----------|
+| Admin     | ✓     |    |         |    |          |
+| HR        | ✓     | ✓  |         |    |          |
+| Finance   | ✓     |    | ✓       |    |          |
+| IT        | ✓     |    |         | ✓  |          |
+| Employee  | ✓     | ✓  | ✓       | ✓  | ✓        |
+
+#### Employees
+| Action            | Admin | HR | Finance | IT | Employee |
+|-------------------|-------|----|---------|----|----------|
+| View all          | ✓     | ✓  | ✓       | ✓  |          |
+| Add / Update / Delete | ✓  | ✓  |         |    |          |
+| View own only     |       |    |         |    | ✓        |
+
+#### Payroll
+| Action            | Admin | HR | Finance | IT | Employee |
+|-------------------|-------|----|---------|----|----------|
+| View all          | ✓     |    | ✓       |    |          |
+| Add / Update / Delete | ✓  |   | ✓       |    |          |
+| View own only     |       | ✓  |         | ✓  | ✓        |
+
+#### Requests
+| Action            | Admin | HR | Finance | IT | Employee |
+|-------------------|-------|----|---------|----|----------|
+| View all          | ✓     | ✓  |         |    |          |
+| Add / Update / Delete | ✓  | ✓  |         |    |          |
+| View own only     |       |    | ✓       | ✓  | ✓        |
+
+#### Attendance
+| Action            | Admin | HR | Finance | IT | Employee |
+|-------------------|-------|----|---------|----|----------|
+| View all          | ✓     | ✓  |         |    |          |
+| Add               | ✓     | ✓  | ✓       | ✓  | ✓        |
+| Update / Delete   | ✓     | ✓  |         |    |          |
+| View own only     |       |    | ✓       | ✓  | ✓        |
+
+#### User Accounts (Users tab)
+| Action            | Admin | HR | Finance | IT | Employee |
+|-------------------|-------|----|---------|----|----------|
+| View & manage     | ✓     |    |         | ✓  |          |
 
 > Sidebar tabs that a role cannot access are shown greyed out and are not clickable.
+> The Employees tab is accessible to all roles; the panel restricts edits to Admin/HR and view scope to Finance/IT/Employee.
 
 ---
 

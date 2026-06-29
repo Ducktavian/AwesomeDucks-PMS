@@ -71,6 +71,23 @@ public class PayrollDisputeService {
     }
 
 
+    // Files a payroll dispute by payslip number string (no Payslip object required).
+    public PayrollDispute fileDisputeByPayslipNumber(String payslipNumber, String reason) {
+        UserAccount current = Session.getCurrentUser();
+        if (current == null) throw new IllegalStateException("No active session.");
+        if (payslipNumber == null || payslipNumber.isBlank())
+            throw new IllegalArgumentException("Payslip number is required.");
+        if (reason == null || reason.isBlank())
+            throw new IllegalArgumentException("Reason is required.");
+
+        PayrollDispute dispute = new PayrollDispute(
+                0, String.valueOf(current.getEmployeeId()), reason,
+                DisputeStatus.UNRESOLVED, null, LocalDate.now(), null, payslipNumber);
+        disputeDAO.save(dispute);
+        return dispute;
+    }
+
+
     // Retrieval
     public List<PayrollDispute> findAll() {
         return disputeDAO.findAll().stream()
