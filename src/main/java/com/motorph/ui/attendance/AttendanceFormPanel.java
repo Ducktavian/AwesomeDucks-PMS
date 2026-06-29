@@ -1,7 +1,10 @@
 package com.motorph.ui.attendance;
 
+import com.motorph.model.Attendance;
 import com.motorph.model.Role;
 import com.motorph.model.UserAccount;
+import com.motorph.service.AttendanceService;
+import com.motorph.util.AppContext;
 import com.motorph.util.Session;
 
 import java.awt.*;
@@ -9,6 +12,9 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.Calendar;
 import java.util.Date;
 import javax.swing.*;
@@ -32,6 +38,8 @@ public class AttendanceFormPanel extends JPanel {
 
     private final boolean restrictedRole;
     private final boolean adminOrHrRole;
+
+    private final AttendanceService attendanceService = AppContext.getAttendanceService();
 
     private JTextField employeeIdField;
     private JComboBox<String> typeCombo;
@@ -64,7 +72,6 @@ public class AttendanceFormPanel extends JPanel {
 
         setLayout(new BorderLayout());
         setBackground(BG);
-
         add(createMainPanel(), BorderLayout.CENTER);
 
         if (existingData != null) {
@@ -77,27 +84,17 @@ public class AttendanceFormPanel extends JPanel {
 
     private boolean isRestrictedAttendanceRole() {
         UserAccount user = Session.getCurrentUser();
-
-        if (user == null || user.getRole() == null) {
-            return false;
-        }
+        if (user == null || user.getRole() == null) return false;
 
         Role role = user.getRole();
-
-        return role == Role.EMPLOYEE
-                || role == Role.IT
-                || role == Role.FINANCE;
+        return role == Role.EMPLOYEE || role == Role.IT || role == Role.FINANCE;
     }
 
     private boolean isAdminOrHrRole() {
         UserAccount user = Session.getCurrentUser();
-
-        if (user == null || user.getRole() == null) {
-            return false;
-        }
+        if (user == null || user.getRole() == null) return false;
 
         Role role = user.getRole();
-
         return role == Role.ADMIN || role == Role.HR;
     }
 
@@ -108,6 +105,14 @@ public class AttendanceFormPanel extends JPanel {
             dateSpinner.setValue(today);
             dateSpinner.setEnabled(false);
             validityCombo.setEnabled(false);
+
+            UserAccount user = Session.getCurrentUser();
+            if (user != null) {
+                employeeIdField.setText(String.valueOf(user.getEmployeeId()));
+                employeeIdField.setEditable(false);
+                employeeIdField.setFocusable(false);
+                employeeIdField.setBackground(new Color(245, 245, 245));
+            }
 
             if (existingData == null) {
                 validityCombo.setSelectedItem("Valid");
@@ -131,9 +136,7 @@ public class AttendanceFormPanel extends JPanel {
         back.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                if (onBack != null) {
-                    onBack.run();
-                }
+                if (onBack != null) onBack.run();
             }
         });
 
@@ -150,28 +153,13 @@ public class AttendanceFormPanel extends JPanel {
     private JPanel createFormWrapper() {
         JPanel wrapper = new JPanel(new BorderLayout());
         wrapper.setOpaque(false);
-        wrapper.setBorder(new EmptyBorder(62, 0, 0, 0));
+        wrapper.setBorder(new EmptyBorder(36, 0, 0, 0));
 
-        JPanel form = new JPanel(new GridBagLayout());
+        JPanel form = new JPanel(new GridLayout(1, 2, 40, 0));
         form.setOpaque(false);
 
-        GridBagConstraints leftGbc = new GridBagConstraints();
-        leftGbc.gridx = 0;
-        leftGbc.gridy = 0;
-        leftGbc.weightx = 1.0;
-        leftGbc.fill = GridBagConstraints.BOTH;
-        leftGbc.anchor = GridBagConstraints.NORTHWEST;
-        leftGbc.insets = new Insets(0, 0, 0, 68);
-
-        GridBagConstraints rightGbc = new GridBagConstraints();
-        rightGbc.gridx = 1;
-        rightGbc.gridy = 0;
-        rightGbc.weightx = 1.0;
-        rightGbc.fill = GridBagConstraints.BOTH;
-        rightGbc.anchor = GridBagConstraints.NORTHWEST;
-
-        form.add(createLeftColumn(), leftGbc);
-        form.add(createRightColumn(), rightGbc);
+        form.add(createLeftColumn());
+        form.add(createRightColumn());
 
         wrapper.add(form, BorderLayout.CENTER);
         wrapper.add(createButtonRow(), BorderLayout.SOUTH);
@@ -220,19 +208,15 @@ public class AttendanceFormPanel extends JPanel {
     private JSpinner createDatePicker() {
         Date today = todayOnly();
 
-        SpinnerDateModel model;
-
-        if (restrictedRole) {
-            model = new SpinnerDateModel(today, today, today, Calendar.DAY_OF_MONTH);
-        } else {
-            model = new SpinnerDateModel(today, null, today, Calendar.DAY_OF_MONTH);
-        }
+        SpinnerDateModel model = restrictedRole
+                ? new SpinnerDateModel(today, today, today, Calendar.DAY_OF_MONTH)
+                : new SpinnerDateModel(today, null, today, Calendar.DAY_OF_MONTH);
 
         JSpinner spinner = new JSpinner(model);
         spinner.setEditor(new JSpinner.DateEditor(spinner, "MM/dd/yyyy"));
         spinner.setFont(new Font(FONT, Font.PLAIN, 13));
-        spinner.setPreferredSize(new Dimension(320, 44));
-        spinner.setMinimumSize(new Dimension(250, 44));
+        spinner.setPreferredSize(new Dimension(0, 44));
+        spinner.setMinimumSize(new Dimension(0, 44));
         spinner.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
         spinner.setBorder(new CompoundBorder(
                 new RoundedBorder(8, FIELD_BORDER),
@@ -255,8 +239,9 @@ public class AttendanceFormPanel extends JPanel {
     private JButton createCurrentTimeButton() {
         JButton button = new JButton("Set Time");
         button.setFont(new Font(FONT, Font.PLAIN, 13));
-        button.setPreferredSize(new Dimension(152, 44));
-        button.setMinimumSize(new Dimension(120, 44));
+        button.setPreferredSize(new Dimension(0, 44));
+        button.setMinimumSize(new Dimension(0, 44));
+        button.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
         button.setBackground(Color.WHITE);
         button.setForeground(TEXT_DARK);
         button.setFocusPainted(false);
@@ -274,36 +259,34 @@ public class AttendanceFormPanel extends JPanel {
     }
 
     private void calculateTotalHours() {
-        String timeIn = getTimeValue(timeInButton);
-        String breakOut = getTimeValue(breakOutButton);
-        String breakIn = getTimeValue(breakInButton);
-        String timeOut = getTimeValue(timeOutButton);
+        LocalTime timeIn = parseButtonTime(timeInButton);
+        LocalTime breakOut = parseButtonTime(breakOutButton);
+        LocalTime breakIn = parseButtonTime(breakInButton);
+        LocalTime timeOut = parseButtonTime(timeOutButton);
 
-        if (timeIn.isBlank() || breakOut.isBlank() || breakIn.isBlank() || timeOut.isBlank()) {
-            totalHoursField.setText("");
-            return;
-        }
+        double hours = attendanceService.computeDailyHoursWithBreaks(
+                timeIn,
+                breakOut,
+                breakIn,
+                timeOut
+        );
+
+        totalHoursField.setText(hours <= 0 ? "" : String.format("%.2f", hours));
+    }
+
+    private LocalTime parseButtonTime(JButton button) {
+        String value = getTimeValue(button);
+        if (value.isBlank()) return null;
 
         try {
-            Date in = timeFormat.parse(timeIn);
-            Date bOut = timeFormat.parse(breakOut);
-            Date bIn = timeFormat.parse(breakIn);
-            Date out = timeFormat.parse(timeOut);
-
-            long workBeforeBreak = bOut.getTime() - in.getTime();
-            long workAfterBreak = out.getTime() - bIn.getTime();
-            long totalMillis = workBeforeBreak + workAfterBreak;
-
-            if (totalMillis < 0) {
-                totalHoursField.setText("");
-                return;
-            }
-
-            double hours = totalMillis / (1000.0 * 60.0 * 60.0);
-            totalHoursField.setText(String.format("%.2f", hours));
-
+            Date parsed = timeFormat.parse(value);
+            return parsed.toInstant()
+                    .atZone(ZoneId.systemDefault())
+                    .toLocalTime()
+                    .withSecond(0)
+                    .withNano(0);
         } catch (ParseException e) {
-            totalHoursField.setText("");
+            return null;
         }
     }
 
@@ -338,67 +321,71 @@ public class AttendanceFormPanel extends JPanel {
     }
 
     private void submitAttendance() {
-        String employeeId = employeeIdField.getText().trim();
-        Date selectedDate = (Date) dateSpinner.getValue();
+        try {
+            String employeeId = employeeIdField.getText().trim();
+            Date selectedDate = (Date) dateSpinner.getValue();
+            LocalDate attendanceDate = selectedDate.toInstant()
+                    .atZone(ZoneId.systemDefault())
+                    .toLocalDate();
 
-        if (employeeId.isBlank()) {
+            if (employeeId.isBlank()) {
+                throw new IllegalArgumentException("Please enter the Employee ID.");
+            }
+
+            LocalTime timeIn = parseButtonTime(timeInButton);
+            LocalTime timeOut = parseButtonTime(timeOutButton);
+
+            Attendance attendance = new Attendance(
+                    0,
+                    employeeId,
+                    "",
+                    "",
+                    attendanceDate,
+                    timeIn,
+                    timeOut,
+                    1
+            );
+
+            attendanceService.validateAttendanceForCurrentUser(attendance);
+            calculateTotalHours();
+
+            Object[] rowData = {
+                    employeeId,
+                    typeCombo.getSelectedItem().toString(),
+                    dateFormat.format(selectedDate),
+                    getTimeValue(timeInButton),
+                    getTimeValue(breakOutButton),
+                    getTimeValue(breakInButton),
+                    getTimeValue(timeOutButton),
+                    totalHoursField.getText().trim(),
+                    validityCombo.getSelectedItem().toString()
+            };
+
+            if (onSubmit != null) {
+                onSubmit.onSubmit(rowData);
+            }
+
             JOptionPane.showMessageDialog(
                     this,
-                    "Please enter the Employee ID.",
-                    "Missing Information",
-                    JOptionPane.WARNING_MESSAGE
+                    existingData == null
+                            ? "Attendance entry added successfully."
+                            : "Attendance entry updated successfully.",
+                    "Success",
+                    JOptionPane.INFORMATION_MESSAGE
             );
-            return;
-        }
 
-        if (restrictedRole && !isToday(selectedDate)) {
+            if (onBack != null) {
+                onBack.run();
+            }
+
+        } catch (Exception ex) {
             JOptionPane.showMessageDialog(
                     this,
-                    "Employee, IT, and Finance users can only submit attendance for today's date.",
-                    "Invalid Date",
+                    ex.getMessage(),
+                    "Attendance Error",
                     JOptionPane.WARNING_MESSAGE
             );
-            dateSpinner.setValue(todayOnly());
-            return;
         }
-
-        if (adminOrHrRole && isFutureDate(selectedDate)) {
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Admin and HR users can only use past dates or today's date. Future dates are not allowed.",
-                    "Invalid Date",
-                    JOptionPane.WARNING_MESSAGE
-            );
-            dateSpinner.setValue(todayOnly());
-            return;
-        }
-
-        calculateTotalHours();
-
-        Object[] rowData = {
-            employeeId,
-            typeCombo.getSelectedItem().toString(),
-            dateFormat.format(selectedDate),
-            getTimeValue(timeInButton),
-            getTimeValue(breakOutButton),
-            getTimeValue(breakInButton),
-            getTimeValue(timeOutButton),
-            totalHoursField.getText().trim(),
-            validityCombo.getSelectedItem().toString()
-        };
-
-        if (onSubmit != null) {
-            onSubmit.onSubmit(rowData);
-        }
-
-        JOptionPane.showMessageDialog(
-                this,
-                existingData == null
-                        ? "Attendance entry added successfully."
-                        : "Attendance entry updated successfully.",
-                "Success",
-                JOptionPane.INFORMATION_MESSAGE
-        );
     }
 
     private Date todayOnly() {
@@ -408,10 +395,6 @@ public class AttendanceFormPanel extends JPanel {
         cal.set(Calendar.SECOND, 0);
         cal.set(Calendar.MILLISECOND, 0);
         return cal.getTime();
-    }
-
-    private boolean isToday(Date date) {
-        return dateFormat.format(date).equals(dateFormat.format(new Date()));
     }
 
     private boolean isFutureDate(Date date) {
@@ -427,13 +410,7 @@ public class AttendanceFormPanel extends JPanel {
         } else {
             try {
                 Date parsedDate = dateFormat.parse(value(data, 2));
-
-                if (isFutureDate(parsedDate)) {
-                    dateSpinner.setValue(todayOnly());
-                } else {
-                    dateSpinner.setValue(parsedDate);
-                }
-
+                dateSpinner.setValue(isFutureDate(parsedDate) ? todayOnly() : parsedDate);
             } catch (ParseException ignored) {
                 dateSpinner.setValue(todayOnly());
             }
@@ -460,20 +437,15 @@ public class AttendanceFormPanel extends JPanel {
         parent.add(panel, gbc);
     }
 
-    private void addTwoTimeFields(
-            JPanel parent,
-            int row,
-            String firstLabel,
-            JComponent firstField,
-            String secondLabel,
-            JComponent secondField) {
+    private void addTwoTimeFields(JPanel parent, int row,
+                                  String firstLabel, JComponent firstField,
+                                  String secondLabel, JComponent secondField) {
 
         GridBagConstraints gbc = baseGbc(row);
         gbc.insets = new Insets(0, 0, 22, 0);
 
         JPanel panel = new JPanel(new GridLayout(1, 2, 15, 0));
         panel.setOpaque(false);
-
         panel.add(timeFieldPanel(firstLabel, firstField));
         panel.add(timeFieldPanel(secondLabel, secondField));
 
@@ -483,10 +455,8 @@ public class AttendanceFormPanel extends JPanel {
     private JPanel timeFieldPanel(String labelText, JComponent field) {
         JPanel panel = new JPanel(new BorderLayout(0, 8));
         panel.setOpaque(false);
-
         panel.add(createLabel(labelText), BorderLayout.NORTH);
         panel.add(field, BorderLayout.CENTER);
-
         return panel;
     }
 
@@ -517,8 +487,8 @@ public class AttendanceFormPanel extends JPanel {
     private JTextField createTextField() {
         JTextField field = new JTextField();
         field.setFont(new Font(FONT, Font.PLAIN, 13));
-        field.setPreferredSize(new Dimension(320, 44));
-        field.setMinimumSize(new Dimension(250, 44));
+        field.setPreferredSize(new Dimension(0, 44));
+        field.setMinimumSize(new Dimension(0, 44));
         field.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
         field.setBackground(Color.WHITE);
         field.setForeground(TEXT_DARK);
@@ -533,8 +503,8 @@ public class AttendanceFormPanel extends JPanel {
     private JComboBox<String> createComboBox(String[] items) {
         JComboBox<String> combo = new JComboBox<>(items);
         combo.setFont(new Font(FONT, Font.PLAIN, 13));
-        combo.setPreferredSize(new Dimension(320, 44));
-        combo.setMinimumSize(new Dimension(250, 44));
+        combo.setPreferredSize(new Dimension(0, 44));
+        combo.setMinimumSize(new Dimension(0, 44));
         combo.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
         combo.setBackground(Color.WHITE);
         combo.setFocusable(false);
@@ -558,6 +528,7 @@ public class AttendanceFormPanel extends JPanel {
     }
 
     private static class RoundedBorder extends AbstractBorder {
+
         private final int radius;
         private final Color color;
 
@@ -567,9 +538,14 @@ public class AttendanceFormPanel extends JPanel {
         }
 
         @Override
-        public void paintBorder(Component c, Graphics g, int x, int y, int width, int height) {
+        public void paintBorder(Component c, Graphics g, int x, int y,
+                                int width, int height) {
+
             Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setRenderingHint(
+                    RenderingHints.KEY_ANTIALIASING,
+                    RenderingHints.VALUE_ANTIALIAS_ON
+            );
             g2.setColor(color);
             g2.setStroke(new BasicStroke(1.1f));
             g2.drawRoundRect(x, y, width - 1, height - 1, radius, radius);
