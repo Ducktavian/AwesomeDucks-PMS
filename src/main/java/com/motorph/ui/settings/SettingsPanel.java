@@ -16,6 +16,8 @@ import java.awt.Insets;
 import java.awt.RenderingHints;
 import java.awt.geom.RoundRectangle2D;
 
+import com.motorph.util.AppContext;
+
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JLabel;
@@ -203,6 +205,19 @@ public class SettingsPanel extends JPanel {
             showWarning("New password and confirmation do not match.");
             confirmPasswordField.setText("");
             confirmPasswordField.requestFocus();
+            return;
+        }
+
+        try {
+            AppContext.getAuthService().changePassword(current, newPass);
+        } catch (IllegalArgumentException ex) {
+            // wrong current password
+            showWarning(ex.getMessage());
+            currentPasswordField.setText("");
+            currentPasswordField.requestFocus();
+            return;
+        } catch (Exception ex) {
+            showWarning("Failed to update password: " + ex.getMessage());
             return;
         }
 
