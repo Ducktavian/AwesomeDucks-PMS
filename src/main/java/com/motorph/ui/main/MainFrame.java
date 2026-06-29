@@ -12,6 +12,7 @@ import com.motorph.ui.attendance.AttendancePanel;
 import com.motorph.ui.dashboard.DashboardPanel;
 import com.motorph.ui.employee.EmployeePanel;
 import com.motorph.ui.helpcenter.HelpCenterPanel;
+import com.motorph.ui.it.ITUserAccountList; // NEW
 import com.motorph.ui.login.Login;
 import com.motorph.ui.payroll.PayrollPanel;
 import com.motorph.ui.request.RequestPanel;
@@ -38,6 +39,7 @@ public class MainFrame extends JFrame {
         {"Payroll", "Payroll-Icon.png"},
         {"Requests", "Requests-icon.png"},
         {"Attendance", "Attendance-Icon.png"},
+        {"Users", "Users-Icon.png"},           // NEW: IT user-account management tab
     };
 
     private static final String[][] BOTTOM_NAV = {
@@ -110,6 +112,7 @@ public class MainFrame extends JFrame {
         contentCards.add(payrollPanel, "Payroll");
         contentCards.add(new RequestPanel(), "Requests");
         contentCards.add(new AttendancePanel(), "Attendance");
+        contentCards.add(new ITUserAccountList(), "Users"); // NEW: IT user-account management panel
         contentCards.add(new SettingsPanel(), "Settings");
         contentCards.add(new HelpCenterPanel(), "Help Center");
         contentCards.add(placeholderPanel("Log Out"), "Log Out");
@@ -201,7 +204,9 @@ public class MainFrame extends JFrame {
         navPanel.setBorder(new EmptyBorder(28, 0, 0, 0));
 
         for (String[] item : MAIN_NAV) {
-            navPanel.add(buildNavItem(item[0], item[1]));
+            if (canSeeNavItem(item[0])) { // NEW: hide role-restricted items
+                navPanel.add(buildNavItem(item[0], item[1]));
+            }
         }
 
         bottomNavPanel = new JPanel();
@@ -222,6 +227,16 @@ public class MainFrame extends JFrame {
         sidebar.add(bottomNavPanel, BorderLayout.SOUTH);
 
         return sidebar;
+    }
+
+    // NEW: returns false for nav items that the logged-in user's role cannot access.
+    // "Users" is IT user-account management — only ADMIN and IT should see it.
+    private boolean canSeeNavItem(String label) {
+        if (!"Users".equals(label)) return true;
+        UserAccount user = Session.getCurrentUser();
+        if (user == null) return false;
+        Role role = user.getRole();
+        return role == Role.ADMIN || role == Role.IT;
     }
 
     private JPanel buildNavItem(String label, String iconFile) {
@@ -324,7 +339,9 @@ public class MainFrame extends JFrame {
         navPanel.removeAll();
 
         for (String[] item : MAIN_NAV) {
-            navPanel.add(buildNavItem(item[0], item[1]));
+            if (canSeeNavItem(item[0])) { // NEW: hide role-restricted items
+                navPanel.add(buildNavItem(item[0], item[1]));
+            }
         }
 
         bottomNavPanel.removeAll();
