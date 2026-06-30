@@ -620,7 +620,13 @@ public class HelpCenterPanel extends JPanel {
             JPanel payrollFields = new JPanel();
             payrollFields.setOpaque(false);
             payrollFields.setLayout(new BoxLayout(payrollFields, BoxLayout.Y_AXIS));
-            payrollFields.add(labelRow("Payslip ID*", payslipCombo));
+            // Pin the picker row to its natural height and let glue soak up the
+            // rest, so the combo stays the same height as the Dispute Type one.
+            JPanel payslipRow = labelRow("Payslip ID*", payslipCombo);
+            payslipRow.setMaximumSize(new Dimension(
+                    Integer.MAX_VALUE, payslipRow.getPreferredSize().height));
+            payrollFields.add(payslipRow);
+            payrollFields.add(Box.createVerticalGlue());
 
             // -- card panel for type-specific fields --
             CardLayout cl = new CardLayout();
@@ -628,12 +634,16 @@ public class HelpCenterPanel extends JPanel {
             typeCards.setOpaque(false);
             typeCards.add(infoFields,    "INFO");
             typeCards.add(payrollFields, "PAYROLL");
+            // Cap the card area to its natural height so the dialog's spare
+            // vertical space flows into the Reason box, not the dropdowns.
+            typeCards.setMaximumSize(new Dimension(
+                    Integer.MAX_VALUE, typeCards.getPreferredSize().height));
 
             typeCombo.addActionListener(e ->
                 cl.show(typeCards, typeCombo.getSelectedIndex() == 0 ? "INFO" : "PAYROLL"));
 
             // -- reason --
-            JTextArea reasonArea = new JTextArea(4, 30);
+            JTextArea reasonArea = new JTextArea(8, 30);
             reasonArea.setLineWrap(true);
             reasonArea.setWrapStyleWord(true);
             reasonArea.setFont(new Font("SansSerif", Font.PLAIN, 13));
@@ -645,7 +655,13 @@ public class HelpCenterPanel extends JPanel {
             form.setBackground(Color.WHITE);
             form.setBorder(new EmptyBorder(16, 24, 10, 24));
 
-            form.add(labelRow("Dispute Type", typeCombo));
+            // Pin the type row too; the Reason row is left unbounded so it is
+            // the only component that grows to fill the dialog.
+            JPanel typeRow = labelRow("Dispute Type", typeCombo);
+            typeRow.setMaximumSize(new Dimension(
+                    Integer.MAX_VALUE, typeRow.getPreferredSize().height));
+
+            form.add(typeRow);
             form.add(Box.createVerticalStrut(12));
             form.add(typeCards);
             form.add(Box.createVerticalStrut(12));
