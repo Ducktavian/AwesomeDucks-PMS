@@ -11,7 +11,6 @@ import java.awt.event.*;
 import java.awt.geom.RoundRectangle2D;
 import java.util.*;
 import java.util.List;
-import java.util.stream.Stream;
 import javax.swing.*;
 import javax.swing.border.*;
 import javax.swing.table.*;
@@ -43,11 +42,9 @@ public class HelpCenterPanel extends JPanel {
     };
 
     // ── session / RBAC ────────────────────────────────────────────────────────
-    private final Role role;
+    private final Role role;              // the user's real (logged-in) role
     private final int  currentEmployeeId;
-    private boolean    canDeleteAny;
-    private boolean    canApprove;
-    private boolean    viewingAll = true;
+    private Role       viewAsRole;        // the role whose view is currently active
 
     // ── data ──────────────────────────────────────────────────────────────────
     private final List<Dispute>        loadedDisputes = new ArrayList<>();
@@ -67,7 +64,8 @@ public class HelpCenterPanel extends JPanel {
     private JTextField                       searchField;
     private TableRowSorter<DefaultTableModel> sorter;
 
-    private JComboBox<String> scopeCombo;
+    private JComboBox<String> roleCombo;
+    private JButton           fileBtn;
     private JButton           deleteBtn;
 
     private int       sortedColumn     = -1;
@@ -81,6 +79,7 @@ public class HelpCenterPanel extends JPanel {
         UserAccount user  = Session.getCurrentUser();
         role              = (user == null) ? null : user.getRole();
         currentEmployeeId = (user == null) ? -1   : user.getEmployeeId();
+        viewAsRole        = (role == null) ? Role.EMPLOYEE : role;
 
         setLayout(new BorderLayout());
         setBackground(Color.WHITE);
@@ -105,12 +104,41 @@ public class HelpCenterPanel extends JPanel {
 
     // ── RBAC ──────────────────────────────────────────────────────────────────
     private void applyRBAC() {
-        canDeleteAny = (role == Role.ADMIN);
-        canApprove   = (role == Role.ADMIN || role == Role.HR
-                     || role == Role.IT   || role == Role.FINANCE);
+        updateModeUI();
+    }
 
-        if (scopeCombo != null) scopeCombo.setVisible(canApprove);
-        if (deleteBtn  != null) deleteBtn.setVisible(canDeleteAny);
+    /**
+     * Shows/hides the action buttons for the currently selected view role.
+     * Employee view → "File Dispute" button (everyone files as themselves).
+     * Privileged views (HR/IT/Finance/Admin) → resolving is done in the detail
+     * panel, so the file button is hidden. Delete stays Admin-only.
+     */
+    private void updateModeUI() {
+        boolean employeeView = (viewAsRole == Role.EMPLOYEE);
+        if (fileBtn   != null) fileBtn.setVisible(employeeView);
+        if (deleteBtn != null) deleteBtn.setVisible(role == Role.ADMIN);
+    }
+
+    /** The view-roles a given login may switch between (mirrors the Dashboard). */
+    private static String[] allowedViews(Role r) {
+        if (r == null) return new String[]{"Employee"};
+        return switch (r) {
+            case ADMIN   -> new String[]{"Admin", "HR", "IT", "Finance", "Employee"};
+            case HR      -> new String[]{"HR", "Employee"};
+            case IT      -> new String[]{"IT", "Employee"};
+            case FINANCE -> new String[]{"Finance", "Employee"};
+            default      -> new String[]{"Employee"};
+        };
+    }
+
+    private static Role parseView(String label) {
+        return switch (label) {
+            case "Admin"   -> Role.ADMIN;
+            case "HR"      -> Role.HR;
+            case "IT"      -> Role.IT;
+            case "Finance" -> Role.FINANCE;
+            default        -> Role.EMPLOYEE;
+        };
     }
 
     // ── data loading ──────────────────────────────────────────────────────────
@@ -120,25 +148,35 @@ public class HelpCenterPanel extends JPanel {
 
         try {
             String empIdStr = String.valueOf(currentEmployeeId);
-            boolean viewAll = viewingAll && canApprove;
 
-            if (!viewAll) {
+            if (viewAsRole == Role.EMPLOYEE) {
+                // Own tickets only — what the logged-in person filed.
                 loadedDisputes.addAll(infoSvc.findByEmployee(empIdStr));
                 loadedDisputes.addAll(payrollSvc.findByEmployee(empIdStr));
-            } else if (role == Role.ADMIN) {
+            } else if (viewAsRole == Role.ADMIN) {
+                // Admin sees everything (both HR- and IT-routed info + payroll).
                 loadedDisputes.addAll(infoSvc.findAll());
                 loadedDisputes.addAll(payrollSvc.findAll());
-            } else if (role == Role.HR) {
+            } else if (viewAsRole == Role.HR) {
+                // HR-routed information disputes only.
                 infoSvc.findAll().stream()
                        .filter(d -> HR_CATEGORIES.contains(d.getCategory()))
                        .forEach(loadedDisputes::add);
-            } else if (role == Role.IT) {
+            } else if (viewAsRole == Role.IT) {
+                // IT-routed information disputes only.
                 infoSvc.findAll().stream()
                        .filter(d -> IT_CATEGORIES.contains(d.getCategory()))
                        .forEach(loadedDisputes::add);
-            } else if (role == Role.FINANCE) {
+            } else if (viewAsRole == Role.FINANCE) {
+                // Payroll disputes are owned by Finance.
                 loadedDisputes.addAll(payrollSvc.findAll());
             }
+
+            // Latest on top, oldest at bottom. Dispute IDs are auto-increment,
+            // so a descending id sort is a reliable newest-first ordering even
+            // when several tickets share a date_filed (DATE has no time part).
+            loadedDisputes.sort(
+                    Comparator.comparingInt(Dispute::getDisputeIntId).reversed());
 
             for (Dispute d : loadedDisputes) {
                 int empId = Integer.parseInt(d.getEmployeeId());
@@ -195,12 +233,58 @@ public class HelpCenterPanel extends JPanel {
         body.setBorder(new EmptyBorder(17, 78, 40, 78));
 
         body.add(buildSearchRow());
+
+        // Role-view picker sits directly below the search field. Lower roles
+        // (plain Employee) only have a single view, so the picker is omitted
+        // for them — matching the Dashboard's behaviour.
+        JPanel rolePicker = buildRolePickerRow();
+        if (rolePicker != null) {
+            body.add(Box.createVerticalStrut(12));
+            body.add(rolePicker);
+        }
+
         body.add(Box.createVerticalStrut(15));
         body.add(buildControlRow());
         body.add(Box.createVerticalStrut(22));
         body.add(buildTablePanel());
 
         return body;
+    }
+
+    /**
+     * Dropdown that lets a privileged user switch which role's view they are
+     * looking at (e.g. Admin → HR / IT / Finance / Employee). Returns null when
+     * the user only has a single view, so no picker is shown.
+     */
+    private JPanel buildRolePickerRow() {
+        String[] views = allowedViews(role);
+        if (views.length <= 1) return null;
+
+        roleCombo = new JComboBox<>(views);
+        roleCombo.setPreferredSize(new Dimension(150, 38));
+        roleCombo.setMaximumSize(new Dimension(150, 38));
+        roleCombo.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        roleCombo.setBackground(Color.WHITE);
+        roleCombo.setFocusable(false);
+        roleCombo.addActionListener(e -> {
+            viewAsRole = parseView((String) roleCombo.getSelectedItem());
+            updateModeUI();
+            loadData();
+        });
+
+        JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        row.setOpaque(false);
+        row.setAlignmentX(Component.LEFT_ALIGNMENT);
+        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
+
+        JLabel lbl = new JLabel("Viewing as:");
+        lbl.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        lbl.setForeground(new Color(70, 80, 100));
+        lbl.setBorder(new EmptyBorder(0, 0, 0, 10));
+
+        row.add(lbl);
+        row.add(roleCombo);
+        return row;
     }
 
     private JPanel buildSearchRow() {
@@ -236,18 +320,7 @@ public class HelpCenterPanel extends JPanel {
             @Override public void keyReleased(KeyEvent e) { applySearchFilter(); }
         });
 
-        scopeCombo = new JComboBox<>(new String[]{"View All", "View Mine"});
-        scopeCombo.setPreferredSize(new Dimension(130, 38));
-        scopeCombo.setFont(new Font("SansSerif", Font.PLAIN, 13));
-        scopeCombo.setVisible(false); // shown after applyRBAC()
-        scopeCombo.addActionListener(e -> {
-            viewingAll = "View All".equals(scopeCombo.getSelectedItem());
-            loadData();
-        });
-
         row.add(searchField);
-        row.add(Box.createHorizontalStrut(12));
-        row.add(scopeCombo);
         return row;
     }
 
@@ -260,7 +333,9 @@ public class HelpCenterPanel extends JPanel {
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         buttons.setOpaque(false);
 
-        buttons.add(navyButton("+", "Add", 90, this::addTicket));
+        fileBtn = navyButton("+", "File Dispute", 135, this::addTicket);
+        fileBtn.setVisible(false); // shown after applyRBAC() — Employee view only
+        buttons.add(fileBtn);
 
         deleteBtn = navyButton("🗑", "Delete", 105, this::deleteTicket);
         deleteBtn.setVisible(false); // shown after applyRBAC()
@@ -378,8 +453,13 @@ public class HelpCenterPanel extends JPanel {
 
     // ── actions ───────────────────────────────────────────────────────────────
     private void addTicket() {
+        // The payroll-dispute picker lists the logged-in user's own payslips,
+        // already ordered latest → oldest by PayslipDAO.findByEmployeeId.
+        List<Payslip> myPayslips = AppContext.getPayrollService()
+                .findPayslipsByEmployee(String.valueOf(currentEmployeeId));
+
         AddDisputeDialog dlg = new AddDisputeDialog(
-                SwingUtilities.getWindowAncestor(this), infoSvc, payrollSvc);
+                SwingUtilities.getWindowAncestor(this), infoSvc, payrollSvc, myPayslips);
         dlg.setVisible(true);
         if (dlg.wasSubmitted()) loadData();
     }
@@ -445,7 +525,9 @@ public class HelpCenterPanel extends JPanel {
         int    empId  = Integer.parseInt(d.getEmployeeId());
         String empName = empNameCache.getOrDefault(empId, "Unknown");
 
-        detailPanel.load(d, empName, role);
+        // Resolve rights follow the *selected* view, not just the login: an
+        // Admin browsing "Employee" view acts as an employee (no resolve).
+        detailPanel.load(d, empName, viewAsRole);
         rootCard.show(rootPanel, DETAIL_CARD);
     }
 
@@ -469,9 +551,10 @@ public class HelpCenterPanel extends JPanel {
 
         AddDisputeDialog(Window owner,
                          InformationDisputeService infoSvc,
-                         PayrollDisputeService payrollSvc) {
+                         PayrollDisputeService payrollSvc,
+                         List<Payslip> payslips) {
             super(owner, "File a Dispute", ModalityType.APPLICATION_MODAL);
-            setSize(460, 420);
+            setSize(460, 480);
             setLocationRelativeTo(owner);
             setLayout(new BorderLayout());
             getContentPane().setBackground(Color.WHITE);
@@ -482,8 +565,26 @@ public class HelpCenterPanel extends JPanel {
             typeCombo.setFont(new Font("SansSerif", Font.PLAIN, 13));
 
             // -- info fields --
-            JComboBox<String> categoryCombo = new JComboBox<>(buildCategoryItems());
+            // The employee first picks WHERE the issue goes (HR vs IT); the
+            // category list is then filtered to that department. The chosen
+            // category is what actually routes the ticket in the DB — no extra
+            // column needed, since HR_CATEGORIES / IT_CATEGORIES already map a
+            // category to its owning department.
+            JComboBox<String> sendToCombo = new JComboBox<>(
+                    new String[]{"HR Department", "IT Department"});
+            sendToCombo.setFont(new Font("SansSerif", Font.PLAIN, 13));
+
+            JComboBox<String> categoryCombo = new JComboBox<>();
             categoryCombo.setFont(new Font("SansSerif", Font.PLAIN, 13));
+
+            Runnable refreshCategories = () -> {
+                categoryCombo.removeAllItems();
+                Set<String> cats = sendToCombo.getSelectedIndex() == 0
+                        ? HR_CATEGORIES : IT_CATEGORIES;
+                cats.stream().sorted().forEach(categoryCombo::addItem);
+            };
+            sendToCombo.addActionListener(e -> refreshCategories.run());
+            refreshCategories.run();
 
             JTextField targetField = new JTextField();
             targetField.setFont(new Font("SansSerif", Font.PLAIN, 13));
@@ -491,18 +592,41 @@ public class HelpCenterPanel extends JPanel {
             JPanel infoFields = new JPanel();
             infoFields.setOpaque(false);
             infoFields.setLayout(new BoxLayout(infoFields, BoxLayout.Y_AXIS));
+            infoFields.add(labelRow("Send To*", sendToCombo));
+            infoFields.add(Box.createVerticalStrut(8));
             infoFields.add(labelRow("Category*", categoryCombo));
             infoFields.add(Box.createVerticalStrut(8));
             infoFields.add(labelRow("Target Field (optional)", targetField));
 
             // -- payroll fields --
-            JTextField payslipField = new JTextField();
-            payslipField.setFont(new Font("SansSerif", Font.PLAIN, 13));
+            // Payslip is chosen from the user's own payslips (latest → oldest),
+            // and the dispute is keyed by the payslip ID, not a typed number.
+            JComboBox<Payslip> payslipCombo = new JComboBox<>();
+            payslipCombo.setFont(new Font("SansSerif", Font.PLAIN, 13));
+            payslips.forEach(payslipCombo::addItem);
+            payslipCombo.setRenderer(new DefaultListCellRenderer() {
+                @Override
+                public Component getListCellRendererComponent(JList<?> list, Object value,
+                        int index, boolean sel, boolean foc) {
+                    super.getListCellRendererComponent(list, value, index, sel, foc);
+                    if (value instanceof Payslip p) {
+                        setText(p.getPayslipId() + "   (" + p.getPeriodStart()
+                                + " – " + p.getPeriodEnd() + ")");
+                    }
+                    return this;
+                }
+            });
 
             JPanel payrollFields = new JPanel();
             payrollFields.setOpaque(false);
             payrollFields.setLayout(new BoxLayout(payrollFields, BoxLayout.Y_AXIS));
-            payrollFields.add(labelRow("Payslip Number*", payslipField));
+            // Pin the picker row to its natural height and let glue soak up the
+            // rest, so the combo stays the same height as the Dispute Type one.
+            JPanel payslipRow = labelRow("Payslip ID*", payslipCombo);
+            payslipRow.setMaximumSize(new Dimension(
+                    Integer.MAX_VALUE, payslipRow.getPreferredSize().height));
+            payrollFields.add(payslipRow);
+            payrollFields.add(Box.createVerticalGlue());
 
             // -- card panel for type-specific fields --
             CardLayout cl = new CardLayout();
@@ -510,12 +634,16 @@ public class HelpCenterPanel extends JPanel {
             typeCards.setOpaque(false);
             typeCards.add(infoFields,    "INFO");
             typeCards.add(payrollFields, "PAYROLL");
+            // Cap the card area to its natural height so the dialog's spare
+            // vertical space flows into the Reason box, not the dropdowns.
+            typeCards.setMaximumSize(new Dimension(
+                    Integer.MAX_VALUE, typeCards.getPreferredSize().height));
 
             typeCombo.addActionListener(e ->
                 cl.show(typeCards, typeCombo.getSelectedIndex() == 0 ? "INFO" : "PAYROLL"));
 
             // -- reason --
-            JTextArea reasonArea = new JTextArea(4, 30);
+            JTextArea reasonArea = new JTextArea(8, 30);
             reasonArea.setLineWrap(true);
             reasonArea.setWrapStyleWord(true);
             reasonArea.setFont(new Font("SansSerif", Font.PLAIN, 13));
@@ -527,7 +655,13 @@ public class HelpCenterPanel extends JPanel {
             form.setBackground(Color.WHITE);
             form.setBorder(new EmptyBorder(16, 24, 10, 24));
 
-            form.add(labelRow("Dispute Type", typeCombo));
+            // Pin the type row too; the Reason row is left unbounded so it is
+            // the only component that grows to fill the dialog.
+            JPanel typeRow = labelRow("Dispute Type", typeCombo);
+            typeRow.setMaximumSize(new Dimension(
+                    Integer.MAX_VALUE, typeRow.getPreferredSize().height));
+
+            form.add(typeRow);
             form.add(Box.createVerticalStrut(12));
             form.add(typeCards);
             form.add(Box.createVerticalStrut(12));
@@ -557,12 +691,13 @@ public class HelpCenterPanel extends JPanel {
                         if (target.isBlank()) target = cat.toLowerCase().replace(" ", "_");
                         infoSvc.fileDispute(reason, cat, target);
                     } else {
-                        String ps = payslipField.getText().trim();
-                        if (ps.isBlank()) {
-                            JOptionPane.showMessageDialog(this, "Payslip number is required.");
+                        Payslip selected = (Payslip) payslipCombo.getSelectedItem();
+                        if (selected == null) {
+                            JOptionPane.showMessageDialog(this,
+                                    "You have no payslips available to dispute.");
                             return;
                         }
-                        payrollSvc.fileDisputeByPayslipNumber(ps, reason);
+                        payrollSvc.fileDispute(selected, reason);
                     }
                     submitted = true;
                     JOptionPane.showMessageDialog(this, "Dispute filed successfully.");
@@ -580,13 +715,6 @@ public class HelpCenterPanel extends JPanel {
 
             add(form,   BorderLayout.CENTER);
             add(btnRow, BorderLayout.SOUTH);
-        }
-
-        private static String[] buildCategoryItems() {
-            return Stream.concat(
-                    IT_CATEGORIES.stream().sorted(),
-                    HR_CATEGORIES.stream().sorted())
-                    .toArray(String[]::new);
         }
 
         private static JPanel labelRow(String label, JComponent comp) {
