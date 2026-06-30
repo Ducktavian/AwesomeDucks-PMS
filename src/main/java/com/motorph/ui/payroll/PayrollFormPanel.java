@@ -6,6 +6,7 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.Cursor;
+import java.awt.Dialog;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
@@ -14,24 +15,41 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Image;
 import java.awt.Insets;
 import java.awt.RenderingHints;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.net.URL;
+import java.time.LocalDate;
+import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
+import java.time.format.ResolverStyle;
+import java.util.List;
 
 import javax.swing.Box;
+import javax.swing.DefaultListCellRenderer;
 import javax.swing.Icon;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
+import javax.swing.JDialog;
 import javax.swing.JLabel;
+import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
 import javax.swing.border.AbstractBorder;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
+
+import com.motorph.model.Employee;
+import com.motorph.service.EmployeeService;
+import com.motorph.util.AppContext;
 
 public class PayrollFormPanel extends JPanel {
 
@@ -42,7 +60,18 @@ public class PayrollFormPanel extends JPanel {
     private static final Color TEXT_MUTED = new Color(120, 120, 120);
     private static final String FONT = "Segoe UI";
 
+    private static final String SAVE_ICON_PATH = "/com/motorph/img/Save-Icon.png";
+
+    private static final DateTimeFormatter DATE_FORMATTER =
+            DateTimeFormatter.ofPattern("MM-dd-uuuu").withResolverStyle(ResolverStyle.STRICT);
+
     private final Runnable onBack;
+    private final EmployeeService employeeService = AppContext.getEmployeeService();
+
+    private JComboBox<Employee> employeeCombo;
+    private JTextField payrollDateField;
+    private JButton dateButton;
+    private JComboBox<String> payrollPeriodCombo;
 
     public PayrollFormPanel(Runnable onBack) {
         this.onBack = onBack;
@@ -115,18 +144,20 @@ public class PayrollFormPanel extends JPanel {
 
         return wrapper;
     }
-    
+
     private JPanel createLeftColumn() {
         JPanel col = new JPanel(new GridBagLayout());
         col.setOpaque(false);
 
         int row = 0;
 
-        addFormRow(col, row++, "Employee Name:", createTextField());
-        addFormRow(col, row++, "Employee ID:", createTextField());
+        // FIX 1: "Employee:" now has a trailing colon so addFormRow's
+        // labelText.endsWith(":") check bolds it, matching "Payroll Date:"
+        // and "Payroll Period:" on the right column.
+        addFormRow(col, row++, "Employee:", createEmployeeCombo());
 
         addSpacer(col, row++, 16);
-        addSectionTitle(col, row++, "Earnings");
+        addSectionTitle(col, row++, "Earning");
 
         addFormRow(col, row++, "Basic Salary", createTextField());
         addFormRow(col, row++, "Hours Worked", createTextField());
@@ -135,7 +166,7 @@ public class PayrollFormPanel extends JPanel {
         addFormRow(col, row++, "Holiday", createTextField());
 
         addSpacer(col, row++, 16);
-        addSectionTitle(col, row++, "Benefits");
+        addSectionTitle(col, row++, "Allowance");
 
         addFormRow(col, row++, "Rice Subsidy", createTextField());
         addFormRow(col, row++, "Phone Allowance", createTextField());
@@ -144,7 +175,7 @@ public class PayrollFormPanel extends JPanel {
 
         addSpacer(col, row++, 12);
         addEmphasisFormRow(col, row++, "Gross Pay", createTextField());
-        
+
         GridBagConstraints pushDown = new GridBagConstraints();
         pushDown.gridx = 0;
         pushDown.gridy = row;
@@ -162,11 +193,11 @@ public class PayrollFormPanel extends JPanel {
 
         int row = 0;
 
-        addFormRow(col, row++, "Payroll Date:", createTextField());
-        addFormRow(col, row++, "Payroll Period:", createTextField());
+        addFormRow(col, row++, "Payroll Date:", createDateField());
+        addFormRow(col, row++, "Payroll Period:", createPeriodCombo());
 
         addSpacer(col, row++, 16);
-        addSectionTitle(col, row++, "Deductions");
+        addSectionTitle(col, row++, "Deduction");
 
         addFormRow(col, row++, "Withholding Tax", createTextField());
         addFormRow(col, row++, "SSS", createTextField());
@@ -178,7 +209,7 @@ public class PayrollFormPanel extends JPanel {
 
         addSpacer(col, row++, 16);
         addEmphasisFormRow(col, row++, "Net Pay", createTextField());
-        
+
         GridBagConstraints pushDown = new GridBagConstraints();
         pushDown.gridx = 0;
         pushDown.gridy = row;
@@ -188,7 +219,7 @@ public class PayrollFormPanel extends JPanel {
         col.add(Box.createVerticalGlue(), pushDown);
 
         return col;
-    }     
+    }
 
     private void addSectionTitle(JPanel parent, int row, String title) {
         GridBagConstraints gbc = baseGbc(row);
@@ -262,12 +293,287 @@ public class PayrollFormPanel extends JPanel {
         return field;
     }
 
+    // ---------------------------------------------------------------
+    // Employee: combined "ID — Name" dropdown
+    // ---------------------------------------------------------------
+
+    private JComboBox<Employee> createEmployeeCombo() {
+        employeeCombo = new JComboBox<>();
+        employeeCombo.setFont(new Font(FONT, Font.PLAIN, 13));
+        employeeCombo.setPreferredSize(new Dimension(220, 30));
+        employeeCombo.setMinimumSize(new Dimension(160, 30));
+        employeeCombo.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
+        employeeCombo.setBackground(new Color(165, 196, 228));
+        employeeCombo.setOpaque(true);
+        employeeCombo.setFocusable(false);
+        employeeCombo.setBorder(new CompoundBorder(
+                new RoundedBorder(7, FIELD_BORDER),
+                new EmptyBorder(0, 4, 0, 4)
+        ));
+
+        employeeCombo.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value,
+                    int index, boolean isSelected, boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+
+                if (value instanceof Employee emp) {
+                    setText(formatEmployeeLabel(emp));
+                }
+
+                if (!isSelected) {
+                    setBackground(Color.WHITE);
+                }
+
+                return this;
+            }
+        });
+
+        loadEmployeesIntoCombo();
+
+        return employeeCombo;
+    }
+
+    private void loadEmployeesIntoCombo() {
+        if (employeeService == null) {
+            return;
+        }
+
+        List<Employee> employees = employeeService.getAllEmployees();
+
+        if (employees == null) {
+            return;
+        }
+
+        for (Employee emp : employees) {
+            employeeCombo.addItem(emp);
+        }
+    }
+
+    private String formatEmployeeLabel(Employee emp) {
+        String id = emp.getEmployeeId() == null ? "" : emp.getEmployeeId();
+        String first = emp.getFirstName() == null ? "" : emp.getFirstName();
+        String last = emp.getLastName() == null ? "" : emp.getLastName();
+        return id + " \u2014 " + (first + " " + last).trim();
+    }
+
+    /**
+     * Currently selected employee, or null if nothing is selected yet.
+     * Wire this up wherever the form needs to read which employee the
+     * payroll run is for (e.g. on Submit / Save PDF).
+     */
+    public Employee getSelectedEmployee() {
+        return employeeCombo == null ? null : (Employee) employeeCombo.getSelectedItem();
+    }
+
+
+
+    private JPanel createDateField() {
+        JPanel wrap = new JPanel(new BorderLayout(6, 0));
+        wrap.setOpaque(false);
+        wrap.setPreferredSize(new Dimension(180, 26));
+        wrap.setMinimumSize(new Dimension(120, 26));
+        wrap.setMaximumSize(new Dimension(Integer.MAX_VALUE, 26));
+
+        payrollDateField = createTextField();
+        payrollDateField.setEditable(false);
+        payrollDateField.setFocusable(false);
+        payrollDateField.setText("");
+
+        dateButton = new JButton("\uD83D\uDCC5"); // 📅
+        dateButton.setFont(new Font(FONT, Font.PLAIN, 11));
+        dateButton.setPreferredSize(new Dimension(34, 26));
+        dateButton.setBackground(Color.WHITE);
+        dateButton.setFocusPainted(false);
+        dateButton.setBorder(new CompoundBorder(
+                new RoundedBorder(7, FIELD_BORDER),
+                new EmptyBorder(2, 6, 2, 6)
+        ));
+        dateButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        dateButton.addActionListener(e -> openDatePicker());
+
+        wrap.add(payrollDateField, BorderLayout.CENTER);
+        wrap.add(dateButton, BorderLayout.EAST);
+
+        return wrap;
+    }
+
+    private void openDatePicker() {
+        LocalDate initialDate = LocalDate.now();
+
+        try {
+            String current = payrollDateField.getText().trim();
+            if (!current.isBlank()) {
+                initialDate = LocalDate.parse(current, DATE_FORMATTER);
+            }
+        } catch (Exception ignored) {
+        }
+
+        showCalendarDialog(initialDate);
+    }
+
+    /**
+     * Calendar popup for selecting the Payroll Date.
+     *
+     * NOTE: this mirrors the date picker used in EmployeeFormPanel, but fixes
+     * the bug where it was found there: that version used a hardcoded
+     * dialog.setSize(360, 350) together with an auto-row GridLayout(0, 7),
+     * so months that need 6 week-rows (most months where the 1st doesn't
+     * fall on Sunday) ran out of vertical space and the last row of day
+     * buttons got clipped outside the visible dialog (unreachable/unclickable).
+     * Here the grid always reserves a fixed 7 rows (1 header + 6 week rows)
+     * and the dialog is sized with pack() instead of a hardcoded size, so it
+     * always fits every row regardless of month.
+     */
+    private void showCalendarDialog(LocalDate initialDate) {
+        JDialog dialog = new JDialog(
+                SwingUtilities.getWindowAncestor(this),
+                "Select Payroll Date",
+                Dialog.ModalityType.APPLICATION_MODAL
+        );
+
+        dialog.setLayout(new BorderLayout());
+        dialog.getContentPane().setBackground(Color.WHITE);
+
+        final YearMonth[] currentMonth = {YearMonth.from(initialDate)};
+
+        JPanel header = new JPanel(new BorderLayout());
+        header.setBackground(Color.WHITE);
+        header.setBorder(new EmptyBorder(12, 12, 8, 12));
+
+        JButton prevButton = new JButton("\u2039");
+        JButton nextButton = new JButton("\u203A");
+
+        JLabel monthLabel = new JLabel("", SwingConstants.CENTER);
+        monthLabel.setFont(new Font(FONT, Font.BOLD, 18));
+
+        styleCalendarButton(prevButton);
+        styleCalendarButton(nextButton);
+
+        header.add(prevButton, BorderLayout.WEST);
+        header.add(monthLabel, BorderLayout.CENTER);
+        header.add(nextButton, BorderLayout.EAST);
+
+        // Fixed 7 rows: 1 header row + 6 week rows, always reserved so the
+        // dialog never needs to clip the final week of a 6-row month.
+        JPanel calendarPanel = new JPanel(new GridLayout(7, 7, 6, 6));
+        calendarPanel.setBackground(Color.WHITE);
+        calendarPanel.setBorder(new EmptyBorder(8, 12, 12, 12));
+        calendarPanel.setPreferredSize(new Dimension(320, 280));
+
+        Runnable refreshCalendar = () -> {
+            calendarPanel.removeAll();
+
+            monthLabel.setText(currentMonth[0].getMonth() + " " + currentMonth[0].getYear());
+
+            String[] days = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
+
+            for (String day : days) {
+                JLabel dayLabel = new JLabel(day, SwingConstants.CENTER);
+                dayLabel.setFont(new Font(FONT, Font.BOLD, 12));
+                dayLabel.setForeground(TEXT_DARK);
+                calendarPanel.add(dayLabel);
+            }
+
+            LocalDate firstDay = currentMonth[0].atDay(1);
+            int startOffset = firstDay.getDayOfWeek().getValue() % 7;
+
+            for (int i = 0; i < startOffset; i++) {
+                calendarPanel.add(new JLabel(""));
+            }
+
+            int daysInMonth = currentMonth[0].lengthOfMonth();
+
+            for (int day = 1; day <= daysInMonth; day++) {
+                LocalDate selectedDate = currentMonth[0].atDay(day);
+
+                // FIX 2: day buttons now explicitly set foreground, are
+                // opaque, have trimmed margins, and a guaranteed minimum
+                // size so the digit text can never be squeezed out / hidden
+                // by the look-and-feel or by GridLayout cell sizing.
+                JButton dayButton = new JButton(String.valueOf(day));
+                dayButton.setFont(new Font(FONT, Font.PLAIN, 13));
+                dayButton.setForeground(TEXT_DARK);
+                dayButton.setBackground(Color.WHITE);
+                dayButton.setOpaque(true);
+                dayButton.setFocusPainted(false);
+                dayButton.setMargin(new Insets(2, 2, 2, 2));
+                dayButton.setPreferredSize(new Dimension(38, 32));
+                dayButton.setMinimumSize(new Dimension(38, 32));
+                dayButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+                if (selectedDate.equals(initialDate)) {
+                    dayButton.setBackground(new Color(225, 230, 245));
+                }
+
+                dayButton.addActionListener(e -> {
+                    payrollDateField.setText(selectedDate.format(DateTimeFormatter.ofPattern("MM-dd-yyyy")));
+                    payrollDateField.setForeground(TEXT_DARK);
+                    dialog.dispose();
+                });
+
+                calendarPanel.add(dayButton);
+            }
+
+            // Pad out remaining cells so the grid always has exactly 7 rows,
+            // keeping the dialog size (and pack()) consistent across months.
+            int filledCells = startOffset + daysInMonth;
+            int totalCells = 7 * 7; // header row + 6 week rows
+            for (int i = filledCells; i < totalCells - 7; i++) {
+                calendarPanel.add(new JLabel(""));
+            }
+
+            calendarPanel.revalidate();
+            calendarPanel.repaint();
+        };
+
+        prevButton.addActionListener(e -> {
+            currentMonth[0] = currentMonth[0].minusMonths(1);
+            refreshCalendar.run();
+        });
+
+        nextButton.addActionListener(e -> {
+            currentMonth[0] = currentMonth[0].plusMonths(1);
+            refreshCalendar.run();
+        });
+
+        refreshCalendar.run();
+
+        dialog.add(header, BorderLayout.NORTH);
+        dialog.add(calendarPanel, BorderLayout.CENTER);
+        dialog.pack();
+        dialog.setLocationRelativeTo(this);
+        dialog.setVisible(true);
+    }
+
+    private void styleCalendarButton(JButton button) {
+        button.setPreferredSize(new Dimension(45, 32));
+        button.setBackground(Color.WHITE);
+        button.setForeground(NAVY);
+        button.setFocusPainted(false);
+        button.setFont(new Font(FONT, Font.BOLD, 22));
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+    }
+
+    // ---------------------------------------------------------------
+    // Payroll Period: dropdown (1st Cutoff / 2nd Cutoff)
+    // ---------------------------------------------------------------
+
+    private JComboBox<String> createPeriodCombo() {
+        payrollPeriodCombo = new JComboBox<>(new String[]{"1st Cutoff", "2nd Cutoff"});
+        payrollPeriodCombo.setFont(new Font(FONT, Font.PLAIN, 12));
+        payrollPeriodCombo.setPreferredSize(new Dimension(180, 26));
+        payrollPeriodCombo.setBackground(Color.WHITE);
+        payrollPeriodCombo.setFocusable(false);
+        return payrollPeriodCombo;
+    }
+
     private JPanel createBonusRow() {
         JPanel row = new JPanel(new BorderLayout(10, 0));
         row.setOpaque(false);
 
         JComboBox<String> bonusType = new JComboBox<>(new String[]{
-            "Bonus Type","Performance", "13th Month", "Other"
+            "Bonus Type", "Performance", "13th Month", "Other"
         });
         bonusType.setFont(new Font(FONT, Font.PLAIN, 11));
         bonusType.setPreferredSize(new Dimension(105, 26));
@@ -287,8 +593,8 @@ public class PayrollFormPanel extends JPanel {
         row.setOpaque(false);
         row.setBorder(new EmptyBorder(6, 0, 0, 0));
 
-        JButton savePdf = navyButton("⇩  Save PDF");
-        JButton submit = navyButton("Submit");
+        JButton savePdf = navyButton("Save PDF", loadSaveIcon());
+        JButton submit = navyButton("Submit", null);
 
         row.add(savePdf);
         row.add(submit);
@@ -296,7 +602,24 @@ public class PayrollFormPanel extends JPanel {
         return row;
     }
 
-    private JButton navyButton(String text) {
+    /**
+     * Loads Save-Icon.png as a classpath resource, consistent with how the
+     * rest of the codebase loads icons (e.g. Add-Icon.png, Update-Icon.png)
+     * via getClass().getResource(...) rather than an absolute file path.
+     */
+    private Icon loadSaveIcon() {
+        URL iconUrl = getClass().getResource(SAVE_ICON_PATH);
+
+        if (iconUrl == null) {
+            return null;
+        }
+
+        ImageIcon raw = new ImageIcon(iconUrl);
+        Image scaled = raw.getImage().getScaledInstance(16, 16, Image.SCALE_SMOOTH);
+        return new ImageIcon(scaled);
+    }
+
+    private JButton navyButton(String text, Icon icon) {
         JButton button = new JButton(text) {
             @Override
             protected void paintComponent(Graphics g) {
@@ -320,13 +643,28 @@ public class PayrollFormPanel extends JPanel {
                 g2.setFont(new Font(FONT, Font.PLAIN, 13));
 
                 FontMetrics fm = g2.getFontMetrics();
-                int x = (getWidth() - fm.stringWidth(getText())) / 2;
+                Icon ic = getIcon();
+                int textWidth = fm.stringWidth(getText());
+                int iconWidth = ic != null ? ic.getIconWidth() + 6 : 0;
+                int contentWidth = textWidth + iconWidth;
+
+                int startX = (getWidth() - contentWidth) / 2;
                 int y = (getHeight() + fm.getAscent() - fm.getDescent()) / 2;
 
-                g2.drawString(getText(), x, y);
+                if (ic != null) {
+                    int iconY = (getHeight() - ic.getIconHeight()) / 2;
+                    ic.paintIcon(this, g2, startX, iconY);
+                    startX += iconWidth;
+                }
+
+                g2.drawString(getText(), startX, y);
                 g2.dispose();
             }
         };
+
+        if (icon != null) {
+            button.setIcon(icon);
+        }
 
         button.setPreferredSize(new Dimension(125, 36));
         button.setForeground(Color.WHITE);
@@ -405,7 +743,7 @@ public class PayrollFormPanel extends JPanel {
             return new Insets(4, 8, 4, 8);
         }
     }
-    
+
     private void addEmphasisFormRow(JPanel parent, int row, String labelText, JComponent field) {
         GridBagConstraints labelGbc = baseGbc(row);
         labelGbc.gridx = 0;
@@ -428,7 +766,7 @@ public class PayrollFormPanel extends JPanel {
 
         parent.add(field, fieldGbc);
     }
-    
+
     public PayrollFormPanel(Runnable onBack, boolean viewOnly) {
         this(onBack);
 
@@ -437,7 +775,7 @@ public class PayrollFormPanel extends JPanel {
             setFieldsEditable(false);
         }
     }
-    
+
     private void hideSubmitButton() {
         hideButtonRecursive(this, "Submit");
     }
@@ -463,6 +801,11 @@ public class PayrollFormPanel extends JPanel {
     }
 
     private void setEditableRecursive(Component component, boolean editable) {
+        if (component == dateButton) {
+            component.setEnabled(editable);
+            return;
+        }
+
         if (component instanceof JTextField) {
             ((JTextField) component).setEditable(editable);
         } else if (component instanceof JTextArea) {
