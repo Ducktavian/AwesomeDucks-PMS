@@ -60,7 +60,7 @@ mvn compile exec:java
 |----------|------------------------|----------|
 | Admin    | manueliii.garcia       | 10001M   |
 | Finance  | biancasofia.aquino     | 10003B   |
-| IT       | eduard.hernancez       | 10005E   |
+| IT       | eduard.hernandez       | 10005E   |
 | HR       | brad.sanjose           | 10007B   |
 | Employee | christian.mata         | 10016C   |
 
