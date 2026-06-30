@@ -1,10 +1,37 @@
 package com.motorph.ui.payroll;
 
-import java.awt.*;
+import java.awt.BasicStroke;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Container;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.awt.RenderingHints;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import javax.swing.*;
-import javax.swing.border.*;
+
+import javax.swing.Box;
+import javax.swing.Icon;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JComponent;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
+import javax.swing.SwingConstants;
+import javax.swing.border.AbstractBorder;
+import javax.swing.border.CompoundBorder;
+import javax.swing.border.EmptyBorder;
 
 public class PayrollFormPanel extends JPanel {
 
@@ -240,7 +267,7 @@ public class PayrollFormPanel extends JPanel {
         row.setOpaque(false);
 
         JComboBox<String> bonusType = new JComboBox<>(new String[]{
-            "Bonus Type", "Performance", "Holiday", "13th Month", "Other"
+            "Bonus Type","Performance", "13th Month", "Other"
         });
         bonusType.setFont(new Font(FONT, Font.PLAIN, 11));
         bonusType.setPreferredSize(new Dimension(105, 26));

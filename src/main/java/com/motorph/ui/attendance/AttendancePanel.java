@@ -1,20 +1,64 @@
 package com.motorph.ui.attendance;
 
-import com.motorph.model.Attendance;         
-import com.motorph.model.Role;
-import com.motorph.model.UserAccount;
-import com.motorph.service.AttendanceService;  
-import com.motorph.util.AppContext;          
-import com.motorph.util.Session;
-
-import java.awt.*;
-import java.awt.event.*;
-import java.time.format.DateTimeFormatter;    
+import java.awt.BorderLayout;         
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Container;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.Insets;
+import java.awt.RenderingHints;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import javax.swing.*;
-import javax.swing.border.*;
-import javax.swing.table.*;
+
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
+import javax.swing.ListSelectionModel;
+import javax.swing.RowFilter;
+import javax.swing.RowSorter;
+import javax.swing.SortOrder;
+import javax.swing.SwingConstants;
+import javax.swing.border.AbstractBorder;
+import javax.swing.border.CompoundBorder;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.MatteBorder;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.JTableHeader;
+import javax.swing.table.TableCellRenderer;
+import javax.swing.table.TableColumnModel;
+import javax.swing.table.TableRowSorter;
+
+import com.motorph.model.Attendance;
+import com.motorph.model.Role;
+import com.motorph.model.UserAccount;
+import com.motorph.service.AttendanceService;
+import com.motorph.util.AppContext;          
+import com.motorph.util.Session;
 
 public class AttendancePanel extends JPanel {
 
@@ -28,7 +72,7 @@ public class AttendancePanel extends JPanel {
     private static final String VIEW_MINE = "View Mine";
 
     private static final String[] COLUMNS = {
-        "Employee ID", "Type", "Date", "Time In", "Break Out", "Break In",
+        "Employee ID", "Type", "Date", "Time In",
         "Time Out", "Total Hours Worked", "Validity"
     };
 
@@ -128,8 +172,7 @@ public class AttendancePanel extends JPanel {
     }
 
     // NEW: maps one Attendance record into the table-row format this panel expects.
-    // Break Out / Break In and Type ay wala pa,
-    // so those cells are left blank.
+    // Type ay wala pa, so that cell is left blank.
     private Object[] toTableRow(Attendance a) {
         double hours = attendanceService.computeDailyHours(a);
         boolean complete = a.getLogIn() != null && a.getLogOut() != null;
@@ -139,8 +182,6 @@ public class AttendancePanel extends JPanel {
             "",                                       // Type (not modeled yet)
             a.getDate() == null ? "" : a.getDate().format(DATE_FMT),
             a.getLogIn() == null ? "" : a.getLogIn().format(TIME_FMT),
-            "",                                       // Break Out (not modeled yet)
-            "",                                       // Break In (not modeled yet)
             a.getLogOut() == null ? "" : a.getLogOut().format(TIME_FMT),
             complete ? hours + " hrs" : "",
             complete ? "Valid" : "Invalid"
@@ -535,7 +576,7 @@ public class AttendancePanel extends JPanel {
     }
 
     private void styleColumns() {
-        int[] widths = {120, 100, 140, 95, 95, 95, 95, 150, 105};
+        int[] widths = {120, 100, 140, 95, 95, 150, 105};
         TableColumnModel columns = attendanceTable.getColumnModel();
 
         for (int i = 0; i < widths.length; i++) {
@@ -545,7 +586,7 @@ public class AttendancePanel extends JPanel {
 
     private void styleCells() {
         for (int i = 0; i < attendanceTable.getColumnCount(); i++) {
-            if (i == 8) {
+            if (i == 6) {
                 attendanceTable.getColumnModel().getColumn(i).setCellRenderer(new ValidityRenderer());
             } else {
                 attendanceTable.getColumnModel().getColumn(i).setCellRenderer(new DefaultAttendanceCellRenderer());
