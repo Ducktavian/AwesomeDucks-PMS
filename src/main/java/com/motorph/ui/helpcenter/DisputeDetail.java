@@ -24,7 +24,7 @@ public class DisputeDetail extends JPanel {
     private final JTextField  employeeField  = styledField();
     private final JTextField  typeField      = styledField();   // type + category
     private final JTextArea   descArea       = styledTextArea();
-    private final JComboBox<String> statusBox = styledCombo(new String[]{"Pending", "Resolved"});
+    private final JTextField  statusField = styledField();
     private JButton resolveBtn;
 
     private Dispute currentDispute;
@@ -60,7 +60,7 @@ public class DisputeDetail extends JPanel {
         }
 
         descArea.setText(d.getReason());
-        statusBox.setSelectedItem(d.getStatus() == DisputeStatus.RESOLVED ? "Resolved" : "Pending");
+        statusField.setText(d.getStatus() == DisputeStatus.RESOLVED ? "Resolved" : "Pending");
 
         boolean canResolve = canResolveDispute(d, viewerRole)
                 && d.getStatus() != DisputeStatus.RESOLVED;
@@ -148,13 +148,13 @@ public class DisputeDetail extends JPanel {
         descPanel.add(descScroll, BorderLayout.CENTER);
         form.add(descPanel, c);
 
-        // Status (read-only display)
+        // Status (read-only display). A disabled JComboBox renders its text in
+        // the L&F's washed-out (blue/grey) disabled colour and ignores
+        // setForeground, so we use a read-only field to guarantee black text.
         c.gridx = 1; c.gridy = 3; c.gridheight = 1;
         c.fill = GridBagConstraints.HORIZONTAL; c.weighty = 0;
-        statusBox.setEnabled(false);
-        statusBox.setForeground(Color.BLACK);
-        statusBox.setBackground(READONLY_BG);
-        form.add(labeledCombo("Status", statusBox), c);
+        makeReadOnly(statusField);
+        form.add(labeledField("Status", statusField), c);
 
         // Resolve button
         c.gridx = 1; c.gridy = 4;
@@ -192,7 +192,7 @@ public class DisputeDetail extends JPanel {
             } else if (currentDispute instanceof PayrollDispute pd) {
                 payrollSvc.resolveDispute(pd);
             }
-            statusBox.setSelectedItem("Resolved");
+            statusField.setText("Resolved");
             resolveBtn.setVisible(false);
             JOptionPane.showMessageDialog(this, "Dispute resolved successfully.");
             if (onBack != null) onBack.run(); // refresh list and go back
@@ -250,17 +250,6 @@ public class DisputeDetail extends JPanel {
         return p;
     }
 
-    private JPanel labeledCombo(String label, JComboBox<String> combo) {
-        JPanel p = new JPanel(new BorderLayout(0, 4));
-        p.setOpaque(false);
-        JLabel lbl = new JLabel(label);
-        lbl.setFont(new Font("SansSerif", Font.PLAIN, 12));
-        lbl.setForeground(new Color(50, 60, 80));
-        p.add(lbl, BorderLayout.NORTH);
-        p.add(combo, BorderLayout.CENTER);
-        return p;
-    }
-
     private static JTextField styledField() {
         JTextField f = new JTextField();
         f.setFont(new Font("SansSerif", Font.PLAIN, 13));
@@ -282,11 +271,4 @@ public class DisputeDetail extends JPanel {
         return ta;
     }
 
-    private static JComboBox<String> styledCombo(String[] items) {
-        JComboBox<String> cb = new JComboBox<>(items);
-        cb.setFont(new Font("SansSerif", Font.PLAIN, 13));
-        cb.setBackground(FIELD_BG);
-        cb.setPreferredSize(new Dimension(240, 36));
-        return cb;
-    }
 }

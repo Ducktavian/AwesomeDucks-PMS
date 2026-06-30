@@ -453,8 +453,13 @@ public class HelpCenterPanel extends JPanel {
 
     // ── actions ───────────────────────────────────────────────────────────────
     private void addTicket() {
+        // The payroll-dispute picker lists the logged-in user's own payslips,
+        // already ordered latest → oldest by PayslipDAO.findByEmployeeId.
+        List<Payslip> myPayslips = AppContext.getPayrollService()
+                .findPayslipsByEmployee(String.valueOf(currentEmployeeId));
+
         AddDisputeDialog dlg = new AddDisputeDialog(
-                SwingUtilities.getWindowAncestor(this), infoSvc, payrollSvc);
+                SwingUtilities.getWindowAncestor(this), infoSvc, payrollSvc, myPayslips);
         dlg.setVisible(true);
         if (dlg.wasSubmitted()) loadData();
     }
@@ -546,7 +551,8 @@ public class HelpCenterPanel extends JPanel {
 
         AddDisputeDialog(Window owner,
                          InformationDisputeService infoSvc,
-                         PayrollDisputeService payrollSvc) {
+                         PayrollDisputeService payrollSvc,
+                         List<Payslip> payslips) {
             super(owner, "File a Dispute", ModalityType.APPLICATION_MODAL);
             setSize(460, 480);
             setLocationRelativeTo(owner);
@@ -593,13 +599,28 @@ public class HelpCenterPanel extends JPanel {
             infoFields.add(labelRow("Target Field (optional)", targetField));
 
             // -- payroll fields --
-            JTextField payslipField = new JTextField();
-            payslipField.setFont(new Font("SansSerif", Font.PLAIN, 13));
+            // Payslip is chosen from the user's own payslips (latest → oldest),
+            // and the dispute is keyed by the payslip ID, not a typed number.
+            JComboBox<Payslip> payslipCombo = new JComboBox<>();
+            payslipCombo.setFont(new Font("SansSerif", Font.PLAIN, 13));
+            payslips.forEach(payslipCombo::addItem);
+            payslipCombo.setRenderer(new DefaultListCellRenderer() {
+                @Override
+                public Component getListCellRendererComponent(JList<?> list, Object value,
+                        int index, boolean sel, boolean foc) {
+                    super.getListCellRendererComponent(list, value, index, sel, foc);
+                    if (value instanceof Payslip p) {
+                        setText(p.getPayslipId() + "   (" + p.getPeriodStart()
+                                + " – " + p.getPeriodEnd() + ")");
+                    }
+                    return this;
+                }
+            });
 
             JPanel payrollFields = new JPanel();
             payrollFields.setOpaque(false);
             payrollFields.setLayout(new BoxLayout(payrollFields, BoxLayout.Y_AXIS));
-            payrollFields.add(labelRow("Payslip Number*", payslipField));
+            payrollFields.add(labelRow("Payslip ID*", payslipCombo));
 
             // -- card panel for type-specific fields --
             CardLayout cl = new CardLayout();
@@ -654,12 +675,13 @@ public class HelpCenterPanel extends JPanel {
                         if (target.isBlank()) target = cat.toLowerCase().replace(" ", "_");
                         infoSvc.fileDispute(reason, cat, target);
                     } else {
-                        String ps = payslipField.getText().trim();
-                        if (ps.isBlank()) {
-                            JOptionPane.showMessageDialog(this, "Payslip number is required.");
+                        Payslip selected = (Payslip) payslipCombo.getSelectedItem();
+                        if (selected == null) {
+                            JOptionPane.showMessageDialog(this,
+                                    "You have no payslips available to dispute.");
                             return;
                         }
-                        payrollSvc.fileDisputeByPayslipNumber(ps, reason);
+                        payrollSvc.fileDispute(selected, reason);
                     }
                     submitted = true;
                     JOptionPane.showMessageDialog(this, "Dispute filed successfully.");
