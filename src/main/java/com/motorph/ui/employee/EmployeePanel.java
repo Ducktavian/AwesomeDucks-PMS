@@ -295,6 +295,30 @@ public class EmployeePanel extends JPanel {
         cardLayout.show(cardPanel, EMPLOYEE_FORM);
     }
 
+    /** Opens the logged-in employee's own record without changing list scope. */
+    public void openCurrentEmployeeDetails() {
+        UserAccount user = Session.getCurrentUser();
+        if (user == null) {
+            return;
+        }
+
+        String employeeId = String.valueOf(user.getEmployeeId());
+        Employee employee = employeeService.findEmployee(employeeId);
+
+        if (employee == null) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Your employee information could not be found.",
+                    "Employee Not Found",
+                    JOptionPane.WARNING_MESSAGE
+            );
+            return;
+        }
+
+        formPanel.setViewMode(employee);
+        cardLayout.show(cardPanel, EMPLOYEE_FORM);
+    }
+
     private Employee getSelectedEmployee() {
         int selectedRow = employeeTable.getSelectedRow();
 

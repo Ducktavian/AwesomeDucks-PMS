@@ -25,6 +25,7 @@ import com.motorph.util.Session;
 public class MainFrame extends JFrame {
 
     private PayrollPanel payrollPanel;
+    private EmployeePanel employeePanel;
 
     public static final Color SIDEBAR_BG = new Color(5, 22, 103);
     public static final Color ACCENT_W = Color.WHITE;
@@ -112,7 +113,8 @@ public class MainFrame extends JFrame {
         payrollPanel = new PayrollPanel();
 
         contentCards.add(buildDashboardPanel(), "Dashboard");
-        contentCards.add(new EmployeePanel(), "Employees");
+        employeePanel = new EmployeePanel();
+        contentCards.add(employeePanel, "Employees");
         contentCards.add(payrollPanel, "Payroll");
         contentCards.add(new RequestPanel(), "Requests");
         contentCards.add(new AttendancePanel(), "Attendance");
@@ -145,6 +147,14 @@ public class MainFrame extends JFrame {
         name.setForeground(NAVY);
         name.setFont(new Font("Segoe UI", Font.BOLD, 16));
         name.setAlignmentX(Component.RIGHT_ALIGNMENT);
+        name.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        name.setToolTipText("View my employee information");
+        name.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                openCurrentUserProfile();
+            }
+        });
 
         JLabel position = new JLabel("Position");
         position.setForeground(Color.GRAY);
@@ -173,6 +183,18 @@ public class MainFrame extends JFrame {
 
         topBar.add(profile, BorderLayout.EAST);
         return topBar;
+    }
+
+    private void openCurrentUserProfile() {
+        if (employeePanel == null || Session.getCurrentUser() == null) {
+            return;
+        }
+
+        activeNav = "Employees";
+        cardLayout.show(contentCards, "Employees");
+        employeePanel.openCurrentEmployeeDetails();
+        setTitle("MotorPH - Employees");
+        rebuildNavPanels();
     }
 
     private JPanel buildDashboardPanel() {
