@@ -1,6 +1,6 @@
 <!-- Created with Jaspersoft Studio version 7.0.6.final using JasperReports Library version 7.0.6-5d2a603fdc6b3db8f842a83383e594f41891534d  -->
 <jasperReport name="Payslip" language="java" pageWidth="595" pageHeight="842" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20" uuid="dc26bc78-da41-489c-a85f-2ab50ced2207">
-	<property name="com.jaspersoft.studio.data.defaultdataadapter" value="Final AOOP"/>
+	<property name="com.jaspersoft.studio.data.defaultdataadapter" value="AOOP"/>
 	<property name="com.jaspersoft.studio.data.sql.tables" value=""/>
 	<property name="com.jaspersoft.studio.unit." value="pixel"/>
 	<property name="com.jaspersoft.studio.unit.pageHeight" value="pixel"/>
@@ -31,6 +31,11 @@
     ep.position_name AS position,
     d.department_name AS department,
 
+    DATE_FORMAT(COALESCE(att.payroll_date, CURDATE()), '%m/%d/%Y') AS payroll_date_text,
+    CASE
+        WHEN DAY(COALESCE(att.payroll_date, CURDATE())) BETWEEN 1 AND 15 THEN '1st Cutoff'
+        ELSE '2nd Cutoff'
+    END AS payroll_period,
     CAST(NULL AS DATE) AS period_start,
     CAST(NULL AS DATE) AS period_end,
 
@@ -91,6 +96,7 @@ LEFT JOIN department d
 LEFT JOIN (
     SELECT
         employee_id,
+        MAX(attendance_date) AS payroll_date,
         COUNT(DISTINCT attendance_date) AS days_worked,
         SUM(
             CASE
@@ -149,6 +155,8 @@ ORDER BY pr.payroll_id DESC]]></query>
 	<field name="bonus_amount" class="java.math.BigDecimal"/>
 	<field name="employee_id" class="java.lang.Integer"/>
 	<field name="employee_name" class="java.lang.String"/>
+	<field name="payroll_date_text" class="java.lang.String"/>
+	<field name="payroll_period" class="java.lang.String"/>
 	<field name="position" class="java.lang.String"/>
 	<field name="department" class="java.lang.String"/>
 	<field name="period_start" class="java.util.Date"/>
@@ -208,14 +216,14 @@ ORDER BY pr.payroll_id DESC]]></query>
 			</element>
 			<element kind="staticText" uuid="0cb79624-de4a-41b9-b34f-8e65e60a5db0" mode="Opaque" x="275" y="135" width="140" height="24" backcolor="#03135F" vTextAlign="Middle" style="InfoLabel">
 				<paragraph leftIndent="5"/>
-				<text><![CDATA[PERIOD START DATE]]></text>
+				<text><![CDATA[PAYROLL DATE]]></text>
 				<box style="InfoLabel">
 					<pen lineWidth="0.25" lineColor="#FFFFFF"/>
 				</box>
 			</element>
-			<element kind="textField" uuid="5c21cb89-21ce-4955-9ed6-570962dd550e" x="415" y="135" width="140" height="24" pattern="MM/dd/yyyy" blankWhenNull="true" vTextAlign="Middle" style="InfoValue">
+			<element kind="textField" uuid="5c21cb89-21ce-4955-9ed6-570962dd550e" x="415" y="135" width="140" height="24" blankWhenNull="true" vTextAlign="Middle" style="InfoValue">
 				<paragraph leftIndent="5"/>
-				<expression><![CDATA[$F{period_start}]]></expression>
+				<expression><![CDATA[$F{payroll_date_text}]]></expression>
 				<box style="InfoValue">
 					<pen lineWidth="0.25" lineColor="#BFBFBF"/>
 				</box>
@@ -236,14 +244,14 @@ ORDER BY pr.payroll_id DESC]]></query>
 			</element>
 			<element kind="staticText" uuid="f09bbef5-cbd6-415a-87c1-14ec4328712e" mode="Opaque" x="275" y="159" width="140" height="24" backcolor="#03135F" vTextAlign="Middle" style="InfoLabel">
 				<paragraph leftIndent="5"/>
-				<text><![CDATA[PERIOD END DATE]]></text>
+				<text><![CDATA[PAYROLL PERIOD]]></text>
 				<box style="InfoLabel">
 					<pen lineWidth="0.25" lineColor="#FFFFFF"/>
 				</box>
 			</element>
-			<element kind="textField" uuid="108782b1-ab49-4626-906f-652f3336049b" x="415" y="159" width="140" height="24" pattern="MM/dd/yyyy" blankWhenNull="true" vTextAlign="Middle" style="InfoValue">
+			<element kind="textField" uuid="108782b1-ab49-4626-906f-652f3336049b" x="415" y="159" width="140" height="24" blankWhenNull="true" vTextAlign="Middle" style="InfoValue">
 				<paragraph leftIndent="5"/>
-				<expression><![CDATA[$F{period_end}]]></expression>
+				<expression><![CDATA[$F{payroll_period}]]></expression>
 				<box style="InfoValue">
 					<pen lineWidth="0.25" lineColor="#BFBFBF"/>
 				</box>
@@ -264,21 +272,21 @@ ORDER BY pr.payroll_id DESC]]></query>
 			</element>
 			<element kind="staticText" uuid="c9e05381-c26c-41c6-b119-4323f3542876" mode="Opaque" x="275" y="183" width="140" height="24" backcolor="#03135F" vTextAlign="Middle" style="InfoLabel">
 				<paragraph leftIndent="5"/>
-				<text><![CDATA[EMPLOYEE POSITION/DEPARTMENT]]></text>
+				<text><![CDATA[EMPLOYEE DEPARTMENT]]></text>
 				<box style="InfoLabel">
 					<pen lineWidth="0.25" lineColor="#FFFFFF"/>
 				</box>
 			</element>
 			<element kind="textField" uuid="ca03176a-1d75-46b5-8b1b-e228991263bb" x="415" y="183" width="140" height="24" blankWhenNull="true" vTextAlign="Middle" style="InfoValue">
 				<paragraph leftIndent="5"/>
-				<expression><![CDATA[$F{position} + " / " + $F{department}]]></expression>
+				<expression><![CDATA[$F{department}]]></expression>
 				<box style="InfoValue">
 					<pen lineWidth="0.25" lineColor="#BFBFBF"/>
 				</box>
 			</element>
 			<element kind="staticText" uuid="4df67865-303b-485c-83cc-5ee82733b898" mode="Opaque" x="0" y="245" width="555" height="20" backcolor="#03135F" vTextAlign="Middle" style="SectionHeader">
 				<paragraph leftIndent="5"/>
-				<text><![CDATA[EARNINGS]]></text>
+				<text><![CDATA[EARNING]]></text>
 			</element>
 			<element kind="staticText" uuid="83ef33b4-29a1-4295-af5c-2a1558165dad" x="5" y="270" width="250" height="18" vTextAlign="Middle" style="RowLabel">
 				<text><![CDATA[Basic Salary]]></text>
@@ -312,14 +320,14 @@ ORDER BY pr.payroll_id DESC]]></query>
 			</element>
 			<element kind="rectangle" uuid="5c7caeff-7f40-4e9e-9fd1-06988df460a8" mode="Opaque" x="0" y="360" width="555" height="20" forecolor="#EAEAEA" backcolor="#EAEAEA"/>
 			<element kind="staticText" uuid="7eb1f406-d2e6-470e-874e-cbc3b32efa32" x="5" y="360" width="250" height="20" vTextAlign="Middle" style="TotalLabel">
-				<text><![CDATA[GROSS INCOME]]></text>
+				<text><![CDATA[TOTAL EARNING]]></text>
 			</element>
 			<element kind="textField" uuid="6d6e6f08-d353-4957-93dc-c4c0e0431213" x="420" y="360" width="130" height="20" pattern="₱#,##0.00" hTextAlign="Right" vTextAlign="Middle" style="TotalValue">
 				<expression><![CDATA[$F{gross_income}]]></expression>
 			</element>
 			<element kind="staticText" uuid="504abfee-8270-471f-9993-00e89a763327" mode="Opaque" x="0" y="385" width="555" height="20" backcolor="#03135F" vTextAlign="Middle" style="SectionHeader">
 				<paragraph leftIndent="5"/>
-				<text><![CDATA[BENEFITS]]></text>
+				<text><![CDATA[ALLOWANCE]]></text>
 			</element>
 			<element kind="staticText" uuid="f938e5da-67d6-4422-a9a2-f9a57b4cdb9b" x="5" y="410" width="250" height="18" vTextAlign="Middle" style="RowLabel">
 				<text><![CDATA[Rice Subsidy]]></text>
@@ -350,14 +358,14 @@ ORDER BY pr.payroll_id DESC]]></query>
 			</element>
 			<element kind="rectangle" uuid="aebc1a8e-51dc-4943-ac37-c6f08fb11f28" mode="Opaque" x="0" y="482" width="555" height="20" forecolor="#EAEAEA" backcolor="#EAEAEA"/>
 			<element kind="staticText" uuid="e977887e-213e-4d5d-aa6c-31693fe1c8a3" x="5" y="482" width="250" height="20" vTextAlign="Middle" style="TotalLabel">
-				<text><![CDATA[TOTAL]]></text>
+				<text><![CDATA[TOTAL ALLOWANCE]]></text>
 			</element>
 			<element kind="textField" uuid="275b5b38-7a1f-4661-a370-0515453b5bfd" x="420" y="482" width="130" height="20" pattern="₱#,##0.00" hTextAlign="Right" vTextAlign="Middle" style="TotalValue">
 				<expression><![CDATA[$F{total_benefits}]]></expression>
 			</element>
 			<element kind="staticText" uuid="8bee817c-3141-4633-8184-2697fbd37698" mode="Opaque" x="0" y="525" width="555" height="20" backcolor="#03135F" vTextAlign="Middle" style="SectionHeader">
 				<paragraph leftIndent="5"/>
-				<text><![CDATA[DEDUCTIONS]]></text>
+				<text><![CDATA[DEDUCTION]]></text>
 			</element>
 			<element kind="staticText" uuid="749ac327-cfc8-451f-9806-3c6e6d03f3ce" x="5" y="550" width="250" height="18" vTextAlign="Middle" style="RowLabel">
 				<text><![CDATA[PAG-IBIG]]></text>
@@ -385,7 +393,7 @@ ORDER BY pr.payroll_id DESC]]></query>
 			</element>
 			<element kind="rectangle" uuid="d18c50f9-58a0-48e0-b356-d9399bf39e57" mode="Opaque" x="0" y="622" width="555" height="20" forecolor="#EAEAEA" backcolor="#EAEAEA"/>
 			<element kind="staticText" uuid="ebba7309-8fba-406e-8522-068992d1f116" x="5" y="622" width="250" height="20" vTextAlign="Middle" style="TotalLabel">
-				<text><![CDATA[TOTAL DEDUCTIONS]]></text>
+				<text><![CDATA[TOTAL DEDUCTION]]></text>
 			</element>
 			<element kind="textField" uuid="9be81a40-ed85-45bf-b425-d8a519d191fc" x="420" y="622" width="130" height="20" pattern="₱#,##0.00" hTextAlign="Right" vTextAlign="Middle" style="TotalValue">
 				<expression><![CDATA[$F{total_deductions}]]></expression>
@@ -395,28 +403,28 @@ ORDER BY pr.payroll_id DESC]]></query>
 				<text><![CDATA[SUMMARY]]></text>
 			</element>
 			<element kind="staticText" uuid="da1e258f-599a-4579-a6f9-c2cd0bcd872d" x="5" y="690" width="250" height="16" vTextAlign="Middle" style="RowLabel">
-				<text><![CDATA[Gross Income]]></text>
+				<text><![CDATA[Total Earning]]></text>
 			</element>
 			<element kind="textField" uuid="febae6cb-fa9e-422d-9a2a-7ec876076702" x="420" y="690" width="130" height="16" pattern="₱#,##0.00" hTextAlign="Right" vTextAlign="Middle" style="RowValue">
 				<expression><![CDATA[$F{gross_income}]]></expression>
 			</element>
 			<element kind="staticText" uuid="e1934188-b09b-4b15-8d00-38ad4f0967b4" x="5" y="706" width="250" height="16" vTextAlign="Middle" style="RowLabel">
-				<text><![CDATA[Benefits]]></text>
+				<text><![CDATA[Total Allowance]]></text>
 			</element>
 			<element kind="textField" uuid="318881e2-2fd9-49e4-aba4-80969449175d" x="420" y="706" width="130" height="16" pattern="₱#,##0.00" hTextAlign="Right" vTextAlign="Middle" style="RowValue">
 				<expression><![CDATA[$F{total_benefits}]]></expression>
 			</element>
 			<element kind="staticText" uuid="88711fbf-9dd7-48fd-959d-21c90fe733d1" x="5" y="722" width="250" height="16" vTextAlign="Middle" style="RowLabel">
-				<text><![CDATA[Deductions]]></text>
+				<text><![CDATA[Total Deduction]]></text>
 			</element>
 			<element kind="textField" uuid="9b2b3eec-5e8c-4c06-aa67-0e23a1e3c377" x="420" y="722" width="130" height="16" pattern="₱#,##0.00" hTextAlign="Right" vTextAlign="Middle" style="RowValue">
 				<expression><![CDATA[$F{total_deductions}]]></expression>
 			</element>
 			<element kind="rectangle" uuid="3beba623-4fe6-4ce1-8f13-c29e673183c9" mode="Opaque" x="0" y="738" width="555" height="22" forecolor="#EAEAEA" backcolor="#EAEAEA"/>
-			<element kind="staticText" uuid="e8284499-b2b2-47a4-aace-0ad50d85c900" x="5" y="738" width="250" height="22" underline="true" vTextAlign="Middle" style="TotalLabel">
-				<text><![CDATA[TAKE HOME PAY]]></text>
+			<element kind="staticText" uuid="e8284499-b2b2-47a4-aace-0ad50d85c900" x="5" y="738" width="250" height="22" fontSize="10.0" underline="true" vTextAlign="Middle" style="TotalLabel">
+				<text><![CDATA[NET PAY]]></text>
 			</element>
-			<element kind="textField" uuid="0a4e97d9-8db8-4e11-8593-21e23073c0c6" x="420" y="738" width="130" height="22" pattern="₱#,##0.00" underline="true" hTextAlign="Right" vTextAlign="Middle" style="TotalValue">
+			<element kind="textField" uuid="0a4e97d9-8db8-4e11-8593-21e23073c0c6" x="420" y="738" width="130" height="22" fontSize="10.0" pattern="₱#,##0.00" underline="true" hTextAlign="Right" vTextAlign="Middle" style="TotalValue">
 				<expression><![CDATA[$F{net_pay}]]></expression>
 			</element>
 		</band>

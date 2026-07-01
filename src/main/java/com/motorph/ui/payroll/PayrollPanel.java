@@ -1,20 +1,59 @@
 package com.motorph.ui.payroll;
 
-import com.motorph.model.Payslip;            
-import com.motorph.model.Role;
-import com.motorph.model.UserAccount;
-import com.motorph.service.PayrollService;     
-import com.motorph.util.AppContext;            
-import com.motorph.util.Session;
-
-import java.awt.*;
-import java.awt.event.*;
-import java.time.format.DateTimeFormatter;     
+import java.awt.BorderLayout;            
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.Insets;
+import java.awt.RenderingHints;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import javax.swing.*;
-import javax.swing.border.*;
-import javax.swing.table.*;
+
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.Icon;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.JTextField;
+import javax.swing.ListSelectionModel;
+import javax.swing.RowFilter;
+import javax.swing.RowSorter;
+import javax.swing.SortOrder;
+import javax.swing.SwingConstants;
+import javax.swing.border.CompoundBorder;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.LineBorder;
+import javax.swing.border.MatteBorder;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.JTableHeader;
+import javax.swing.table.TableCellRenderer;
+import javax.swing.table.TableRowSorter;
+
+import com.motorph.model.Payslip;
+import com.motorph.model.Role;
+import com.motorph.model.UserAccount;
+import com.motorph.service.PayrollService;
+import com.motorph.util.AppContext;            
+import com.motorph.util.Session;
 
 public class PayrollPanel extends JPanel {
 
@@ -263,7 +302,7 @@ public class PayrollPanel extends JPanel {
     private void createTable() {
         String[] columns = {
             "Payslip ID", "Employee ID", "Start Date", "End Date",
-            "Gross Pay", "Deduction", "Allowance", "Net Pay"
+            "Gross Pay", "Allowance", "Deduction", "Net Pay"
         };
 
         tableModel = new DefaultTableModel(columns, 0) {
@@ -412,8 +451,8 @@ public class PayrollPanel extends JPanel {
                     p.getPeriodStart() == null ? "" : p.getPeriodStart().format(DATE_FMT),
                     p.getPeriodEnd() == null ? "" : p.getPeriodEnd().format(DATE_FMT),
                     money(p.getGrossPay()),
-                    money(p.getTotalDeductions()),
                     money(p.getAllowances()),
+                    money(p.getTotalDeductions()),
                     money(p.getNetPay())
                 });
             }
