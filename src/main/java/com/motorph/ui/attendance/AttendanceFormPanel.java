@@ -1,13 +1,20 @@
 package com.motorph.ui.attendance;
 
-import com.motorph.model.Attendance;
-import com.motorph.model.Role;
-import com.motorph.model.UserAccount;
-import com.motorph.service.AttendanceService;
-import com.motorph.util.AppContext;
-import com.motorph.util.Session;
-
-import java.awt.*;
+import java.awt.BasicStroke;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Insets;
+import java.awt.RenderingHints;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.text.ParseException;
@@ -17,8 +24,29 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.Calendar;
 import java.util.Date;
-import javax.swing.*;
-import javax.swing.border.*;
+
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JComponent;
+import javax.swing.JFormattedTextField;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JSpinner;
+import javax.swing.JTextField;
+import javax.swing.SpinnerDateModel;
+import javax.swing.border.AbstractBorder;
+import javax.swing.border.CompoundBorder;
+import javax.swing.border.EmptyBorder;
+
+import com.motorph.model.Attendance;
+import com.motorph.model.Role;
+import com.motorph.model.UserAccount;
+import com.motorph.service.AttendanceService;
+import com.motorph.util.AppContext;
+import com.motorph.util.Session;
 
 public class AttendanceFormPanel extends JPanel {
 
@@ -46,8 +74,6 @@ public class AttendanceFormPanel extends JPanel {
     private JComboBox<String> typeCombo;
     private JSpinner dateSpinner;
     private JButton timeInButton;
-    private JButton breakOutButton;
-    private JButton breakInButton;
     private JButton timeOutButton;
     private JTextField totalHoursField;
     private JComboBox<String> validityCombo;
@@ -67,14 +93,35 @@ public class AttendanceFormPanel extends JPanel {
         this(onBack, existingData, null, onSubmit);
     }
 
-    // NEW: editing constructor — carries the attendance id so an update targets the right row.
+    // Existing 4-arg constructor kept for backward compatibility — it infers the
+    // mode from the logged-in user's role, same as before.
     public AttendanceFormPanel(Runnable onBack, Object[] existingData, Integer attendanceId, SubmitHandler onSubmit) {
+        this(onBack, existingData, attendanceId, onSubmit, null);
+    }
+
+    /**
+     * @param viewMine explicitly tells the form which screen opened it:
+     *                 true  = "View Mine" (self-service; Employee ID is always
+     *                         the current user's own ID and is auto-filled/locked)
+     *                 false = "View All"   (HR/Finance/Admin logging attendance
+     *                         for any employee; Employee ID stays editable)
+     *                 null  = not specified, falls back to inferring from role
+     *                         (kept only for old call sites that haven't been
+     *                         updated to pass the mode explicitly)
+     */
+    public AttendanceFormPanel(Runnable onBack, Object[] existingData, Integer attendanceId,
+                                SubmitHandler onSubmit, Boolean viewMine) {
         this.onBack = onBack;
         this.existingData = existingData;
         this.editingAttendanceId = attendanceId;
         this.onSubmit = onSubmit;
 
-        this.restrictedRole = isRestrictedAttendanceRole();
+        // Auto-fill/lock behavior is now driven by which screen opened the form
+        // (viewMine), not by the user's role. This matters because an Admin/HR
+        // user can also open "View Mine" to log their own attendance, and in
+        // that case the ID must still auto-fill even though their role isn't
+        // one of the traditionally "restricted" roles.
+        this.restrictedRole = (viewMine != null) ? viewMine : isRestrictedAttendanceRole();
         this.adminOrHrRole = isAdminOrHrRole();
 
         setLayout(new BorderLayout());
@@ -109,6 +156,8 @@ public class AttendanceFormPanel extends JPanel {
         Date today = todayOnly();
 
         if (restrictedRole) {
+            // "View Mine": the employee is always logging their own attendance,
+            // so the Employee ID is auto-filled from the session and locked.
             dateSpinner.setValue(today);
             dateSpinner.setEnabled(false);
             validityCombo.setEnabled(false);
@@ -125,6 +174,8 @@ public class AttendanceFormPanel extends JPanel {
                 validityCombo.setSelectedItem("Valid");
             }
         }
+        // "View All" (adminOrHrRole / others): Employee ID stays editable so
+        // HR/Finance can log attendance on behalf of another employee.
 
         totalHoursField.setEditable(false);
         totalHoursField.setFocusable(false);
@@ -174,6 +225,7 @@ public class AttendanceFormPanel extends JPanel {
         return wrapper;
     }
 
+    // Left column rows: Employee ID -> Type -> Date
     private JPanel createLeftColumn() {
         JPanel col = new JPanel(new GridBagLayout());
         col.setOpaque(false);
@@ -181,32 +233,31 @@ public class AttendanceFormPanel extends JPanel {
         employeeIdField = createTextField();
         typeCombo = createComboBox(new String[]{"Regular", "Overtime", "Holiday"});
         dateSpinner = createDatePicker();
-        validityCombo = createComboBox(new String[]{"Valid", "Invalid"});
 
         int row = 0;
         addStackedField(col, row++, "Employee ID", employeeIdField);
         addStackedField(col, row++, "Type", typeCombo);
         addStackedField(col, row++, "Date", dateSpinner);
-        addStackedField(col, row++, "Validity", validityCombo);
 
         addVerticalGlue(col, row);
         return col;
     }
 
+    // Right column rows: (Time In / Time Out) -> Total Hours Worked -> Validity
+    // so each row lines up with the corresponding left-column row.
     private JPanel createRightColumn() {
         JPanel col = new JPanel(new GridBagLayout());
         col.setOpaque(false);
 
         timeInButton = createCurrentTimeButton();
-        breakOutButton = createCurrentTimeButton();
-        breakInButton = createCurrentTimeButton();
         timeOutButton = createCurrentTimeButton();
         totalHoursField = createTextField();
+        validityCombo = createComboBox(new String[]{"Valid", "Invalid"});
 
         int row = 0;
-        addTwoTimeFields(col, row++, "Time In", timeInButton, "Break Out", breakOutButton);
-        addTwoTimeFields(col, row++, "Break In", breakInButton, "Time Out", timeOutButton);
+        addTwoTimeFields(col, row++, "Time In", timeInButton, "Time Out", timeOutButton);
         addStackedField(col, row++, "Total Hours Worked", totalHoursField);
+        addStackedField(col, row++, "Validity", validityCombo);
 
         addVerticalGlue(col, row);
         return col;
@@ -267,14 +318,12 @@ public class AttendanceFormPanel extends JPanel {
 
     private void calculateTotalHours() {
         LocalTime timeIn = parseButtonTime(timeInButton);
-        LocalTime breakOut = parseButtonTime(breakOutButton);
-        LocalTime breakIn = parseButtonTime(breakInButton);
         LocalTime timeOut = parseButtonTime(timeOutButton);
 
         double hours = attendanceService.computeDailyHoursWithBreaks(
                 timeIn,
-                breakOut,
-                breakIn,
+                null,
+                null,
                 timeOut
         );
 
@@ -367,8 +416,6 @@ public class AttendanceFormPanel extends JPanel {
                     typeCombo.getSelectedItem().toString(),
                     dateFormat.format(selectedDate),
                     getTimeValue(timeInButton),
-                    getTimeValue(breakOutButton),
-                    getTimeValue(breakInButton),
                     getTimeValue(timeOutButton),
                     totalHoursField.getText().trim(),
                     validityCombo.getSelectedItem().toString()
@@ -414,6 +461,8 @@ public class AttendanceFormPanel extends JPanel {
         return date.after(todayOnly());
     }
 
+    // NOTE: existingData / rowData layout (no more Break Out / Break In):
+    // 0 EmployeeId, 1 Type, 2 Date, 3 TimeIn, 4 TimeOut, 5 TotalHours, 6 Validity
     private void populateFields(Object[] data) {
         employeeIdField.setText(value(data, 0));
         typeCombo.setSelectedItem(value(data, 1));
@@ -430,11 +479,9 @@ public class AttendanceFormPanel extends JPanel {
         }
 
         setButtonValue(timeInButton, value(data, 3));
-        setButtonValue(breakOutButton, value(data, 4));
-        setButtonValue(breakInButton, value(data, 5));
-        setButtonValue(timeOutButton, value(data, 6));
+        setButtonValue(timeOutButton, value(data, 4));
 
-        validityCombo.setSelectedItem(value(data, 8));
+        validityCombo.setSelectedItem(value(data, 6));
         calculateTotalHours();
     }
 

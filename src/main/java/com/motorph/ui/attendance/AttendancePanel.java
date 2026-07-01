@@ -11,6 +11,7 @@ import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Image;
 import java.awt.Insets;
 import java.awt.RenderingHints;
 import java.awt.event.FocusAdapter;
@@ -26,6 +27,7 @@ import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
@@ -57,7 +59,7 @@ import com.motorph.model.Attendance;
 import com.motorph.model.Role;
 import com.motorph.model.UserAccount;
 import com.motorph.service.AttendanceService;
-import com.motorph.util.AppContext;          
+import com.motorph.util.AppContext;
 import com.motorph.util.Session;
 
 public class AttendancePanel extends JPanel {
@@ -261,22 +263,22 @@ public class AttendancePanel extends JPanel {
         JPanel rightButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         rightButtons.setOpaque(false);
 
-        JButton addButton = navyButton("+", "Add", 90);
+        JButton addButton = navyButton("Add-Icon.png", "Add", 90);
         addButton.setVisible(canAddAttendance);
         addButton.addActionListener(e -> openAddForm());
         rightButtons.add(addButton);
 
-        JButton updateButton = navyButton("✎", "Update", 105);
+        JButton updateButton = navyButton("Update-Icon.png", "Update", 105);
         updateButton.setVisible(canModifyAttendance);
         updateButton.addActionListener(e -> openUpdateForm());
         rightButtons.add(updateButton);
 
-        JButton deleteButton = navyButton("🗑", "Delete", 105);
+        JButton deleteButton = navyButton("Delete-Icon.png", "Delete", 105);
         deleteButton.setVisible(canModifyAttendance);
         deleteButton.addActionListener(e -> deleteSelectedRow());
         rightButtons.add(deleteButton);
 
-        JButton refreshButton = navyButton("⟳", "Refresh", 110);
+        JButton refreshButton = navyButton("Refresh-Icon.png", "Refresh", 110);
         refreshButton.addActionListener(e -> showAttendanceList()); // reloads from DB
         rightButtons.add(refreshButton);
 
@@ -638,10 +640,8 @@ public class AttendancePanel extends JPanel {
         }
     }
 
-    private JButton navyButton(String icon, String text, int width) {
-        String label = icon == null || icon.isBlank() ? text : icon + "  " + text;
-
-        JButton button = new JButton(label);
+    private JButton navyButton(String iconFileName, String text, int width) {
+        JButton button = new JButton(text);
         button.setPreferredSize(new Dimension(width, 37));
         button.setBackground(NAVY);
         button.setForeground(Color.WHITE);
@@ -650,7 +650,30 @@ public class AttendancePanel extends JPanel {
         button.setBorderPainted(false);
         button.setMargin(new Insets(0, 10, 0, 10));
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+        ImageIcon icon = loadIcon(iconFileName, 16, 16);
+        if (icon != null) {
+            button.setIcon(icon);
+            button.setIconTextGap(8);
+        }
+
         return button;
+    }
+
+    // Loads an icon from the classpath (src/main/java/com/motorph/img/) and
+    // scales it. Returns null (button falls back to text-only) if the file
+    // isn't found, so a bad path never crashes the UI.
+    private ImageIcon loadIcon(String fileName, int width, int height) {
+        java.net.URL url = getClass().getResource("/com/motorph/img/" + fileName);
+
+        if (url == null) {
+            System.err.println("Icon not found: /com/motorph/img/" + fileName);
+            return null;
+        }
+
+        ImageIcon rawIcon = new ImageIcon(url);
+        Image scaled = rawIcon.getImage().getScaledInstance(width, height, Image.SCALE_SMOOTH);
+        return new ImageIcon(scaled);
     }
 
     private class HeaderFilterRenderer extends JPanel implements TableCellRenderer {
