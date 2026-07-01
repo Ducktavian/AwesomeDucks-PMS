@@ -104,7 +104,7 @@ public class SettingsPanel extends JPanel {
         confirmPasswordField = makePasswordField();
         card.add(makePasswordRow(confirmPasswordField), fieldGbc(gbc, 8));
 
-        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 16, 0));
+        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 16, 0));
         btnPanel.setOpaque(false);
 
         JButton updateButton = makeButton("Update", new Color(46, 204, 113), new Color(39, 174, 96));
