@@ -9,21 +9,23 @@ import java.awt.*;
 import java.awt.geom.RoundRectangle2D;
 import javax.swing.*;
 import javax.swing.border.*;
+import javax.swing.text.JTextComponent;
 
 public class DisputeDetail extends JPanel {
 
     private static final Color NAVY         = new Color(13, 36, 89);
     private static final Color FIELD_BG     = Color.WHITE;
     private static final Color FIELD_BORDER = new Color(180, 185, 200);
-    private static final Color APPROVE_CLR  = new Color(34, 197, 94);
+    private static final Color RESOLVE_CLR  = new Color(34, 197, 94);
+    private static final Color READONLY_BG  = new Color(238, 238, 238);
 
     private final JTextField  ticketIdField  = styledField();
     private final JTextField  dateField      = styledField();
     private final JTextField  employeeField  = styledField();
     private final JTextField  typeField      = styledField();   // type + category
     private final JTextArea   descArea       = styledTextArea();
-    private final JComboBox<String> statusBox = styledCombo(new String[]{"Pending", "Resolved"});
-    private JButton approveBtn;
+    private final JTextField  statusField = styledField();
+    private JButton resolveBtn;
 
     private Dispute currentDispute;
 
@@ -58,17 +60,17 @@ public class DisputeDetail extends JPanel {
         }
 
         descArea.setText(d.getReason());
-        statusBox.setSelectedItem(d.getStatus() == DisputeStatus.RESOLVED ? "Resolved" : "Pending");
+        statusField.setText(d.getStatus() == DisputeStatus.RESOLVED ? "Resolved" : "Pending");
 
-        boolean canApprove = canApproveDispute(d, viewerRole)
+        boolean canResolve = canResolveDispute(d, viewerRole)
                 && d.getStatus() != DisputeStatus.RESOLVED;
-        approveBtn.setVisible(canApprove);
+        resolveBtn.setVisible(canResolve);
 
         revalidate();
         repaint();
     }
 
-    private boolean canApproveDispute(Dispute d, Role r) {
+    private boolean canResolveDispute(Dispute d, Role r) {
         if (r == Role.ADMIN) return true;
         if (d instanceof InformationDispute id) {
             String cat = id.getCategory();
@@ -110,19 +112,19 @@ public class DisputeDetail extends JPanel {
 
         // Left column
         c.gridx = 0; c.gridy = 0; c.weightx = 0.45;
-        ticketIdField.setEditable(false);
+        makeReadOnly(ticketIdField);
         form.add(labeledField("Ticket ID", ticketIdField), c);
 
         c.gridy = 1;
-        dateField.setEditable(false);
+        makeReadOnly(dateField);
         form.add(labeledField("Date Filed", dateField), c);
 
         c.gridy = 2;
-        employeeField.setEditable(false);
+        makeReadOnly(employeeField);
         form.add(labeledField("Employee Name", employeeField), c);
 
         c.gridy = 3;
-        typeField.setEditable(false);
+        makeReadOnly(typeField);
         form.add(labeledField("Type / Category", typeField), c);
 
         // Right column – description (spans 3 rows)
@@ -137,7 +139,7 @@ public class DisputeDetail extends JPanel {
         descLbl.setFont(new Font("SansSerif", Font.PLAIN, 12));
         descLbl.setForeground(new Color(50, 60, 80));
 
-        descArea.setEditable(false);
+        makeReadOnly(descArea);
         JScrollPane descScroll = new JScrollPane(descArea);
         descScroll.setBorder(BorderFactory.createLineBorder(FIELD_BORDER));
         descScroll.setPreferredSize(new Dimension(280, 160));
@@ -146,29 +148,31 @@ public class DisputeDetail extends JPanel {
         descPanel.add(descScroll, BorderLayout.CENTER);
         form.add(descPanel, c);
 
-        // Status (read-only display)
+        // Status (read-only display). A disabled JComboBox renders its text in
+        // the L&F's washed-out (blue/grey) disabled colour and ignores
+        // setForeground, so we use a read-only field to guarantee black text.
         c.gridx = 1; c.gridy = 3; c.gridheight = 1;
         c.fill = GridBagConstraints.HORIZONTAL; c.weighty = 0;
-        statusBox.setEnabled(false);
-        form.add(labeledCombo("Status", statusBox), c);
+        makeReadOnly(statusField);
+        form.add(labeledField("Status", statusField), c);
 
-        // Approve button
+        // Resolve button
         c.gridx = 1; c.gridy = 4;
         c.anchor = GridBagConstraints.SOUTHEAST;
         c.fill = GridBagConstraints.NONE;
         c.weightx = 0;
         c.insets = new Insets(8, 0, 0, 0);
-        approveBtn = actionButton("Approve", APPROVE_CLR);
-        approveBtn.setVisible(false);
-        approveBtn.addActionListener(e -> approveDispute());
-        form.add(approveBtn, c);
+        resolveBtn = actionButton("Resolve", RESOLVE_CLR);
+        resolveBtn.setVisible(false);
+        resolveBtn.addActionListener(e -> resolveDispute());
+        form.add(resolveBtn, c);
 
         outer.add(backRow, BorderLayout.NORTH);
         outer.add(form, BorderLayout.CENTER);
         return outer;
     }
 
-    private void approveDispute() {
+    private void resolveDispute() {
         if (currentDispute == null) return;
         if (currentDispute.getStatus() == DisputeStatus.RESOLVED) {
             JOptionPane.showMessageDialog(this, "This dispute is already resolved.");
@@ -176,7 +180,7 @@ public class DisputeDetail extends JPanel {
         }
         int confirm = JOptionPane.showConfirmDialog(this,
                 "Mark dispute #" + currentDispute.getDisputeId() + " as Resolved?",
-                "Confirm Approve", JOptionPane.YES_NO_OPTION);
+                "Confirm Resolve", JOptionPane.YES_NO_OPTION);
         if (confirm != JOptionPane.YES_OPTION) return;
 
         try {
@@ -188,8 +192,8 @@ public class DisputeDetail extends JPanel {
             } else if (currentDispute instanceof PayrollDispute pd) {
                 payrollSvc.resolveDispute(pd);
             }
-            statusBox.setSelectedItem("Resolved");
-            approveBtn.setVisible(false);
+            statusField.setText("Resolved");
+            resolveBtn.setVisible(false);
             JOptionPane.showMessageDialog(this, "Dispute resolved successfully.");
             if (onBack != null) onBack.run(); // refresh list and go back
         } catch (Exception ex) {
@@ -222,6 +226,19 @@ public class DisputeDetail extends JPanel {
         return btn;
     }
 
+    /**
+     * Marks a text component as read-only: greyed background with solid black
+     * text. Black reads with far better contrast on the grey fill than the
+     * pale blue some Look-and-Feels use for non-editable fields.
+     */
+    private static void makeReadOnly(JTextComponent c) {
+        c.setEditable(false);
+        c.setFocusable(false);
+        c.setBackground(READONLY_BG);
+        c.setForeground(Color.BLACK);
+        c.setDisabledTextColor(Color.BLACK);
+    }
+
     private JPanel labeledField(String label, JTextField field) {
         JPanel p = new JPanel(new BorderLayout(0, 4));
         p.setOpaque(false);
@@ -230,17 +247,6 @@ public class DisputeDetail extends JPanel {
         lbl.setForeground(new Color(50, 60, 80));
         p.add(lbl, BorderLayout.NORTH);
         p.add(field, BorderLayout.CENTER);
-        return p;
-    }
-
-    private JPanel labeledCombo(String label, JComboBox<String> combo) {
-        JPanel p = new JPanel(new BorderLayout(0, 4));
-        p.setOpaque(false);
-        JLabel lbl = new JLabel(label);
-        lbl.setFont(new Font("SansSerif", Font.PLAIN, 12));
-        lbl.setForeground(new Color(50, 60, 80));
-        p.add(lbl, BorderLayout.NORTH);
-        p.add(combo, BorderLayout.CENTER);
         return p;
     }
 
@@ -265,11 +271,4 @@ public class DisputeDetail extends JPanel {
         return ta;
     }
 
-    private static JComboBox<String> styledCombo(String[] items) {
-        JComboBox<String> cb = new JComboBox<>(items);
-        cb.setFont(new Font("SansSerif", Font.PLAIN, 13));
-        cb.setBackground(FIELD_BG);
-        cb.setPreferredSize(new Dimension(240, 36));
-        return cb;
-    }
 }
