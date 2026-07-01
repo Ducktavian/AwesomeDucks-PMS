@@ -2,6 +2,7 @@ package com.motorph.ui.dashboard;
 
 import java.awt.*;
 import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
 
 import com.motorph.model.Role;
 import com.motorph.util.Session;
@@ -333,7 +334,15 @@ public class DashboardPanel extends JPanel {
                 {"Juan Cruz", "IT", "Vacation"}
         };
 
-        JTable table = new JTable(data, columns);
+        DefaultTableModel tableModel = new DefaultTableModel(data, columns) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+
+        JTable table = new JTable(tableModel);
+        table.setDefaultEditor(Object.class, null);
         table.setFont(new Font(FONT, Font.PLAIN, 12));
         table.setRowHeight(55);
         table.setShowGrid(true);

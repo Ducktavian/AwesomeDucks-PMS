@@ -10,7 +10,9 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.time.format.ResolverStyle;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import javax.swing.*;
 import javax.swing.border.*;
 import javax.swing.event.DocumentEvent;
@@ -21,19 +23,24 @@ public class EmployeeFormPanel extends JPanel {
     private static final Color NAVY = new Color(8, 25, 105);
     private static final Color PLACEHOLDER_GRAY = new Color(185, 185, 185);
     private static final String FONT = "Segoe UI";
+    private static final String NO_SUPERVISOR = "N/A";
 
     private static final DateTimeFormatter DATE_FORMATTER =
             DateTimeFormatter.ofPattern("MM-dd-uuuu").withResolverStyle(ResolverStyle.STRICT);
 
     private final Runnable onBack;
     private final EmployeeService employeeService = AppContext.getEmployeeService();
+    private final Map<String, Integer> supervisorIdsByName = new LinkedHashMap<>();
+    private Map<String, Integer> positionIdsByName = new LinkedHashMap<>();
+    private Map<String, Integer> statusIdsByName = new LinkedHashMap<>();
 
     private boolean updateMode = false;
     private Employee selectedEmployee;
 
     private JTextField employeeIdField, firstNameField, lastNameField;
-    private JTextField positionField, supervisorField;
+    private JTextField positionField;
     private JTextField statusField;
+    private JComboBox<String> supervisorComboBox;
     private JComboBox<String> statusComboBox;
 
     private JTextField birthdateField, cellphoneField;
@@ -151,7 +158,19 @@ public class EmployeeFormPanel extends JPanel {
             label.setBounds(x, currentY, 180, 17);
             parent.add(label);
 
-            if (sectionIndex == 0 && i == 5) {
+            if (sectionIndex == 0 && i == 4) {
+                supervisorComboBox = new JComboBox<>();
+                supervisorComboBox.setName("combo_" + sectionIndex + "_" + i);
+                supervisorComboBox.setFont(new Font(FONT, Font.PLAIN, 13));
+                supervisorComboBox.setBackground(Color.WHITE);
+                supervisorComboBox.setOpaque(true);
+                supervisorComboBox.setBounds(x, currentY + 18, 174, 28);
+                parent.add(supervisorComboBox);
+                loadSupervisorOptions();
+
+                currentY += 57;
+
+            } else if (sectionIndex == 0 && i == 5) {
                 statusComboBox = new JComboBox<>(new String[]{"Regular", "Probationary"});
                 statusComboBox.setName("combo_" + sectionIndex + "_" + i);
                 statusComboBox.setFont(new Font(FONT, Font.PLAIN, 13));
@@ -255,7 +274,6 @@ public class EmployeeFormPanel extends JPanel {
                 case 1 -> firstNameField = field;
                 case 2 -> lastNameField = field;
                 case 3 -> positionField = field;
-                case 4 -> supervisorField = field;
             }
         } else if (sectionIndex == 1) {
             switch (fieldIndex) {
@@ -413,6 +431,7 @@ public class EmployeeFormPanel extends JPanel {
 
                 JButton dayButton = new JButton(String.valueOf(day));
                 dayButton.setFont(new Font(FONT, Font.PLAIN, 13));
+                dayButton.setMargin(new Insets(0, 0, 0, 0));
                 dayButton.setBackground(Color.WHITE);
                 dayButton.setFocusPainted(false);
                 dayButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
@@ -462,6 +481,7 @@ public class EmployeeFormPanel extends JPanel {
 
     private void saveEmployee() {
         try {
+            loadEmployeeLookupValues();
             computeRatesFromBasicSalary();
 
             String validationError = validateForm();
@@ -489,9 +509,10 @@ public class EmployeeFormPanel extends JPanel {
             if (onBack != null) onBack.run();
 
         } catch (Exception ex) {
+            ex.printStackTrace();
             JOptionPane.showMessageDialog(
                     this,
-                    "Failed to save employee:\n" + ex.getMessage(),
+                    "Failed to save employee. Please check that all required fields are complete and valid.",
                     "Save Error",
                     JOptionPane.ERROR_MESSAGE
             );
@@ -502,6 +523,10 @@ public class EmployeeFormPanel extends JPanel {
         StringBuilder errors = new StringBuilder();
 
         String employeeId = getValue(employeeIdField);
+        String firstName = getValue(firstNameField);
+        String lastName = getValue(lastNameField);
+        String position = getValue(positionField);
+        String status = getSelectedStatus();
         String birthdate = getValue(birthdateField);
         String cellphone = cleanDigits(getValue(cellphoneField));
         String sss = getValue(sssField);
@@ -511,8 +536,19 @@ public class EmployeeFormPanel extends JPanel {
 
         if (employeeId.isBlank()) {
             errors.append("Employee ID is required.\n");
+        } else if (!employeeId.matches("\\d+")) {
+            errors.append("Employee ID must contain numbers only.\n");
         } else if (isDuplicateEmployeeId(employeeId)) {
             errors.append("Employee ID already exists. Please use a unique Employee ID.\n");
+        }
+
+        if (firstName.isBlank()) errors.append("First Name is required.\n");
+        if (lastName.isBlank()) errors.append("Last Name is required.\n");
+        if (position.isBlank() || findIdIgnoreCase(positionIdsByName, position) == null) {
+            errors.append("Please select a valid position before saving the employee.\n");
+        }
+        if (status.isBlank() || findIdIgnoreCase(statusIdsByName, status) == null) {
+            errors.append("Please select a valid employment status.\n");
         }
 
         if (birthdate.isBlank()) {
@@ -537,7 +573,7 @@ public class EmployeeFormPanel extends JPanel {
         }
 
         if (sssDigits.length() != 10) {
-            errors.append("SSS No. must have exactly 10 digits.\n");
+            errors.append("SSS Number must contain exactly 10 numeric digits.\n");
         }
 
         if (philhealthDigits.length() != 12) {
@@ -558,6 +594,15 @@ public class EmployeeFormPanel extends JPanel {
         validateMoneyField(errors, clothingAllowanceField, "Clothing Allowance");
         validateMoneyField(errors, semiMonthlyRateField, "Gross Semi-Monthly Rate");
         validateMoneyField(errors, hourlyRateField, "Hourly Rate");
+
+        String basicSalary = getValue(basicSalaryField).replace(",", "");
+        try {
+            if (!basicSalary.isBlank() && Double.parseDouble(basicSalary) <= 0) {
+                errors.append("Basic Salary must be greater than 0.\n");
+            }
+        } catch (NumberFormatException ignored) {
+            // validateMoneyField already supplies the numeric validation message.
+        }
 
         return errors.toString();
     }
@@ -612,8 +657,12 @@ public class EmployeeFormPanel extends JPanel {
         employee.setFirstName(getValue(firstNameField));
         employee.setLastName(getValue(lastNameField));
         employee.setPosition(getValue(positionField));
-        employee.setImmediateSupervisor(getValue(supervisorField));
+        employee.setPositionId(findIdIgnoreCase(positionIdsByName, employee.getPosition()));
+        String supervisorName = getSelectedSupervisorName();
+        employee.setImmediateSupervisor(supervisorName);
+        employee.setImmediateSupervisorId(getSelectedSupervisorId());
         employee.setStatus(getSelectedStatus());
+        employee.setEmploymentStatusId(findIdIgnoreCase(statusIdsByName, employee.getStatus()));
 
         employee.setBirthday(parseDate(getValue(birthdateField)));
         employee.setPhoneNumber(cleanDigits(getValue(cellphoneField)));
@@ -631,13 +680,21 @@ public class EmployeeFormPanel extends JPanel {
         employee.setClothingAllowance(parseDouble(getValue(clothingAllowanceField)));
         employee.setHourlyRate(parseDouble(getValue(hourlyRateField)));
 
-        if (updateMode && selectedEmployee != null) {
-            employee.setPositionId(selectedEmployee.getPositionId());
-            employee.setImmediateSupervisorId(selectedEmployee.getImmediateSupervisorId());
-            employee.setEmploymentStatusId(selectedEmployee.getEmploymentStatusId());
-        }
-
         return employee;
+    }
+
+    private void loadEmployeeLookupValues() {
+        positionIdsByName = employeeService.getAvailablePositions();
+        statusIdsByName = employeeService.getEmploymentStatuses();
+    }
+
+    private Integer findIdIgnoreCase(Map<String, Integer> values, String selectedName) {
+        if (selectedName == null) return null;
+        String normalized = selectedName.trim();
+        for (Map.Entry<String, Integer> entry : values.entrySet()) {
+            if (entry.getKey().equalsIgnoreCase(normalized)) return entry.getValue();
+        }
+        return null;
     }
 
     public void setAddMode() {
@@ -645,6 +702,7 @@ public class EmployeeFormPanel extends JPanel {
         selectedEmployee = null;
 
         clearFields();
+        loadSupervisorOptions();
         restorePlaceholders();
         setFieldsEditable(true);
 
@@ -674,6 +732,7 @@ public class EmployeeFormPanel extends JPanel {
         selectedEmployee = employee;
 
         clearFields();
+        loadSupervisorOptions();
         populateFields(employee);
         setFieldsEditable(true);
 
@@ -702,6 +761,7 @@ public class EmployeeFormPanel extends JPanel {
         selectedEmployee = employee;
 
         clearFields();
+        loadSupervisorOptions();
         populateFields(employee);
         setFieldsEditable(false);
 
@@ -772,7 +832,7 @@ public class EmployeeFormPanel extends JPanel {
         firstNameField.setText(safe(emp.getFirstName()));
         lastNameField.setText(safe(emp.getLastName()));
         positionField.setText(safe(emp.getPosition()));
-        supervisorField.setText(safe(emp.getImmediateSupervisor()));
+        selectSupervisor(emp.getImmediateSupervisor());
 
         String status = safe(emp.getStatus());
 
@@ -815,6 +875,68 @@ public class EmployeeFormPanel extends JPanel {
     private String getSelectedStatus() {
         Object selected = statusComboBox.getSelectedItem();
         return selected == null ? "Regular" : selected.toString();
+    }
+
+    private void loadSupervisorOptions() {
+        if (supervisorComboBox == null) {
+            return;
+        }
+
+        String currentSelection = getSelectedSupervisorName();
+        supervisorIdsByName.clear();
+        supervisorComboBox.removeAllItems();
+        supervisorComboBox.addItem(NO_SUPERVISOR);
+
+        for (Employee employee : employeeService.getAllEmployees()) {
+            String name = employee.getFullName().trim();
+            String employeeId = employee.getEmployeeId();
+
+            if (!name.isBlank() && employeeId != null && !employeeId.isBlank()) {
+                try {
+                    supervisorIdsByName.putIfAbsent(name, Integer.valueOf(employeeId));
+                } catch (NumberFormatException ignored) {
+                    // The database supervisor foreign key is numeric, so invalid IDs
+                    // cannot safely be offered as writable supervisor choices.
+                }
+            }
+        }
+
+        for (String name : supervisorIdsByName.keySet()) {
+            supervisorComboBox.addItem(name);
+        }
+
+        selectSupervisor(currentSelection);
+    }
+
+    private String getSelectedSupervisorName() {
+        if (supervisorComboBox == null) {
+            return NO_SUPERVISOR;
+        }
+
+        Object selected = supervisorComboBox.getSelectedItem();
+        String name = selected == null ? "" : selected.toString().trim();
+        return name.isBlank() || NO_SUPERVISOR.equalsIgnoreCase(name)
+                ? NO_SUPERVISOR
+                : name;
+    }
+
+    private Integer getSelectedSupervisorId() {
+        return supervisorIdsByName.get(getSelectedSupervisorName());
+    }
+
+    private void selectSupervisor(String supervisorName) {
+        String normalized = supervisorName == null ? "" : supervisorName.trim();
+
+        if (normalized.isBlank() || NO_SUPERVISOR.equalsIgnoreCase(normalized)) {
+            supervisorComboBox.setSelectedItem(NO_SUPERVISOR);
+            return;
+        }
+
+        if (supervisorIdsByName.containsKey(normalized)) {
+            supervisorComboBox.setSelectedItem(normalized);
+        } else {
+            supervisorComboBox.setSelectedItem(NO_SUPERVISOR);
+        }
     }
 
     private String getValue(JTextField field) {
