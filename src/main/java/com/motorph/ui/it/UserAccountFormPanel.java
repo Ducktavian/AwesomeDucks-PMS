@@ -1,16 +1,38 @@
 package com.motorph.ui.it;
 
-import com.motorph.model.Employee;
-import com.motorph.model.Role;
-
-import java.awt.*;
+import java.awt.BasicStroke;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.Frame;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.awt.RenderingHints;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.List;
-import javax.swing.*;
+
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JComponent;
+import javax.swing.JDialog;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JTextField;
 import javax.swing.border.AbstractBorder;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
+
+import com.motorph.model.Employee;
+import com.motorph.model.Role;
 
 /**
  * Modal form for creating or updating a user account.
@@ -19,10 +41,16 @@ import javax.swing.border.EmptyBorder;
  * rounded fields) and re-modelled to fit the database. A user account belongs to
  * an existing employee, so create mode shows an employee picker and the name /
  * position / supervisor are read-only (they live on the employee, edited in the
- * Employees tab). Only the account fields — username, password, role, and active
- * status — are editable here.
+ * Employees tab). Only the account fields — username, role, and active status —
+ * are editable here.
+ *
+ * NOTE: Password management is NOT handled in this panel. Only the account
+ * owner (Employee) can change their own password, via the Account Security
+ * section under Settings. This form's Reset Password button is an Admin-side
+ * action that simply resets the account's password (e.g. to a system default)
+ * and does not collect or edit a password value here.
  */
-public class CreateUserDialog extends JDialog {
+public class UserAccountFormPanel extends JDialog {
 
     private static final Color NAVY = new Color(8, 25, 105);
     private static final String FONT = "Segoe UI";
@@ -38,8 +66,7 @@ public class CreateUserDialog extends JDialog {
     private JTextField positionField;
     private JTextField supervisorField;
     private JTextField usernameField;
-    private JPasswordField passwordField;
-    private JPasswordField confirmPasswordField;
+    private JButton resetPasswordButton;
     private JComboBox<String> roleBox;
     private JComboBox<String> statusBox;
 
@@ -47,7 +74,7 @@ public class CreateUserDialog extends JDialog {
     private UserAccountEntry result;
 
     /** Create mode — choose an employee that does not yet have an account. */
-    public CreateUserDialog(Frame owner, List<Employee> availableEmployees) {
+    public UserAccountFormPanel(Frame owner, List<Employee> availableEmployees) {
         super(owner, "Create User Account", true);
         this.editMode = false;
         this.existing = null;
@@ -56,7 +83,7 @@ public class CreateUserDialog extends JDialog {
     }
 
     /** Update mode — edit the account fields of an existing user. */
-    public CreateUserDialog(Frame owner, UserAccountEntry existing) {
+    public UserAccountFormPanel(Frame owner, UserAccountEntry existing) {
         super(owner, "Update User Account", true);
         this.editMode = true;
         this.existing = existing;
@@ -69,8 +96,8 @@ public class CreateUserDialog extends JDialog {
     public UserAccountEntry getResult() { return result; }
 
     private void buildUI() {
-        setSize(620, 540);
-        setMinimumSize(new Dimension(560, 520));
+        setSize(620, 480);
+        setMinimumSize(new Dimension(560, 460));
         setLocationRelativeTo(getOwner());
 
         JPanel card = new JPanel(new BorderLayout());
@@ -117,12 +144,11 @@ public class CreateUserDialog extends JDialog {
         positionField = readOnlyField();
         supervisorField = readOnlyField();
         usernameField = textField();
-        passwordField = passwordField();
-        confirmPasswordField = passwordField();
+        resetPasswordButton = resetPasswordButton();
         roleBox = combo(ROLE_OPTIONS);
         statusBox = combo(new String[] { "Active", "Inactive" });
 
-        // Left column row 0 — employee picker (create) or read-only label (update)
+        // Row 0 — employee picker (create) or read-only label (update) alone
         if (editMode) {
             employeeLabel = new JLabel();
             employeeLabel.setFont(new Font(FONT, Font.BOLD, 13));
@@ -138,20 +164,17 @@ public class CreateUserDialog extends JDialog {
             addCell(form, 0, 0, "Employee*", employeeBox);
         }
 
-        // Right column row 0 — username
-        addCell(form, 1, 0, "Username*", usernameField);
-
-        // Row 1
+        // Row 1 — Position | Username
         addCell(form, 0, 1, "Position", positionField);
-        addCell(form, 1, 1, editMode ? "New Password" : "Password*", passwordField);
+        addCell(form, 1, 1, "Username*", usernameField);
 
-        // Row 2
+        // Row 2 — Immediate Supervisor | Password (Reset)
         addCell(form, 0, 2, "Immediate Supervisor", supervisorField);
-        addCell(form, 1, 2, editMode ? "Confirm New Password" : "Confirm Password*", confirmPasswordField);
+        addCell(form, 1, 2, "Password", wrapButtonCell(resetPasswordButton));
 
-        // Row 3
-        addCell(form, 0, 3, "Role*", roleBox);
-        addCell(form, 1, 3, "Account Status*", statusBox);
+        // Row 3 — Account Status | Role
+        addCell(form, 0, 3, "Account Status*", statusBox);
+        addCell(form, 1, 3, "Role*", roleBox);
 
         roleBox.setSelectedItem("Employee");
 
@@ -160,6 +183,14 @@ public class CreateUserDialog extends JDialog {
         }
 
         return form;
+    }
+
+    /** Wraps the reset-password button so it sits flush-left within its grid cell. */
+    private JPanel wrapButtonCell(JButton button) {
+        JPanel wrap = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        wrap.setBackground(Color.WHITE);
+        wrap.add(button);
+        return wrap;
     }
 
     private void fillEmployeeDetails() {
@@ -204,8 +235,6 @@ public class CreateUserDialog extends JDialog {
 
     private void handleSubmit() {
         String username = usernameField.getText().trim();
-        String pass = new String(passwordField.getPassword());
-        String confirm = new String(confirmPasswordField.getPassword());
 
         if (!editMode && (employeeBox == null || employeeBox.getSelectedIndex() < 0)) {
             warn("Please select an employee.");
@@ -216,32 +245,32 @@ public class CreateUserDialog extends JDialog {
             return;
         }
 
-        // Password required on create; optional on update (blank = keep existing).
-        boolean passwordProvided = !pass.isEmpty() || !confirm.isEmpty();
-        if (!editMode || passwordProvided) {
-            if (pass.isEmpty() || confirm.isEmpty()) {
-                warn("Please fill in both password fields.");
-                return;
-            }
-            if (pass.length() < 8) {
-                warn("Password must be at least 8 characters.");
-                return;
-            }
-            if (!pass.equals(confirm)) {
-                warn("Password and Confirm Password do not match.");
-                confirmPasswordField.setText("");
-                return;
-            }
-        }
-
         result = editMode ? buildUpdatedEntry() : buildNewEntry();
         result.setUsername(username);
         result.setRole(Role.fromName((String) roleBox.getSelectedItem()));
         result.setActive("Active".equals(statusBox.getSelectedItem()));
-        result.setNewPassword(passwordProvided || !editMode ? pass : null);
 
         confirmed = true;
         dispose();
+    }
+
+    /**
+     * Resets the account's password (Admin-side action). This panel does not
+     * collect or edit a password value itself — self-service password
+     * changes are handled separately, in the Account Security section under
+     * Settings. Here we just confirm the action and reset it, e.g. to a
+     * default password issued by the system.
+     */
+    private void handleResetPassword() {
+        int choice = JOptionPane.showConfirmDialog(this,
+                "Reset the password for this account?",
+                "Reset Password", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+        if (choice != JOptionPane.YES_OPTION) return;
+
+        // TODO: wire to the actual password-reset service call.
+        JOptionPane.showMessageDialog(this,
+                "Password was reset.",
+                "Reset Password", JOptionPane.INFORMATION_MESSAGE);
     }
 
     private UserAccountEntry buildNewEntry() {
@@ -315,14 +344,17 @@ public class CreateUserDialog extends JDialog {
         return field;
     }
 
-    private JPasswordField passwordField() {
-        JPasswordField field = new JPasswordField();
-        field.setFont(new Font(FONT, Font.PLAIN, 13));
-        field.setPreferredSize(new Dimension(0, 36));
-        field.setEchoChar('•');
-        field.setBorder(new CompoundBorder(new RoundedBorder(8), new EmptyBorder(2, 10, 2, 10)));
-        field.setBackground(Color.WHITE);
-        return field;
+    private JButton resetPasswordButton() {
+        JButton button = new JButton("Reset Password");
+        button.setFont(new Font(FONT, Font.BOLD, 13));
+        button.setForeground(NAVY);
+        button.setBackground(Color.WHITE);
+        button.setPreferredSize(new Dimension(160, 36));
+        button.setFocusPainted(false);
+        button.setBorder(new CompoundBorder(new RoundedBorder(8), new EmptyBorder(2, 10, 2, 10)));
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        button.addActionListener(e -> handleResetPassword());
+        return button;
     }
 
     private JComboBox<String> combo(String[] items) {

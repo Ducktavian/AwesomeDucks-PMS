@@ -1,5 +1,58 @@
 package com.motorph.ui.it;
 
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.Frame;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.Insets;
+import java.awt.RenderingHints;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollBar;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.JTextField;
+import javax.swing.ListSelectionModel;
+import javax.swing.RowSorter;
+import javax.swing.SortOrder;
+import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
+import javax.swing.border.AbstractBorder;
+import javax.swing.border.CompoundBorder;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.MatteBorder;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.JTableHeader;
+import javax.swing.table.TableCellRenderer;
+import javax.swing.table.TableColumnModel;
+import javax.swing.table.TableRowSorter;
+
 import com.motorph.model.Employee;
 import com.motorph.model.Role;
 import com.motorph.model.UserAccount;
@@ -7,18 +60,6 @@ import com.motorph.service.EmployeeService;
 import com.motorph.service.UserService;
 import com.motorph.util.AppContext;
 import com.motorph.util.Session;
-
-import java.awt.*;
-import java.awt.event.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import javax.swing.*;
-import javax.swing.border.*;
-import javax.swing.table.*;
 
 /**
  * IT Users screen — search, role filter, CRUD action buttons, and the user
@@ -31,7 +72,7 @@ import javax.swing.table.*;
  * UserService -> UserAccountDAO, joined with EmployeeService for the employee
  * details, and all CRUD actions persist through the service layer.
  */
-public class ITUserAccountList extends JPanel {
+public class UserAccountPanel extends JPanel {
 
     private static final Color NAVY = new Color(8, 25, 105);
     private static final Color ROW_GRAY = new Color(238, 238, 238);
@@ -60,7 +101,7 @@ public class ITUserAccountList extends JPanel {
     private int sortedColumn = -1;
     private SortOrder currentSortOrder = SortOrder.UNSORTED;
 
-    public ITUserAccountList() {
+    public UserAccountPanel() {
         setLayout(new BorderLayout());
         setBackground(Color.WHITE);
 
@@ -311,7 +352,7 @@ public class ITUserAccountList extends JPanel {
         }
 
         Frame owner = (Frame) SwingUtilities.getWindowAncestor(this);
-        CreateUserDialog dialog = new CreateUserDialog(owner, available);
+        UserAccountFormPanel dialog = new UserAccountFormPanel(owner, available);
         dialog.setVisible(true);
 
         if (!dialog.isConfirmed()) return;
@@ -335,7 +376,7 @@ public class ITUserAccountList extends JPanel {
         }
 
         Frame owner = (Frame) SwingUtilities.getWindowAncestor(this);
-        CreateUserDialog dialog = new CreateUserDialog(owner, selected);
+        UserAccountFormPanel dialog = new UserAccountFormPanel(owner, selected);
         dialog.setVisible(true);
 
         if (!dialog.isConfirmed()) return;

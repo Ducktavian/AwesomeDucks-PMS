@@ -14,7 +14,7 @@ import com.motorph.ui.attendance.AttendancePanel;
 import com.motorph.ui.dashboard.DashboardPanel;
 import com.motorph.ui.employee.EmployeePanel;
 import com.motorph.ui.helpcenter.HelpCenterPanel;
-import com.motorph.ui.it.ITUserAccountList; // NEW
+import com.motorph.ui.it.UserAccountPanel; // NEW
 import com.motorph.ui.login.Login;
 import com.motorph.ui.payroll.PayrollPanel;
 import com.motorph.ui.request.RequestPanel;
@@ -116,7 +116,7 @@ public class MainFrame extends JFrame {
         contentCards.add(payrollPanel, "Payroll");
         contentCards.add(new RequestPanel(), "Requests");
         contentCards.add(new AttendancePanel(), "Attendance");
-        contentCards.add(new ITUserAccountList(), "Users"); // NEW: IT user-account management panel
+        contentCards.add(new UserAccountPanel(), "Users"); // NEW: IT user-account management panel
         contentCards.add(new SettingsPanel(), "Settings");
         contentCards.add(new HelpCenterPanel(), "Help Center");
         contentCards.add(placeholderPanel("Log Out"), "Log Out");

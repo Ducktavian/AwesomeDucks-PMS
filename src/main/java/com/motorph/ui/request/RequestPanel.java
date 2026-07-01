@@ -1,5 +1,67 @@
 package com.motorph.ui.request;
 
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Container;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.Image;
+import java.awt.Insets;
+import java.awt.RenderingHints;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.ImageIcon;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JRadioButton;
+import javax.swing.JScrollBar;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
+import javax.swing.ListSelectionModel;
+import javax.swing.RowFilter;
+import javax.swing.RowSorter;
+import javax.swing.SortOrder;
+import javax.swing.SwingConstants;
+import javax.swing.border.AbstractBorder;
+import javax.swing.border.CompoundBorder;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.MatteBorder;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.JTableHeader;
+import javax.swing.table.TableCellRenderer;
+import javax.swing.table.TableColumn;
+import javax.swing.table.TableColumnModel;
+import javax.swing.table.TableRowSorter;
+
 import com.motorph.model.Employee;
 import com.motorph.model.LeaveRequest;
 import com.motorph.model.OvertimeRequest;
@@ -13,20 +75,6 @@ import com.motorph.service.EmployeeService;
 import com.motorph.service.RequestService;
 import com.motorph.util.AppContext;
 import com.motorph.util.Session;
-
-import java.awt.*;
-import java.awt.event.*;
-import java.time.LocalDate;
-import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import javax.swing.*;
-import javax.swing.border.*;
-import javax.swing.table.*;
 
 public class RequestPanel extends JPanel {
 
@@ -287,21 +335,21 @@ public class RequestPanel extends JPanel {
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         buttons.setOpaque(false);
 
-        JButton addButton = navyButton("+", "Add", 90);
+        JButton addButton = navyButton("Add-Icon.png", "Add", 90);
         addButton.addActionListener(e -> openAddForm());
         buttons.add(addButton);
 
-        JButton updateButton = navyButton("✎", "Update", 105);
+        JButton updateButton = navyButton("Update-Icon.png", "Update", 105);
         updateButton.setVisible(canModifyAllRequests);
         updateButton.addActionListener(e -> openUpdateForm());
         buttons.add(updateButton);
 
-        JButton deleteButton = navyButton("🗑", "Delete", 105);
+        JButton deleteButton = navyButton("Delete-Icon.png", "Delete", 105);
         deleteButton.setVisible(canModifyAllRequests);
         deleteButton.addActionListener(e -> deleteSelectedRequest());
         buttons.add(deleteButton);
 
-        JButton refreshButton = navyButton("⟳", "Refresh", 110);
+        JButton refreshButton = navyButton("Refresh-Icon.png", "Refresh", 110);
         refreshButton.addActionListener(e -> showRequestList()); // reloads from DB
         buttons.add(refreshButton);
 
@@ -735,8 +783,8 @@ public class RequestPanel extends JPanel {
         }
     }
 
-    private JButton navyButton(String icon, String text, int width) {
-        JButton button = new JButton(icon + "  " + text);
+    private JButton navyButton(String iconFileName, String text, int width) {
+        JButton button = new JButton(text);
         button.setPreferredSize(new Dimension(width, 37));
         button.setBackground(NAVY);
         button.setForeground(Color.WHITE);
@@ -745,7 +793,30 @@ public class RequestPanel extends JPanel {
         button.setBorderPainted(false);
         button.setMargin(new Insets(0, 10, 0, 10));
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+        ImageIcon icon = loadIcon(iconFileName, 16, 16);
+        if (icon != null) {
+            button.setIcon(icon);
+            button.setIconTextGap(8);
+        }
+
         return button;
+    }
+
+    // Loads an icon from the classpath (src/main/java/com/motorph/img/) and
+    // scales it. Returns null (button falls back to text-only) if the file
+    // isn't found, so a bad path never crashes the UI.
+    private ImageIcon loadIcon(String fileName, int width, int height) {
+        java.net.URL url = getClass().getResource("/com/motorph/img/" + fileName);
+
+        if (url == null) {
+            System.err.println("Icon not found: /com/motorph/img/" + fileName);
+            return null;
+        }
+
+        ImageIcon rawIcon = new ImageIcon(url);
+        Image scaled = rawIcon.getImage().getScaledInstance(width, height, Image.SCALE_SMOOTH);
+        return new ImageIcon(scaled);
     }
 
     private class HeaderFilterRenderer extends JPanel implements TableCellRenderer {
