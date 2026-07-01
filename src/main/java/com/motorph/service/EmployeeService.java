@@ -8,6 +8,7 @@ import com.motorph.model.UserAccount;
 import com.motorph.util.Session;
 
 import java.util.List;
+import java.util.Map;
 
 public class EmployeeService {
 
@@ -36,6 +37,14 @@ public class EmployeeService {
         return employeeDAO.findBy(employeeId);
     }
 
+    public Map<String, Integer> getAvailablePositions() {
+        return employeeDAO.findAllPositions();
+    }
+
+    public Map<String, Integer> getEmploymentStatuses() {
+        return employeeDAO.findAllEmploymentStatuses();
+    }
+
     public void addEmployee(Employee employee) {
         authorizeHR();
         validateEmployee(employee);
@@ -55,6 +64,9 @@ public class EmployeeService {
     
 
     private void validateEmployee(Employee employee) {
+        if (employee.getEmployeeId() == null || employee.getEmployeeId().isBlank()) {
+            throw new IllegalArgumentException("Employee ID is required.");
+        }
         if (employee.getFirstName() == null || employee.getFirstName().isBlank()) {
             throw new IllegalArgumentException("First name is required.");
         }
@@ -76,8 +88,11 @@ public class EmployeeService {
         if (employee.getPhoneNumber() == null || !employee.getPhoneNumber().matches("^\\d{9,11}$")) {
             throw new IllegalArgumentException("Phone number must be between 9 to 11 digits.");
         }
-        if (employee.getSSSNumber() == null || !employee.getSSSNumber().matches("^\\d{10}$")) {
-            throw new IllegalArgumentException("SSS Number must be exactly 10 digits.");
+        String sssDigits = employee.getSSSNumber() == null
+                ? ""
+                : employee.getSSSNumber().replaceAll("\\D", "");
+        if (sssDigits.length() != 10) {
+            throw new IllegalArgumentException("SSS Number must contain exactly 10 numeric digits.");
         }
         if (employee.getPhilhealthNumber() == null || !employee.getPhilhealthNumber().matches("^\\d{12}$")) {
             throw new IllegalArgumentException("PhilHealth Number must be 12 digits.");
@@ -93,6 +108,12 @@ public class EmployeeService {
         }
         if (employee.getPosition() == null || employee.getPosition().isBlank()) {
             throw new IllegalArgumentException("Position is required.");
+        }
+        if (employee.getPositionId() == null) {
+            throw new IllegalArgumentException("Please select a valid position before saving the employee.");
+        }
+        if (employee.getEmploymentStatusId() == null) {
+            throw new IllegalArgumentException("Please select a valid employment status.");
         }
         if (employee.getImmediateSupervisor() == null || employee.getImmediateSupervisor().isBlank()) {
             throw new IllegalArgumentException("Immediate Supervisor is required.");

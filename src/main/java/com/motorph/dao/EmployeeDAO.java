@@ -2,6 +2,7 @@ package com.motorph.dao;
 
 import com.motorph.model.Employee;
 import java.util.List;
+import java.util.Map;
 
 /**
  *
@@ -13,4 +14,6 @@ public interface EmployeeDAO extends BaseDAO {
     void save(Employee employee);
     void update(Employee employee);
     void delete(String employeeId);
+    Map<String, Integer> findAllPositions();
+    Map<String, Integer> findAllEmploymentStatuses();
 }

@@ -5,6 +5,8 @@ import com.motorph.config.DatabaseConnection;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 
 public class JdbcEmployeeDAO implements EmployeeDAO {
@@ -12,6 +14,34 @@ public class JdbcEmployeeDAO implements EmployeeDAO {
     // The view already handles all joins, pivots, and GROUP BY.
     private static final String SELECT_FROM_VIEW =
             "SELECT * FROM v_full_employee_profile";
+
+    @Override
+    public Map<String, Integer> findAllPositions() {
+        return findLookupValues(
+                "SELECT position_id, position_name FROM employee_position ORDER BY position_name",
+                "position_name", "position_id");
+    }
+
+    @Override
+    public Map<String, Integer> findAllEmploymentStatuses() {
+        return findLookupValues(
+                "SELECT employment_status_id, status_type FROM employment_status ORDER BY employment_status_id",
+                "status_type", "employment_status_id");
+    }
+
+    private Map<String, Integer> findLookupValues(String sql, String nameColumn, String idColumn) {
+        Map<String, Integer> values = new LinkedHashMap<>();
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            while (rs.next()) {
+                values.put(rs.getString(nameColumn), rs.getInt(idColumn));
+            }
+        } catch (SQLException e) {
+            throw new IllegalStateException("Unable to load employee lookup values.", e);
+        }
+        return values;
+    }
 
     @Override
     public Employee findBy(String employeeId) {
@@ -163,7 +193,7 @@ public class JdbcEmployeeDAO implements EmployeeDAO {
 
         } catch (SQLException e) {
             rollback(conn);
-            e.printStackTrace();
+            throw new IllegalStateException("Unable to save employee.", e);
         } finally {
             resetAndClose(conn);
         }
