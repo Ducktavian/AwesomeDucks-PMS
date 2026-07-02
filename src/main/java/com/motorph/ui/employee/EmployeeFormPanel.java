@@ -1,5 +1,6 @@
 package com.motorph.ui.employee;
 
+import com.motorph.exception.UnauthorizedException;
 import com.motorph.model.Employee;
 import com.motorph.service.EmployeeService;
 import com.motorph.util.AppContext;
@@ -653,7 +654,7 @@ public class EmployeeFormPanel extends JPanel {
             if (!validationError.isBlank()) {
                 JOptionPane.showMessageDialog(
                         this,
-                        validationError,
+                        buildValidationMessage(validationError),
                         "Validation Error",
                         JOptionPane.WARNING_MESSAGE
                 );
@@ -672,15 +673,73 @@ public class EmployeeFormPanel extends JPanel {
 
             if (onBack != null) onBack.run();
 
-        } catch (Exception ex) {
-            ex.printStackTrace();
+        } catch (IllegalArgumentException ex) {
+            // The service validates every field and throws a precise, field-specific
+            // message (e.g. "Address is required."). Show that verbatim so the user
+            // knows exactly which field to fix instead of a vague "failed to save".
             JOptionPane.showMessageDialog(
                     this,
-                    "Failed to save employee. Please check that all required fields are complete and valid.",
+                    buildValidationMessage(ex.getMessage()),
+                    "Validation Error",
+                    JOptionPane.WARNING_MESSAGE
+            );
+        } catch (UnauthorizedException ex) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    ex.getMessage(),
+                    "Not Allowed",
+                    JOptionPane.WARNING_MESSAGE
+            );
+        } catch (Exception ex) {
+            ex.printStackTrace();
+
+            // Only genuinely unexpected failures (e.g. database errors) reach here.
+            // Surface the underlying cause so it isn't a dead-end "failed to save".
+            Throwable root = ex;
+            while (root.getCause() != null) {
+                root = root.getCause();
+            }
+
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Failed to save employee.\n\n" + root.getMessage(),
                     "Save Error",
                     JOptionPane.ERROR_MESSAGE
             );
         }
+    }
+
+    // Turns the raw newline-separated errors into a clear, scannable list so
+    // the user can see exactly which fields need fixing (as an HTML bullet list
+    // whose count is shown in the header).
+    private String buildValidationMessage(String rawErrors) {
+        String[] lines = rawErrors.split("\n");
+
+        int count = 0;
+        StringBuilder items = new StringBuilder();
+        for (String line : lines) {
+            if (!line.isBlank()) {
+                count++;
+                items.append("<li>")
+                     .append(escapeHtml(line.trim()))
+                     .append("</li>");
+            }
+        }
+
+        String header = count == 1
+                ? "Please fix the following issue before saving:"
+                : "Please fix the following " + count + " issues before saving:";
+
+        return "<html><body style='width:320px; font-family:Segoe UI; font-size:11px;'>"
+                + "<p style='margin:0 0 6px 0;'><b>" + header + "</b></p>"
+                + "<ul style='margin:0; padding-left:18px;'>" + items + "</ul>"
+                + "</body></html>";
+    }
+
+    private String escapeHtml(String value) {
+        return value.replace("&", "&amp;")
+                    .replace("<", "&lt;")
+                    .replace(">", "&gt;");
     }
 
     private String validateForm() {
@@ -719,10 +778,17 @@ public class EmployeeFormPanel extends JPanel {
             errors.append("Birthdate is required.\n");
         } else {
             try {
-                LocalDate.parse(birthdate, DATE_FORMATTER);
-            } catch (Exception ex) {
+                LocalDate parsedBirthdate = LocalDate.parse(birthdate, DATE_FORMATTER);
+                if (java.time.Period.between(parsedBirthdate, LocalDate.now()).getYears() < 18) {
+                    errors.append("Employee must be at least 18 years old.\n");
+                }
+            } catch (java.time.format.DateTimeParseException ex) {
                 errors.append("Birthdate must be in MM-DD-YYYY format.\n");
             }
+        }
+
+        if (getValue(addressField).isBlank()) {
+            errors.append("Address is required.\n");
         }
 
         String sssDigits = sss.replaceAll("\\D", "");
