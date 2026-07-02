@@ -66,7 +66,6 @@ public class PayrollFormPanel extends JPanel {
 
     private static final String SAVE_ICON_PATH = "/com/motorph/img/Save-Icon.png";
 
-   
     private static final DateTimeFormatter DATE_FORMATTER =
             DateTimeFormatter.ofPattern("MM/uuuu").withResolverStyle(ResolverStyle.STRICT);
 
@@ -78,6 +77,9 @@ public class PayrollFormPanel extends JPanel {
     private JTextField payrollDateField;
     private JButton dateButton;
     private JComboBox<String> payrollPeriodCombo;
+
+   
+    private boolean generated = false;
 
     // Earning fields
     private JTextField basicSalaryField;
@@ -360,6 +362,9 @@ public class PayrollFormPanel extends JPanel {
 
         loadEmployeesIntoCombo();
 
+        // Changing the employee invalidates any previously generated figures.
+        employeeCombo.addActionListener(e -> generated = false);
+
         return employeeCombo;
     }
 
@@ -495,6 +500,8 @@ public class PayrollFormPanel extends JPanel {
         selectButton.addActionListener(e -> {
             payrollDateField.setText(currentMonth[0].format(DATE_FORMATTER));
             payrollDateField.setForeground(TEXT_DARK);
+            // Changing the date invalidates any previously generated figures.
+            generated = false;
             dialog.dispose();
         });
 
@@ -529,6 +536,8 @@ public class PayrollFormPanel extends JPanel {
         payrollPeriodCombo.setPreferredSize(new Dimension(180, 26));
         payrollPeriodCombo.setBackground(Color.WHITE);
         payrollPeriodCombo.setFocusable(false);
+        // Changing the period invalidates any previously generated figures.
+        payrollPeriodCombo.addActionListener(e -> generated = false);
         return payrollPeriodCombo;
     }
 
@@ -590,6 +599,7 @@ public class PayrollFormPanel extends JPanel {
         try {
             Payslip payslip = payrollService.computePayslip(employee, period[0], period[1]);
             populateFromPayslip(payslip);
+            generated = true;
         } catch (Exception ex) {
             ex.printStackTrace();
             JOptionPane.showMessageDialog(this,
@@ -600,6 +610,14 @@ public class PayrollFormPanel extends JPanel {
 
     /* Persists the payroll/payslip */
     private void handleSubmit() {
+        // Safety gate: the user must Generate (preview) before they can submit.
+        if (!generated) {
+            JOptionPane.showMessageDialog(this,
+                    "Please click Generate first to compute the payroll before submitting.",
+                    "Submit Payroll", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
         Employee employee = getSelectedEmployee();
         if (employee == null) {
             JOptionPane.showMessageDialog(this,
@@ -610,6 +628,14 @@ public class PayrollFormPanel extends JPanel {
 
         LocalDate[] period = parseSelectedPeriod();
         if (period == null) {
+            return;
+        }
+
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "Are you sure you want to submit this payroll for "
+                        + formatEmployeeLabel(employee) + "?\nThis will save it to the database.",
+                "Confirm Submit", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+        if (confirm != JOptionPane.YES_OPTION) {
             return;
         }
 
