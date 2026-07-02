@@ -11,7 +11,6 @@ import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.Image;
 import java.awt.Insets;
 import java.awt.RenderingHints;
 import java.awt.event.FocusAdapter;
@@ -32,7 +31,6 @@ import java.util.Map;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
-import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
@@ -335,21 +333,21 @@ public class RequestPanel extends JPanel {
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         buttons.setOpaque(false);
 
-        JButton addButton = navyButton("Add-Icon.png", "Add", 90);
+        JButton addButton = button("+  Add", 90);
         addButton.addActionListener(e -> openAddForm());
         buttons.add(addButton);
 
-        JButton updateButton = navyButton("Update-Icon.png", "Update", 105);
+        JButton updateButton = button("✎  Update", 105);
         updateButton.setVisible(canModifyAllRequests);
         updateButton.addActionListener(e -> openUpdateForm());
         buttons.add(updateButton);
 
-        JButton deleteButton = navyButton("Delete-Icon.png", "Delete", 105);
+        JButton deleteButton = button("🗑  Delete", 105);
         deleteButton.setVisible(canModifyAllRequests);
         deleteButton.addActionListener(e -> deleteSelectedRequest());
         buttons.add(deleteButton);
 
-        JButton refreshButton = navyButton("Refresh-Icon.png", "Refresh", 110);
+        JButton refreshButton = button("⟳  Refresh", 110);
         refreshButton.addActionListener(e -> showRequestList()); // reloads from DB
         buttons.add(refreshButton);
 
@@ -783,40 +781,17 @@ public class RequestPanel extends JPanel {
         }
     }
 
-    private JButton navyButton(String iconFileName, String text, int width) {
-        JButton button = new JButton(text);
-        button.setPreferredSize(new Dimension(width, 37));
-        button.setBackground(NAVY);
-        button.setForeground(Color.WHITE);
-        button.setFont(new Font(FONT, Font.PLAIN, 13));
-        button.setFocusPainted(false);
-        button.setBorderPainted(false);
-        button.setMargin(new Insets(0, 10, 0, 10));
-        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-
-        ImageIcon icon = loadIcon(iconFileName, 16, 16);
-        if (icon != null) {
-            button.setIcon(icon);
-            button.setIconTextGap(8);
-        }
-
-        return button;
-    }
-
-    // Loads an icon from the classpath (src/main/java/com/motorph/img/) and
-    // scales it. Returns null (button falls back to text-only) if the file
-    // isn't found, so a bad path never crashes the UI.
-    private ImageIcon loadIcon(String fileName, int width, int height) {
-        java.net.URL url = getClass().getResource("/com/motorph/img/" + fileName);
-
-        if (url == null) {
-            System.err.println("Icon not found: /com/motorph/img/" + fileName);
-            return null;
-        }
-
-        ImageIcon rawIcon = new ImageIcon(url);
-        Image scaled = rawIcon.getImage().getScaledInstance(width, height, Image.SCALE_SMOOTH);
-        return new ImageIcon(scaled);
+    private JButton button(String text, int width) {
+        JButton btn = new JButton(text);
+        btn.setPreferredSize(new Dimension(width, 37));
+        btn.setBackground(NAVY);
+        btn.setForeground(Color.WHITE);
+        btn.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        btn.setFocusPainted(false);
+        btn.setBorderPainted(false);
+        btn.setMargin(new Insets(0, 8, 0, 8));
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        return btn;
     }
 
     private class HeaderFilterRenderer extends JPanel implements TableCellRenderer {
