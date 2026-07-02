@@ -11,7 +11,7 @@ import javax.swing.*;
 import javax.swing.border.*;
 import javax.swing.text.JTextComponent;
 
-public class DisputeDetail extends JPanel {
+public class HelpCenterFormPanel extends JPanel {
 
     private static final Color NAVY         = new Color(13, 36, 89);
     private static final Color FIELD_BG     = Color.WHITE;
@@ -31,7 +31,7 @@ public class DisputeDetail extends JPanel {
 
     private final Runnable onBack;
 
-    public DisputeDetail(Runnable onBack) {
+    public HelpCenterFormPanel(Runnable onBack) {
         this.onBack = onBack;
         setLayout(new BorderLayout());
         setBackground(Color.WHITE);
