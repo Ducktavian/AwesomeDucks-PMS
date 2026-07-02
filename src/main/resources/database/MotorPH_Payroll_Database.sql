@@ -6580,6 +6580,8 @@ SELECT
     pp.period_end_date,
     pr.hours_worked,
     pr.hourly_rate,
+    pr.basic_salary,
+    pr.overtime_pay,
     pr.gross_pay,
     pr.net_pay,
     COALESCE(MAX(CASE WHEN pb.benefit_type_id   = 1 THEN pb.amount END), 0) AS rice_subsidy,
@@ -6600,7 +6602,8 @@ GROUP BY
     ps.payslip_id, ps.payslip_number, ps.generated_at,
     pr.payroll_id, e.employee_id, e.first_name, e.last_name,
     p.position_name, pp.period_start_date, pp.period_end_date,
-    pr.hours_worked, pr.hourly_rate, pr.gross_pay, pr.net_pay;
+    pr.hours_worked, pr.hourly_rate, pr.basic_salary, pr.overtime_pay,
+    pr.gross_pay, pr.net_pay;
 
 
 -- -------------------------------------------------------------

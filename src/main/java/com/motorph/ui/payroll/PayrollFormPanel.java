@@ -15,7 +15,6 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
-import java.awt.GridLayout;
 import java.awt.Image;
 import java.awt.Insets;
 import java.awt.RenderingHints;
@@ -64,8 +63,10 @@ public class PayrollFormPanel extends JPanel {
 
     private static final String SAVE_ICON_PATH = "/com/motorph/img/Save-Icon.png";
 
+    // Payroll Date only ever needs month + year: the day-level cutoff is
+    // already captured by the Payroll Period combo (1st Cutoff / 2nd Cutoff).
     private static final DateTimeFormatter DATE_FORMATTER =
-            DateTimeFormatter.ofPattern("MM-dd-uuuu").withResolverStyle(ResolverStyle.STRICT);
+            DateTimeFormatter.ofPattern("MM/uuuu").withResolverStyle(ResolverStyle.STRICT);
 
     private final Runnable onBack;
     private final EmployeeService employeeService = AppContext.getEmployeeService();
@@ -424,47 +425,40 @@ public class PayrollFormPanel extends JPanel {
     }
 
     private void openDatePicker() {
-        LocalDate initialDate = LocalDate.now();
+        YearMonth initialMonth = YearMonth.now();
 
         try {
             String current = payrollDateField.getText().trim();
             if (!current.isBlank()) {
-                initialDate = LocalDate.parse(current, DATE_FORMATTER);
+                initialMonth = YearMonth.parse(current, DATE_FORMATTER);
             }
         } catch (Exception ignored) {
         }
 
-        showCalendarDialog(initialDate);
+        showMonthYearDialog(initialMonth);
     }
 
     /**
-     * Calendar popup for selecting the Payroll Date.
-     *
-     * NOTE: this mirrors the date picker used in EmployeeFormPanel, but fixes
-     * the bug where it was found there: that version used a hardcoded
-     * dialog.setSize(360, 350) together with an auto-row GridLayout(0, 7),
-     * so months that need 6 week-rows (most months where the 1st doesn't
-     * fall on Sunday) ran out of vertical space and the last row of day
-     * buttons got clipped outside the visible dialog (unreachable/unclickable).
-     * Here the grid always reserves a fixed 7 rows (1 header + 6 week rows)
-     * and the dialog is sized with pack() instead of a hardcoded size, so it
-     * always fits every row regardless of month.
+     * Month/Year popup for selecting the Payroll Date. Only month + year are
+     * captured \u2014 the Payroll Period combo (1st Cutoff / 2nd Cutoff) already
+     * pins down which half of that month the cutoff falls in, so a day-level
+     * calendar would just be redundant with it.
      */
-    private void showCalendarDialog(LocalDate initialDate) {
+    private void showMonthYearDialog(YearMonth initialMonth) {
         JDialog dialog = new JDialog(
                 SwingUtilities.getWindowAncestor(this),
-                "Select Payroll Date",
+                "Select Payroll Month",
                 Dialog.ModalityType.APPLICATION_MODAL
         );
 
         dialog.setLayout(new BorderLayout());
         dialog.getContentPane().setBackground(Color.WHITE);
 
-        final YearMonth[] currentMonth = {YearMonth.from(initialDate)};
+        final YearMonth[] currentMonth = {initialMonth};
 
         JPanel header = new JPanel(new BorderLayout());
         header.setBackground(Color.WHITE);
-        header.setBorder(new EmptyBorder(12, 12, 8, 12));
+        header.setBorder(new EmptyBorder(20, 20, 12, 20));
 
         JButton prevButton = new JButton("\u2039");
         JButton nextButton = new JButton("\u203A");
@@ -479,94 +473,36 @@ public class PayrollFormPanel extends JPanel {
         header.add(monthLabel, BorderLayout.CENTER);
         header.add(nextButton, BorderLayout.EAST);
 
-        // Fixed 7 rows: 1 header row + 6 week rows, always reserved so the
-        // dialog never needs to clip the final week of a 6-row month.
-        JPanel calendarPanel = new JPanel(new GridLayout(7, 7, 6, 6));
-        calendarPanel.setBackground(Color.WHITE);
-        calendarPanel.setBorder(new EmptyBorder(8, 12, 12, 12));
-        calendarPanel.setPreferredSize(new Dimension(320, 280));
-
-        Runnable refreshCalendar = () -> {
-            calendarPanel.removeAll();
-
-            monthLabel.setText(currentMonth[0].getMonth() + " " + currentMonth[0].getYear());
-
-            String[] days = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
-
-            for (String day : days) {
-                JLabel dayLabel = new JLabel(day, SwingConstants.CENTER);
-                dayLabel.setFont(new Font(FONT, Font.BOLD, 12));
-                dayLabel.setForeground(TEXT_DARK);
-                calendarPanel.add(dayLabel);
-            }
-
-            LocalDate firstDay = currentMonth[0].atDay(1);
-            int startOffset = firstDay.getDayOfWeek().getValue() % 7;
-
-            for (int i = 0; i < startOffset; i++) {
-                calendarPanel.add(new JLabel(""));
-            }
-
-            int daysInMonth = currentMonth[0].lengthOfMonth();
-
-            for (int day = 1; day <= daysInMonth; day++) {
-                LocalDate selectedDate = currentMonth[0].atDay(day);
-
-                // FIX 2: day buttons now explicitly set foreground, are
-                // opaque, have trimmed margins, and a guaranteed minimum
-                // size so the digit text can never be squeezed out / hidden
-                // by the look-and-feel or by GridLayout cell sizing.
-                JButton dayButton = new JButton(String.valueOf(day));
-                dayButton.setFont(new Font(FONT, Font.PLAIN, 13));
-                dayButton.setForeground(TEXT_DARK);
-                dayButton.setBackground(Color.WHITE);
-                dayButton.setOpaque(true);
-                dayButton.setFocusPainted(false);
-                dayButton.setMargin(new Insets(2, 2, 2, 2));
-                dayButton.setPreferredSize(new Dimension(38, 32));
-                dayButton.setMinimumSize(new Dimension(38, 32));
-                dayButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-
-                if (selectedDate.equals(initialDate)) {
-                    dayButton.setBackground(new Color(225, 230, 245));
-                }
-
-                dayButton.addActionListener(e -> {
-                    payrollDateField.setText(selectedDate.format(DateTimeFormatter.ofPattern("MM-dd-yyyy")));
-                    payrollDateField.setForeground(TEXT_DARK);
-                    dialog.dispose();
-                });
-
-                calendarPanel.add(dayButton);
-            }
-
-            // Pad out remaining cells so the grid always has exactly 7 rows,
-            // keeping the dialog size (and pack()) consistent across months.
-            int filledCells = startOffset + daysInMonth;
-            int totalCells = 7 * 7; // header row + 6 week rows
-            for (int i = filledCells; i < totalCells - 7; i++) {
-                calendarPanel.add(new JLabel(""));
-            }
-
-            calendarPanel.revalidate();
-            calendarPanel.repaint();
-        };
+        Runnable refreshLabel = () ->
+                monthLabel.setText(currentMonth[0].getMonth() + " " + currentMonth[0].getYear());
 
         prevButton.addActionListener(e -> {
             currentMonth[0] = currentMonth[0].minusMonths(1);
-            refreshCalendar.run();
+            refreshLabel.run();
         });
 
         nextButton.addActionListener(e -> {
             currentMonth[0] = currentMonth[0].plusMonths(1);
-            refreshCalendar.run();
+            refreshLabel.run();
         });
 
-        refreshCalendar.run();
+        refreshLabel.run();
+
+        JButton selectButton = navyButton("Select", null);
+        selectButton.addActionListener(e -> {
+            payrollDateField.setText(currentMonth[0].format(DATE_FORMATTER));
+            payrollDateField.setForeground(TEXT_DARK);
+            dialog.dispose();
+        });
+
+        JPanel footer = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        footer.setBackground(Color.WHITE);
+        footer.setBorder(new EmptyBorder(0, 20, 20, 20));
+        footer.add(selectButton);
 
         dialog.add(header, BorderLayout.NORTH);
-        dialog.add(calendarPanel, BorderLayout.CENTER);
-        dialog.pack();
+        dialog.add(footer, BorderLayout.SOUTH);
+        dialog.setSize(300, 170);
         dialog.setLocationRelativeTo(this);
         dialog.setVisible(true);
     }
@@ -814,15 +750,19 @@ public class PayrollFormPanel extends JPanel {
     }
 
     /**
-     * Fills the form from a Payslip. Basic Salary, Overtime, Holiday and the
-     * Bonus Type/Amount fields are left blank: the Payslip DTO doesn't carry
-     * per-payslip basic salary, overtime pay, holiday pay, or bonus data today.
+     * Fills the form from a Payslip. Bonus Type/Amount is left blank: no
+     * bonus concept exists anywhere in the schema or model layer yet.
+     * Holiday is sourced from Payslip.getHolidayPay(), which is always 0
+     * today since PayrollService has no holiday-pay computation to feed it.
      */
     private void populateFromPayslip(Payslip payslip) {
         selectEmployeeById(payslip.getEmployeeNumber());
 
+        basicSalaryField.setText(money(payslip.getBasicSalary()));
         hoursWorkedField.setText(trimNumber(payslip.getTotalHours()));
         hourlyRateField.setText(trimNumber(payslip.getHourlyRate()));
+        overtimeField.setText(money(payslip.getOvertimePay()));
+        holidayField.setText(money(payslip.getHolidayPay()));
         grossPayField.setText(money(payslip.getGrossPay()));
 
         riceSubsidyField.setText(money(payslip.getAllowanceBreakdown().getRiceSubsidy()));

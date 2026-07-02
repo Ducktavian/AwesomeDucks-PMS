@@ -22,7 +22,7 @@ public class JdbcPayslipDAO implements PayslipDAO {
     private static final String SELECT_BASE =
             "SELECT payslip_id, payslip_number, generated_at, payroll_id, employee_id, " +
             "full_name, position_name, period_start_date, period_end_date, " +
-            "hours_worked, hourly_rate, gross_pay, net_pay, " +
+            "hours_worked, hourly_rate, basic_salary, overtime_pay, gross_pay, net_pay, " +
             "rice_subsidy, phone_allowance, clothing_allowance, " +
             "sss, philhealth, pagibig, withholding_tax " +
             "FROM v_payslip_detail";
@@ -168,6 +168,9 @@ public class JdbcPayslipDAO implements PayslipDAO {
                 periodEnd,
                 rs.getDouble("hours_worked"),
                 rs.getDouble("hourly_rate"),
+                rs.getDouble("basic_salary"),
+                rs.getDouble("overtime_pay"),
+                0.0, // holiday_pay: no column/benefit type exists for this yet
                 rs.getDouble("gross_pay"),
                 allowances,
                 deductions,

@@ -24,6 +24,9 @@ public class Payslip {
     // Earnings
     private double totalHours;
     private double hourlyRate;
+    private double basicSalary;
+    private double overtimePay;
+    private double holidayPay;
 
     private double grossPay;
     private AllowanceBreakdown allowanceBreakdown;
@@ -44,6 +47,9 @@ public class Payslip {
                    LocalDate periodEnd,
                    double totalHours,
                    double hourlyRate,
+                   double basicSalary,
+                   double overtimePay,
+                   double holidayPay,
                    double grossPay,
                    AllowanceBreakdown allowanceBreakdown,
                    DeductionBreakdown deductionBreakdown,
@@ -57,6 +63,9 @@ public class Payslip {
         this.periodEnd = periodEnd;
         this.totalHours = totalHours;
         this.hourlyRate = hourlyRate;
+        this.basicSalary = basicSalary;
+        this.overtimePay = overtimePay;
+        this.holidayPay = holidayPay;
         this.grossPay = grossPay;
         this.allowanceBreakdown = allowanceBreakdown;
         this.deductionBreakdown = deductionBreakdown;
@@ -96,6 +105,16 @@ public class Payslip {
     }
     public double getHourlyRate() {
         return hourlyRate;
+    }
+    public double getBasicSalary() {
+        return basicSalary;
+    }
+    public double getOvertimePay() {
+        return overtimePay;
+    }
+    // Always 0 today: no holiday-pay computation exists in PayrollService yet.
+    public double getHolidayPay() {
+        return holidayPay;
     }
 
     public double getGrossPay() {
@@ -140,6 +159,9 @@ public class Payslip {
                 ", periodEnd=" + periodEnd +
                 ", totalHours=" + totalHours +
                 ", hourlyRate=" + hourlyRate +
+                ", basicSalary=" + basicSalary +
+                ", overtimePay=" + overtimePay +
+                ", holidayPay=" + holidayPay +
                 ", grossPay=" + grossPay +
                 ", allowanceBreakdown=" + allowanceBreakdown +
                 ", totalAllowances=" + getAllowances() +

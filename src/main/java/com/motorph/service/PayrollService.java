@@ -53,6 +53,10 @@ public class PayrollService {
         double totalGross;
         double netPay;
 
+        double basicSalary = rateService.computeBasicSalary(employee);
+        double overtimePay = 0; // overtime not modeled yet - plug in when work_time_request integration is added
+        double holidayPay = 0; // holiday pay not modeled anywhere yet - no column/benefit type exists for it
+
         if (payrollId == -1) {
             // No payroll yet for this employee/period - compute and save it.
             cutoffHours = attendanceService.computeTotalHours(employee.getEmployeeId(), periodStart, periodEnd);
@@ -78,11 +82,11 @@ public class PayrollService {
                     employeeId,
                     payPeriod.getPayPeriodId(),
                     STATUS_PAID,
-                    rateService.computeBasicSalary(employee),
+                    basicSalary,
                     hourlyRate,
                     cutoffHours,
                     cutoffGross,
-                    0, // overtime not modeled yet - plug in when work_time_request integration is added
+                    overtimePay,
                     totalGross,
                     allowanceBreakdown.getTotal(),
                     deductionBreakdown.getTotal(),
@@ -122,6 +126,9 @@ public class PayrollService {
                 periodEnd,
                 cutoffHours,
                 hourlyRate,
+                basicSalary,
+                overtimePay,
+                holidayPay,
                 totalGross,
                 allowanceBreakdown,
                 deductionBreakdown,
