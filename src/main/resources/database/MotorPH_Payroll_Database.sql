@@ -679,14 +679,14 @@ INSERT INTO `employee` (`employee_id`, `first_name`, `last_name`, `birthdate`, `
 (10005, 'Eduard',       'Hernandez',   '1989-09-23', '088-861-012', 'eduard.hernandez@motorph.com',     13, 10002, 2, NOW(), NULL),
 (10006, 'Andrea Mae',   'Villanueva',  '1988-02-14', '918-621-603', 'andreamae.villanueva@motorph.com', 10, 10002, 2, NOW(), NULL),
 (10007, 'Brad',         'San Jose',    '1996-03-15', '797-009-261', 'brad.sanjose@motorph.com',         12, 10006, 2, NOW(), NULL),
-(10008, 'Alice',        'Romualdez',   '1992-05-14', '983-606-799', 'alice.romualdez@motorph.com',      11, NULL, 2, NOW(), NULL),
-(10009, 'Rosie',        'Atienza',     '1948-09-24', '266-036-427', 'rosie.atienza@motorph.com',        11, NULL, 2, NOW(), NULL),
+(10008, 'Alice',        'Romualdez',   '1992-05-14', '983-606-799', 'alice.romualdez@motorph.com',      11, 10007, 2, NOW(), NULL),
+(10009, 'Rosie',        'Atienza',     '1948-09-24', '266-036-427', 'rosie.atienza@motorph.com',        11, 10007, 2, NOW(), NULL),
 (10010, 'Roderick',     'Alvaro',      '1988-03-30', '053-381-386', 'roderick.alvaro@motorph.com',      4,  10003, 2, NOW(), NULL),
 (10011, 'Anthony',      'Salcedo',     '1993-09-14', '070-766-300', 'anthony.salcedo@motorph.com',      14, 10010, 2, NOW(), NULL),
 (10012, 'Josie',        'Lopez',       '1987-01-14', '478-355-427', 'josie.lopez@motorph.com',          16, 10011, 2, NOW(), NULL),
 (10013, 'Martha',       'Farala',      '1942-01-11', '329-034-366', 'martha.farala@motorph.com',        15, 10011, 2, NOW(), NULL),
 (10014, 'Leila',        'Martinez',    '1970-07-11', '877-110-749', 'leila.martinez@motorph.com',       15, 10011, 2, NOW(), NULL),
-(10015, 'Fredrick',     'Romualdez',   '1985-03-10', '023-079-009', 'fredrick.romualdez@motorph.com',   1,  NULL, 2, NOW(), NULL),
+(10015, 'Fredrick',     'Romualdez',   '1985-03-10', '023-079-009', 'fredrick.romualdez@motorph.com',   1,  10004, 2, NOW(), NULL),
 (10016, 'Christian',    'Mata',        '1987-10-21', '783-776-744', 'christian.mata@motorph.com',       3,  10015, 2, NOW(), NULL),
 (10017, 'Selena',       'De Leon',     '1975-02-20', '975-432-139', 'selena.deleon@motorph.com',        3,  10015, 2, NOW(), NULL),
 (10018, 'Allison',      'San Jose',    '1986-06-24', '179-075-129', 'allison.sanjose@motorph.com',      2,  10016, 2, NOW(), NULL),
@@ -6201,8 +6201,11 @@ INSERT INTO `user_account` (`employee_id`, `username`, `password_hash`, `is_acti
 -- Account-Role mapping (user_account_id follows insertion order 1=10001 ... 34=10034)
 -- Role IDs: 1=Admin  2=HR  3=IT  4=Finance  5=Employee
 INSERT INTO `account_role` (`user_account_id`, `role_id`, `created_at`, `created_by`) VALUES
--- Admin
+-- Admin (Executive department: CEO, COO, CFO, CMO all get full system access)
 (1,  1, NOW(), NULL),   -- 10001 Garcia       CEO               → Admin
+(2,  1, NOW(), NULL),   -- 10002 Lim           COO               → Admin
+(3,  1, NOW(), NULL),   -- 10003 Aquino        CFO               → Admin
+(4,  1, NOW(), NULL),   -- 10004 Reyes         CMO               → Admin
 -- HR (position_id 10,11,12 = HR Manager / Rank and File / Team Leader)
 (6,  2, NOW(), NULL),   -- 10006 Villanueva   HR Manager        → HR
 (7,  2, NOW(), NULL),   -- 10007 San Jose      HR Team Leader    → HR
@@ -6212,15 +6215,12 @@ INSERT INTO `account_role` (`user_account_id`, `role_id`, `created_at`, `created
 (5,  3, NOW(), NULL),   -- 10005 Hernandez    IT Operations     → IT
 (34, 3, NOW(), NULL),   -- 10034 Santos        IT Operations     → IT
 -- Finance (position_id 4,14,15,16 = Accounting/Payroll)
-(3,  4, NOW(), NULL),   -- 10003 Aquino        CFO               → Finance
 (10, 4, NOW(), NULL),   -- 10010 Alvaro        Accounting Head   → Finance
 (11, 4, NOW(), NULL),   -- 10011 Salcedo       Payroll Manager   → Finance
 (12, 4, NOW(), NULL),   -- 10012 Lopez         Payroll TL        → Finance
 (13, 4, NOW(), NULL),   -- 10013 Farala        Payroll RF        → Finance
 (14, 4, NOW(), NULL),   -- 10014 Martinez      Payroll RF        → Finance
 -- Employee (everyone else)
-(2,  5, NOW(), NULL),   -- 10002 Lim           COO
-(4,  5, NOW(), NULL),   -- 10004 Reyes         CMO
 (15, 5, NOW(), NULL),   -- 10015 Romualdez     Account Manager
 (16, 5, NOW(), NULL),   -- 10016 Mata          Account TL
 (17, 5, NOW(), NULL),   -- 10017 De Leon       Account TL

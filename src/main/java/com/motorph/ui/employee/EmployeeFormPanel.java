@@ -33,14 +33,21 @@ public class EmployeeFormPanel extends JPanel {
     private final Map<String, Integer> supervisorIdsByName = new LinkedHashMap<>();
     private Map<String, Integer> positionIdsByName = new LinkedHashMap<>();
     private Map<String, Integer> statusIdsByName = new LinkedHashMap<>();
+    private Map<String, Integer> departmentIdsByName = new LinkedHashMap<>();
 
     private boolean updateMode = false;
     private Employee selectedEmployee;
+    // Guards the department combo's listener while we repopulate it programmatically.
+    private boolean loadingDepartments = false;
 
     private JTextField employeeIdField, firstNameField, lastNameField;
+    private JComboBox<String> departmentComboBox;
+    private JTextField departmentField;
+    private JComboBox<String> positionComboBox;
     private JTextField positionField;
     private JTextField statusField;
     private JComboBox<String> supervisorComboBox;
+    private JTextField supervisorField;
     private JComboBox<String> statusComboBox;
 
     private JTextField birthdateField, cellphoneField;
@@ -88,11 +95,11 @@ public class EmployeeFormPanel extends JPanel {
         content.add(buildSection("Basic Information",
                 new String[]{
                     "Employee ID", "First Name", "Last Name",
-                    "Position", "Immediate Supervisor", "Status"
+                    "Department", "Position", "Immediate Supervisor", "Status"
                 },
                 new String[]{
                     "e.g., 10001", "e.g., Juan", "e.g., Dela Cruz",
-                    "e.g., Software Engineer", "e.g., Maria Santos", ""
+                    "", "", "", ""
                 }));
         content.add(Box.createVerticalStrut(30));
 
@@ -198,43 +205,40 @@ public class EmployeeFormPanel extends JPanel {
     // special cases (supervisor combo, status combo+field, birthdate picker,
     // address text area) and wiring up the field references exactly as before.
     private JComponent buildInput(int sectionIndex, int i, String[] placeholders) {
+        if (sectionIndex == 0 && i == 3) {
+            departmentComboBox = new JComboBox<>();
+            styleCombo(departmentComboBox);
+            loadDepartmentOptions();
+            // When the department changes, refresh the Position and Supervisor lists.
+            departmentComboBox.addActionListener(e -> onDepartmentChanged());
+
+            departmentField = createReadOnlyField();
+            return buildComboFieldStack(departmentComboBox, departmentField);
+        }
+
         if (sectionIndex == 0 && i == 4) {
-            supervisorComboBox = new JComboBox<>();
-            styleCombo(supervisorComboBox);
-            loadSupervisorOptions();
-            return supervisorComboBox;
+            positionComboBox = new JComboBox<>();
+            styleCombo(positionComboBox);
+
+            positionField = createReadOnlyField();
+            return buildComboFieldStack(positionComboBox, positionField);
         }
 
         if (sectionIndex == 0 && i == 5) {
+            supervisorComboBox = new JComboBox<>();
+            styleCombo(supervisorComboBox);
+            loadSupervisorOptions();
+
+            supervisorField = createReadOnlyField();
+            return buildComboFieldStack(supervisorComboBox, supervisorField);
+        }
+
+        if (sectionIndex == 0 && i == 6) {
             statusComboBox = new JComboBox<>(new String[]{"Regular", "Probationary"});
             styleCombo(statusComboBox);
 
-            statusField = new JTextField();
-            statusField.setFont(new Font(FONT, Font.PLAIN, 13));
-            statusField.setBackground(Color.WHITE);
-            statusField.setOpaque(true);
-            statusField.setBorder(new CompoundBorder(
-                    new RoundedBorder(6),
-                    new EmptyBorder(2, 8, 2, 8)
-            ));
-            statusField.setEditable(false);
-            statusField.setFocusable(false);
-            statusField.setVisible(false);
-
-            // Overlap combo + read-only field in one cell; visibility decides
-            // which one shows (combo for add/update, field for view mode).
-            JPanel stack = new JPanel(new GridBagLayout());
-            stack.setOpaque(false);
-            sizeInput(stack);
-            GridBagConstraints gc = new GridBagConstraints();
-            gc.gridx = 0;
-            gc.gridy = 0;
-            gc.fill = GridBagConstraints.BOTH;
-            gc.weightx = 1;
-            gc.weighty = 1;
-            stack.add(statusComboBox, gc);
-            stack.add(statusField, gc);
-            return stack;
+            statusField = createReadOnlyField();
+            return buildComboFieldStack(statusComboBox, statusField);
         }
 
         if (sectionIndex == 1 && i == 0) {
@@ -318,13 +322,122 @@ public class EmployeeFormPanel extends JPanel {
         c.setMinimumSize(new Dimension(160, FIELD_HEIGHT));
     }
 
+    // Read-only text field shown in place of a combo in view mode.
+    private JTextField createReadOnlyField() {
+        JTextField field = new JTextField();
+        field.setFont(new Font(FONT, Font.PLAIN, 13));
+        field.setBackground(Color.WHITE);
+        field.setOpaque(true);
+        field.setBorder(new CompoundBorder(
+                new RoundedBorder(6),
+                new EmptyBorder(2, 8, 2, 8)
+        ));
+        field.setEditable(false);
+        field.setFocusable(false);
+        field.setVisible(false);
+        return field;
+    }
+
+    // Overlaps a combo + read-only field in one cell; visibility decides which
+    // one shows (combo for add/update, field for view mode) so read-only mode
+    // shows plain black text instead of a low-contrast disabled combo.
+    private JPanel buildComboFieldStack(JComboBox<?> combo, JTextField field) {
+        JPanel stack = new JPanel(new GridBagLayout());
+        stack.setOpaque(false);
+        sizeInput(stack);
+        GridBagConstraints gc = new GridBagConstraints();
+        gc.gridx = 0;
+        gc.gridy = 0;
+        gc.fill = GridBagConstraints.BOTH;
+        gc.weightx = 1;
+        gc.weighty = 1;
+        stack.add(combo, gc);
+        stack.add(field, gc);
+        return stack;
+    }
+
+    // ---------------------------------------------------------------
+    // Department -> Position / Supervisor cascade
+    // ---------------------------------------------------------------
+
+    private void loadDepartmentOptions() {
+        if (departmentComboBox == null) {
+            return;
+        }
+        loadingDepartments = true;
+        departmentIdsByName = employeeService.getDepartments();
+        departmentComboBox.removeAllItems();
+        for (String name : departmentIdsByName.keySet()) {
+            departmentComboBox.addItem(name);
+        }
+        loadingDepartments = false;
+    }
+
+    private void onDepartmentChanged() {
+        if (loadingDepartments) {
+            return;
+        }
+        reloadPositionsForSelectedDepartment(null);
+        loadSupervisorOptions();
+    }
+
+    private Integer getSelectedDepartmentId() {
+        Object selected = departmentComboBox == null ? null : departmentComboBox.getSelectedItem();
+        return selected == null ? null : departmentIdsByName.get(selected.toString());
+    }
+
+    private String getSelectedDepartmentName() {
+        Object selected = departmentComboBox == null ? null : departmentComboBox.getSelectedItem();
+        return selected == null ? "" : selected.toString();
+    }
+
+    // Selects a department without triggering the cascade listener; callers
+    // repopulate the dependent lists explicitly afterwards.
+    private void selectDepartment(String departmentName) {
+        if (departmentComboBox == null) {
+            return;
+        }
+        loadingDepartments = true;
+        if (departmentName != null && departmentIdsByName.containsKey(departmentName)) {
+            departmentComboBox.setSelectedItem(departmentName);
+        } else if (departmentComboBox.getItemCount() > 0) {
+            departmentComboBox.setSelectedIndex(0);
+        }
+        loadingDepartments = false;
+    }
+
+    private void reloadPositionsForSelectedDepartment(String positionToSelect) {
+        if (positionComboBox == null) {
+            return;
+        }
+        Integer deptId = getSelectedDepartmentId();
+        positionIdsByName = deptId == null
+                ? new LinkedHashMap<>()
+                : employeeService.getPositionsByDepartment(deptId);
+
+        positionComboBox.removeAllItems();
+        for (String name : positionIdsByName.keySet()) {
+            positionComboBox.addItem(name);
+        }
+
+        if (positionToSelect != null && positionIdsByName.containsKey(positionToSelect)) {
+            positionComboBox.setSelectedItem(positionToSelect);
+        }
+    }
+
+    private String getSelectedPosition() {
+        Object selected = positionComboBox == null ? null : positionComboBox.getSelectedItem();
+        return selected == null ? "" : selected.toString();
+    }
+
     private void assignFieldReference(int sectionIndex, int fieldIndex, JTextField field) {
         if (sectionIndex == 0) {
             switch (fieldIndex) {
                 case 0 -> employeeIdField = field;
                 case 1 -> firstNameField = field;
                 case 2 -> lastNameField = field;
-                case 3 -> positionField = field;
+                // 3 = Department, 4 = Position, 5 = Supervisor, 6 = Status are
+                // combo-backed and handled directly in buildInput.
             }
         } else if (sectionIndex == 1) {
             switch (fieldIndex) {
@@ -576,7 +689,7 @@ public class EmployeeFormPanel extends JPanel {
         String employeeId = getValue(employeeIdField);
         String firstName = getValue(firstNameField);
         String lastName = getValue(lastNameField);
-        String position = getValue(positionField);
+        String position = getSelectedPosition();
         String status = getSelectedStatus();
         String birthdate = getValue(birthdateField);
         String cellphone = cleanDigits(getValue(cellphoneField));
@@ -707,7 +820,8 @@ public class EmployeeFormPanel extends JPanel {
         employee.setEmployeeId(getValue(employeeIdField));
         employee.setFirstName(getValue(firstNameField));
         employee.setLastName(getValue(lastNameField));
-        employee.setPosition(getValue(positionField));
+        employee.setDepartment(getSelectedDepartmentName());
+        employee.setPosition(getSelectedPosition());
         employee.setPositionId(findIdIgnoreCase(positionIdsByName, employee.getPosition()));
         String supervisorName = getSelectedSupervisorName();
         employee.setImmediateSupervisor(supervisorName);
@@ -735,7 +849,8 @@ public class EmployeeFormPanel extends JPanel {
     }
 
     private void loadEmployeeLookupValues() {
-        positionIdsByName = employeeService.getAvailablePositions();
+        // positionIdsByName is maintained per-selected-department by the
+        // department -> position cascade, so we only refresh statuses here.
         statusIdsByName = employeeService.getEmploymentStatuses();
     }
 
@@ -753,6 +868,9 @@ public class EmployeeFormPanel extends JPanel {
         selectedEmployee = null;
 
         clearFields();
+        // Default to the first department, then load its positions/supervisors.
+        selectDepartment(null);
+        reloadPositionsForSelectedDepartment(null);
         loadSupervisorOptions();
         restorePlaceholders();
         setFieldsEditable(true);
@@ -760,10 +878,20 @@ public class EmployeeFormPanel extends JPanel {
         employeeIdField.setEditable(true);
         employeeIdField.setFocusable(true);
 
+        departmentComboBox.setVisible(true);
+        departmentField.setVisible(false);
+
+        positionComboBox.setVisible(true);
+        positionField.setVisible(false);
+
         statusComboBox.setVisible(true);
         statusComboBox.setSelectedItem("Regular");
 
         statusField.setVisible(false);
+
+        supervisorComboBox.setVisible(true);
+        supervisorField.setVisible(false);
+
         datePickerButton.setVisible(true);
 
         birthdateField.setEditable(true);
@@ -790,8 +918,18 @@ public class EmployeeFormPanel extends JPanel {
         employeeIdField.setEditable(false);
         employeeIdField.setFocusable(false);
 
+        departmentComboBox.setVisible(true);
+        departmentField.setVisible(false);
+
+        positionComboBox.setVisible(true);
+        positionField.setVisible(false);
+
         statusComboBox.setVisible(true);
         statusField.setVisible(false);
+
+        supervisorComboBox.setVisible(true);
+        supervisorField.setVisible(false);
+
         datePickerButton.setVisible(true);
 
         birthdateField.setEditable(true);
@@ -816,8 +954,20 @@ public class EmployeeFormPanel extends JPanel {
         populateFields(employee);
         setFieldsEditable(false);
 
+        departmentComboBox.setVisible(false);
+        departmentField.setText(getSelectedDepartmentName());
+        departmentField.setVisible(true);
+
+        positionComboBox.setVisible(false);
+        positionField.setText(getSelectedPosition());
+        positionField.setVisible(true);
+
         statusComboBox.setVisible(false);
         statusField.setVisible(true);
+
+        supervisorComboBox.setVisible(false);
+        supervisorField.setText(getSelectedSupervisorName());
+        supervisorField.setVisible(true);
 
         datePickerButton.setVisible(false);
 
@@ -881,7 +1031,14 @@ public class EmployeeFormPanel extends JPanel {
         employeeIdField.setText(safe(emp.getEmployeeId()));
         firstNameField.setText(safe(emp.getFirstName()));
         lastNameField.setText(safe(emp.getLastName()));
+
+        // Department drives the Position + Supervisor lists, so set it first,
+        // then repopulate and select the employee's actual position/supervisor.
+        selectDepartment(safe(emp.getDepartment()));
+        departmentField.setText(safe(emp.getDepartment()));
+        reloadPositionsForSelectedDepartment(safe(emp.getPosition()));
         positionField.setText(safe(emp.getPosition()));
+        loadSupervisorOptions();
         selectSupervisor(emp.getImmediateSupervisor());
 
         String status = safe(emp.getStatus());
@@ -937,7 +1094,16 @@ public class EmployeeFormPanel extends JPanel {
         supervisorComboBox.removeAllItems();
         supervisorComboBox.addItem(NO_SUPERVISOR);
 
+        // Only offer supervisors from the currently selected department, so the
+        // available supervisors track the chosen department.
+        String selectedDepartment = getSelectedDepartmentName();
+
         for (Employee employee : employeeService.getAllEmployees()) {
+            if (!selectedDepartment.isBlank()
+                    && !selectedDepartment.equalsIgnoreCase(safe(employee.getDepartment()))) {
+                continue;
+            }
+
             String name = employee.getFullName().trim();
             String employeeId = employee.getEmployeeId();
 
