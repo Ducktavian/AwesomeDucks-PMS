@@ -48,6 +48,8 @@ import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
 
 import com.motorph.model.Employee;
+import com.motorph.model.Payslip;
+import com.motorph.model.PayrollPeriod;
 import com.motorph.service.EmployeeService;
 import com.motorph.util.AppContext;
 
@@ -72,6 +74,29 @@ public class PayrollFormPanel extends JPanel {
     private JTextField payrollDateField;
     private JButton dateButton;
     private JComboBox<String> payrollPeriodCombo;
+
+    // Earning fields
+    private JTextField basicSalaryField;
+    private JTextField hoursWorkedField;
+    private JTextField hourlyRateField;
+    private JTextField overtimeField;
+    private JTextField holidayField;
+    private JTextField grossPayField;
+
+    // Allowance fields
+    private JTextField riceSubsidyField;
+    private JTextField phoneAllowanceField;
+    private JTextField clothingAllowanceField;
+    private JComboBox<String> bonusTypeCombo;
+    private JTextField bonusAmountField;
+
+    // Deduction fields
+    private JTextField withholdingTaxField;
+    private JTextField sssField;
+    private JTextField philHealthField;
+    private JTextField pagIbigField;
+    private JTextField totalDeductionsField;
+    private JTextField netPayField;
 
     public PayrollFormPanel(Runnable onBack) {
         this.onBack = onBack;
@@ -159,22 +184,22 @@ public class PayrollFormPanel extends JPanel {
         addSpacer(col, row++, 16);
         addSectionTitle(col, row++, "Earning");
 
-        addFormRow(col, row++, "Basic Salary", createTextField());
-        addFormRow(col, row++, "Hours Worked", createTextField());
-        addFormRow(col, row++, "Hourly Rate", createTextField());
-        addFormRow(col, row++, "Overtime", createTextField());
-        addFormRow(col, row++, "Holiday", createTextField());
+        addFormRow(col, row++, "Basic Salary", basicSalaryField = createTextField());
+        addFormRow(col, row++, "Hours Worked", hoursWorkedField = createTextField());
+        addFormRow(col, row++, "Hourly Rate", hourlyRateField = createTextField());
+        addFormRow(col, row++, "Overtime", overtimeField = createTextField());
+        addFormRow(col, row++, "Holiday", holidayField = createTextField());
 
         addSpacer(col, row++, 16);
         addSectionTitle(col, row++, "Allowance");
 
-        addFormRow(col, row++, "Rice Subsidy", createTextField());
-        addFormRow(col, row++, "Phone Allowance", createTextField());
-        addFormRow(col, row++, "Clothing Allowance", createTextField());
+        addFormRow(col, row++, "Rice Subsidy", riceSubsidyField = createTextField());
+        addFormRow(col, row++, "Phone Allowance", phoneAllowanceField = createTextField());
+        addFormRow(col, row++, "Clothing Allowance", clothingAllowanceField = createTextField());
         addFormRow(col, row++, "Bonus Type", createBonusRow());
 
         addSpacer(col, row++, 12);
-        addEmphasisFormRow(col, row++, "Gross Pay", createTextField());
+        addEmphasisFormRow(col, row++, "Gross Pay", grossPayField = createTextField());
 
         GridBagConstraints pushDown = new GridBagConstraints();
         pushDown.gridx = 0;
@@ -199,16 +224,16 @@ public class PayrollFormPanel extends JPanel {
         addSpacer(col, row++, 16);
         addSectionTitle(col, row++, "Deduction");
 
-        addFormRow(col, row++, "Withholding Tax", createTextField());
-        addFormRow(col, row++, "SSS", createTextField());
-        addFormRow(col, row++, "PhilHealth", createTextField());
-        addFormRow(col, row++, "PAG-IBIG", createTextField());
+        addFormRow(col, row++, "Withholding Tax", withholdingTaxField = createTextField());
+        addFormRow(col, row++, "SSS", sssField = createTextField());
+        addFormRow(col, row++, "PhilHealth", philHealthField = createTextField());
+        addFormRow(col, row++, "PAG-IBIG", pagIbigField = createTextField());
 
         addSpacer(col, row++, 22);
-        addEmphasisFormRow(col, row++, "Total Deductions", createTextField());
+        addEmphasisFormRow(col, row++, "Total Deductions", totalDeductionsField = createTextField());
 
         addSpacer(col, row++, 16);
-        addEmphasisFormRow(col, row++, "Net Pay", createTextField());
+        addEmphasisFormRow(col, row++, "Net Pay", netPayField = createTextField());
 
         GridBagConstraints pushDown = new GridBagConstraints();
         pushDown.gridx = 0;
@@ -572,18 +597,18 @@ public class PayrollFormPanel extends JPanel {
         JPanel row = new JPanel(new BorderLayout(10, 0));
         row.setOpaque(false);
 
-        JComboBox<String> bonusType = new JComboBox<>(new String[]{
+        bonusTypeCombo = new JComboBox<>(new String[]{
             "Bonus Type", "Performance", "13th Month", "Other"
         });
-        bonusType.setFont(new Font(FONT, Font.PLAIN, 11));
-        bonusType.setPreferredSize(new Dimension(105, 26));
-        bonusType.setBackground(Color.WHITE);
-        bonusType.setFocusable(false);
+        bonusTypeCombo.setFont(new Font(FONT, Font.PLAIN, 11));
+        bonusTypeCombo.setPreferredSize(new Dimension(105, 26));
+        bonusTypeCombo.setBackground(Color.WHITE);
+        bonusTypeCombo.setFocusable(false);
 
-        JTextField amount = createTextField();
+        bonusAmountField = createTextField();
 
-        row.add(bonusType, BorderLayout.WEST);
-        row.add(amount, BorderLayout.CENTER);
+        row.add(bonusTypeCombo, BorderLayout.WEST);
+        row.add(bonusAmountField, BorderLayout.CENTER);
 
         return row;
     }
@@ -768,12 +793,76 @@ public class PayrollFormPanel extends JPanel {
     }
 
     public PayrollFormPanel(Runnable onBack, boolean viewOnly) {
+        this(onBack, viewOnly, null);
+    }
+
+    /**
+     * viewOnly form pre-populated from an existing Payslip, e.g. when a row
+     * in the payroll table is opened for viewing/updating.
+     */
+    public PayrollFormPanel(Runnable onBack, boolean viewOnly, Payslip payslip) {
         this(onBack);
 
         if (viewOnly) {
             hideSubmitButton();
             setFieldsEditable(false);
         }
+
+        if (payslip != null) {
+            populateFromPayslip(payslip);
+        }
+    }
+
+    /**
+     * Fills the form from a Payslip. Basic Salary, Overtime, Holiday and the
+     * Bonus Type/Amount fields are left blank: the Payslip DTO doesn't carry
+     * per-payslip basic salary, overtime pay, holiday pay, or bonus data today.
+     */
+    private void populateFromPayslip(Payslip payslip) {
+        selectEmployeeById(payslip.getEmployeeNumber());
+
+        hoursWorkedField.setText(trimNumber(payslip.getTotalHours()));
+        hourlyRateField.setText(trimNumber(payslip.getHourlyRate()));
+        grossPayField.setText(money(payslip.getGrossPay()));
+
+        riceSubsidyField.setText(money(payslip.getAllowanceBreakdown().getRiceSubsidy()));
+        phoneAllowanceField.setText(money(payslip.getAllowanceBreakdown().getPhoneAllowance()));
+        clothingAllowanceField.setText(money(payslip.getAllowanceBreakdown().getClothingAllowance()));
+
+        withholdingTaxField.setText(money(payslip.getDeductionBreakdown().getWithholdingTax()));
+        sssField.setText(money(payslip.getDeductionBreakdown().getSss()));
+        philHealthField.setText(money(payslip.getDeductionBreakdown().getPhilHealth()));
+        pagIbigField.setText(money(payslip.getDeductionBreakdown().getPagIbig()));
+        totalDeductionsField.setText(money(payslip.getTotalDeductions()));
+        netPayField.setText(money(payslip.getNetPay()));
+
+        if (payslip.getPeriodEnd() != null) {
+            payrollDateField.setText(payslip.getPeriodEnd().format(DATE_FORMATTER));
+            payrollDateField.setForeground(TEXT_DARK);
+        }
+
+        payrollPeriodCombo.setSelectedItem(
+                payslip.getPayrollPeriod() == PayrollPeriod.FIRST_PERIOD ? "1st Cutoff" : "2nd Cutoff"
+        );
+    }
+
+    private void selectEmployeeById(String employeeNumber) {
+        for (int i = 0; i < employeeCombo.getItemCount(); i++) {
+            Employee emp = employeeCombo.getItemAt(i);
+
+            if (emp != null && employeeNumber.equals(emp.getEmployeeId())) {
+                employeeCombo.setSelectedItem(emp);
+                return;
+            }
+        }
+    }
+
+    private String money(double value) {
+        return String.format("%,.2f", value);
+    }
+
+    private String trimNumber(double value) {
+        return value == Math.floor(value) ? String.valueOf((long) value) : String.valueOf(value);
     }
 
     private void hideSubmitButton() {

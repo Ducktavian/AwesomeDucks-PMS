@@ -192,7 +192,7 @@ public class PayrollPanel extends JPanel {
         buttonPanel.add(deleteButton);
         buttonPanel.add(refreshButton);
 
-        addButton.addActionListener(e -> openPayrollForm(false));
+        addButton.addActionListener(e -> openPayrollForm(false, null));
 
         updateButton.addActionListener(e -> {
             if (payrollTable.getSelectedRow() == -1) {
@@ -200,7 +200,7 @@ public class PayrollPanel extends JPanel {
                 return;
             }
 
-            openPayrollForm(false);
+            openPayrollForm(false, getSelectedPayslip());
         });
 
         deleteButton.addActionListener(e -> {
@@ -331,7 +331,7 @@ public class PayrollPanel extends JPanel {
             @Override
             public void mouseClicked(MouseEvent e) {
                 if (e.getClickCount() == 2 && payrollTable.getSelectedRow() != -1) {
-                    openPayrollForm(true);
+                    openPayrollForm(true, getSelectedPayslip());
                 }
             }
         });
@@ -341,7 +341,33 @@ public class PayrollPanel extends JPanel {
         addSampleRows();
     }
 
-    private void openPayrollForm(boolean viewOnly) {
+    // NEW: looks up the full Payslip (with allowance/deduction breakdown) for
+    // the currently selected row, since the table only holds summary totals.
+    private Payslip getSelectedPayslip() {
+        int selectedRow = payrollTable.getSelectedRow();
+
+        if (selectedRow == -1) {
+            return null;
+        }
+
+        int modelRow = payrollTable.convertRowIndexToModel(selectedRow);
+        String payslipId = String.valueOf(tableModel.getValueAt(modelRow, 0));
+
+        try {
+            return payrollService.findPayslipById(payslipId);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Failed to load payslip details:\n" + ex.getMessage(),
+                    "Load Error",
+                    JOptionPane.ERROR_MESSAGE
+            );
+            return null;
+        }
+    }
+
+    private void openPayrollForm(boolean viewOnly, Payslip payslip) {
         removeAll();
         setLayout(new BorderLayout());
 
@@ -352,7 +378,7 @@ public class PayrollPanel extends JPanel {
             add(createContentPanel(), BorderLayout.CENTER);
             revalidate();
             repaint();
-        }, viewOnly), BorderLayout.CENTER);
+        }, viewOnly, payslip), BorderLayout.CENTER);
 
         revalidate();
         repaint();
