@@ -17,6 +17,7 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Image;
 import java.awt.Insets;
+import java.awt.LayoutManager;
 import java.awt.RenderingHints;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -739,13 +740,16 @@ public class PayrollFormPanel extends JPanel {
     public PayrollFormPanel(Runnable onBack, boolean viewOnly, Payslip payslip) {
         this(onBack);
 
+        // Populate BEFORE locking: setFieldsEditable(false) swaps the combos
+        // out for read-only text fields, so the combo selections must already
+        // be set here for those fields to show the right values.
+        if (payslip != null) {
+            populateFromPayslip(payslip);
+        }
+
         if (viewOnly) {
             hideSubmitButton();
             setFieldsEditable(false);
-        }
-
-        if (payslip != null) {
-            populateFromPayslip(payslip);
         }
     }
 
@@ -835,12 +839,21 @@ public class PayrollFormPanel extends JPanel {
             return;
         }
 
+        if (component instanceof JComboBox) {
+            // A disabled combo paints its text in the L&F's low-contrast
+            // disabledForeground (looks blue/gray) and that can't be overridden.
+            // So for read-only mode we swap the combo out for a plain read-only
+            // text field, matching the black text of every other field here.
+            if (!editable) {
+                replaceComboWithReadOnlyField((JComboBox<?>) component);
+            }
+            return; // never recurse into a combo's internal widgets
+        }
+
         if (component instanceof JTextField) {
             ((JTextField) component).setEditable(editable);
         } else if (component instanceof JTextArea) {
             ((JTextArea) component).setEditable(editable);
-        } else if (component instanceof JComboBox) {
-            component.setEnabled(editable);
         }
 
         if (component instanceof Container) {
@@ -848,5 +861,55 @@ public class PayrollFormPanel extends JPanel {
                 setEditableRecursive(child, editable);
             }
         }
+    }
+
+    /**
+     * Replaces a combo with a read-only, black-text field showing its current
+     * selection, keeping it in the same layout slot. Used in view-only mode so
+     * the Employee, Payroll Period and Bonus Type fields read like the rest of
+     * the form instead of a disabled combo's low-contrast text.
+     */
+    private void replaceComboWithReadOnlyField(JComboBox<?> combo) {
+        Container parent = combo.getParent();
+        if (parent == null) {
+            return;
+        }
+
+        JTextField field = createTextField();
+        Object selected = combo.getSelectedItem();
+        if (selected instanceof Employee emp) {
+            field.setText(formatEmployeeLabel(emp));
+        } else {
+            field.setText(selected == null ? "" : selected.toString());
+        }
+        field.setEditable(false);
+        field.setFocusable(false);
+        field.setForeground(TEXT_DARK);
+
+        int index = -1;
+        Component[] siblings = parent.getComponents();
+        for (int i = 0; i < siblings.length; i++) {
+            if (siblings[i] == combo) {
+                index = i;
+                break;
+            }
+        }
+
+        LayoutManager layout = parent.getLayout();
+        if (layout instanceof GridBagLayout gbl) {
+            GridBagConstraints gbc = gbl.getConstraints(combo);
+            parent.remove(combo);
+            parent.add(field, gbc, index);
+        } else if (layout instanceof BorderLayout bl) {
+            Object constraint = bl.getConstraints(combo);
+            parent.remove(combo);
+            parent.add(field, constraint);
+        } else {
+            parent.remove(combo);
+            parent.add(field, index);
+        }
+
+        parent.revalidate();
+        parent.repaint();
     }
 }
