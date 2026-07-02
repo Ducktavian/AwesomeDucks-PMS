@@ -45,6 +45,14 @@ public class EmployeeService {
         return employeeDAO.findAllEmploymentStatuses();
     }
 
+    public Map<String, Integer> getDepartments() {
+        return employeeDAO.findAllDepartments();
+    }
+
+    public Map<String, Integer> getPositionsByDepartment(int departmentId) {
+        return employeeDAO.findPositionsByDepartment(departmentId);
+    }
+
     public void addEmployee(Employee employee) {
         authorizeHR();
         validateEmployee(employee);
