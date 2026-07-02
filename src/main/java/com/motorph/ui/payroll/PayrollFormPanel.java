@@ -38,6 +38,7 @@ import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JList;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
@@ -51,6 +52,7 @@ import com.motorph.model.Employee;
 import com.motorph.model.Payslip;
 import com.motorph.model.PayrollPeriod;
 import com.motorph.service.EmployeeService;
+import com.motorph.service.PayrollService;
 import com.motorph.util.AppContext;
 
 public class PayrollFormPanel extends JPanel {
@@ -64,13 +66,13 @@ public class PayrollFormPanel extends JPanel {
 
     private static final String SAVE_ICON_PATH = "/com/motorph/img/Save-Icon.png";
 
-    // Payroll Date only ever needs month + year: the day-level cutoff is
-    // already captured by the Payroll Period combo (1st Cutoff / 2nd Cutoff).
+   
     private static final DateTimeFormatter DATE_FORMATTER =
             DateTimeFormatter.ofPattern("MM/uuuu").withResolverStyle(ResolverStyle.STRICT);
 
     private final Runnable onBack;
     private final EmployeeService employeeService = AppContext.getEmployeeService();
+    private final PayrollService payrollService = AppContext.getPayrollService();
 
     private JComboBox<Employee> employeeCombo;
     private JTextField payrollDateField;
@@ -330,7 +332,7 @@ public class PayrollFormPanel extends JPanel {
         employeeCombo.setPreferredSize(new Dimension(220, 30));
         employeeCombo.setMinimumSize(new Dimension(160, 30));
         employeeCombo.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
-        employeeCombo.setBackground(new Color(165, 196, 228));
+        employeeCombo.setBackground(Color.WHITE);
         employeeCombo.setOpaque(true);
         employeeCombo.setFocusable(false);
         employeeCombo.setBorder(new CompoundBorder(
@@ -555,20 +557,108 @@ public class PayrollFormPanel extends JPanel {
         row.setOpaque(false);
         row.setBorder(new EmptyBorder(6, 0, 0, 0));
 
+
+        JButton generate = navyButton("Generate", null);
         JButton savePdf = navyButton("Save PDF", loadSaveIcon());
         JButton submit = navyButton("Submit", null);
 
+        generate.addActionListener(e -> handleGenerate());
+        submit.addActionListener(e -> handleSubmit());
+
+        row.add(generate);
         row.add(savePdf);
         row.add(submit);
 
         return row;
     }
 
-    /**
-     * Loads Save-Icon.png as a classpath resource, consistent with how the
-     * rest of the codebase loads icons (e.g. Add-Icon.png, Update-Icon.png)
-     * via getClass().getResource(...) rather than an absolute file path.
-     */
+    /*  Reads the 3 inputs (employee, payroll date, payroll period) */
+    private void handleGenerate() {
+        Employee employee = getSelectedEmployee();
+        if (employee == null) {
+            JOptionPane.showMessageDialog(this,
+                    "Please select an employee first.",
+                    "Generate Payroll", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        LocalDate[] period = parseSelectedPeriod();
+        if (period == null) {
+            return; // parseSelectedPeriod already showed the message
+        }
+
+        try {
+            Payslip payslip = payrollService.computePayslip(employee, period[0], period[1]);
+            populateFromPayslip(payslip);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this,
+                    "Failed to generate payroll:\n" + ex.getMessage(),
+                    "Generate Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    /* Persists the payroll/payslip */
+    private void handleSubmit() {
+        Employee employee = getSelectedEmployee();
+        if (employee == null) {
+            JOptionPane.showMessageDialog(this,
+                    "Please select an employee first.",
+                    "Submit Payroll", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        LocalDate[] period = parseSelectedPeriod();
+        if (period == null) {
+            return;
+        }
+
+        try {
+            payrollService.processPayslip(employee, period[0], period[1]);
+            JOptionPane.showMessageDialog(this,
+                    "Payroll submitted successfully.",
+                    "Submit Payroll", JOptionPane.INFORMATION_MESSAGE);
+            if (onBack != null) {
+                onBack.run();
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this,
+                    "Failed to submit payroll:\n" + ex.getMessage(),
+                    "Submit Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+  
+    private LocalDate[] parseSelectedPeriod() {
+        String dateText = payrollDateField.getText().trim();
+        if (dateText.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                    "Please select a payroll date (month/year).",
+                    "Payroll Date", JOptionPane.WARNING_MESSAGE);
+            return null;
+        }
+
+        YearMonth ym;
+        try {
+            ym = YearMonth.parse(dateText, DATE_FORMATTER);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this,
+                    "Payroll date is not valid. Please pick it again.",
+                    "Payroll Date", JOptionPane.WARNING_MESSAGE);
+            return null;
+        }
+
+        PayrollPeriod period = "1st Cutoff".equals(payrollPeriodCombo.getSelectedItem())
+                ? PayrollPeriod.FIRST_PERIOD
+                : PayrollPeriod.SECOND_PERIOD;
+
+        LocalDate start = period.getStartDate(ym.getYear(), ym.getMonthValue());
+        LocalDate end = period.getEndDate(ym.getYear(), ym.getMonthValue());
+        return new LocalDate[]{ start, end };
+    }
+
+   
     private Icon loadSaveIcon() {
         URL iconUrl = getClass().getResource(SAVE_ICON_PATH);
 
@@ -733,10 +823,7 @@ public class PayrollFormPanel extends JPanel {
         this(onBack, viewOnly, null);
     }
 
-    /**
-     * viewOnly form pre-populated from an existing Payslip, e.g. when a row
-     * in the payroll table is opened for viewing/updating.
-     */
+   
     public PayrollFormPanel(Runnable onBack, boolean viewOnly, Payslip payslip) {
         this(onBack);
 
@@ -748,17 +835,14 @@ public class PayrollFormPanel extends JPanel {
         }
 
         if (viewOnly) {
-            hideSubmitButton();
+            // Generate and Submit are add-only actions; hide them when just viewing.
+            hideButtonRecursive(this, "Generate");
+            hideButtonRecursive(this, "Submit");
             setFieldsEditable(false);
         }
     }
 
-    /**
-     * Fills the form from a Payslip. Bonus Type/Amount is left blank: no
-     * bonus concept exists anywhere in the schema or model layer yet.
-     * Holiday is sourced from Payslip.getHolidayPay(), which is always 0
-     * today since PayrollService has no holiday-pay computation to feed it.
-     */
+    
     private void populateFromPayslip(Payslip payslip) {
         selectEmployeeById(payslip.getEmployeeNumber());
 
@@ -807,10 +891,6 @@ public class PayrollFormPanel extends JPanel {
 
     private String trimNumber(double value) {
         return value == Math.floor(value) ? String.valueOf((long) value) : String.valueOf(value);
-    }
-
-    private void hideSubmitButton() {
-        hideButtonRecursive(this, "Submit");
     }
 
     private void hideButtonRecursive(Component component, String buttonText) {
@@ -863,12 +943,7 @@ public class PayrollFormPanel extends JPanel {
         }
     }
 
-    /**
-     * Replaces a combo with a read-only, black-text field showing its current
-     * selection, keeping it in the same layout slot. Used in view-only mode so
-     * the Employee, Payroll Period and Bonus Type fields read like the rest of
-     * the form instead of a disabled combo's low-contrast text.
-     */
+    
     private void replaceComboWithReadOnlyField(JComboBox<?> combo) {
         Container parent = combo.getParent();
         if (parent == null) {

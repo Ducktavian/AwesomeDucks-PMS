@@ -85,6 +85,10 @@ public class Payslip {
         return payrollId;
     }
 
+    public void setPayrollId(int payrollId) {
+        this.payrollId = payrollId;
+    }
+
     public String getEmployeeNumber() {
         return employeeNumber;
     }
