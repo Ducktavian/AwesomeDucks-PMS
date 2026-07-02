@@ -55,38 +55,37 @@ public class EmployeeFormPanel extends JPanel {
 
     private JButton submitButton;
 
+    private static final int FIELD_WIDTH = 360;
+    private static final int FIELD_HEIGHT = 30;
+
     public EmployeeFormPanel(Runnable onBack) {
         this.onBack = onBack;
         setLayout(new BorderLayout());
         setBackground(Color.WHITE);
-        add(createMainContent(), BorderLayout.CENTER);
+        add(createScrollableContent(), BorderLayout.CENTER);
     }
 
-    private JPanel createMainContent() {
-        JPanel main = new JPanel(null);
-        main.setBackground(Color.WHITE);
-
-        main.addComponentListener(new ComponentAdapter() {
-            @Override
-            public void componentResized(ComponentEvent e) {
-                resizeForm(main);
-            }
-        });
+    private JComponent createScrollableContent() {
+        JPanel content = new JPanel();
+        content.setBackground(Color.WHITE);
+        content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
+        content.setBorder(new EmptyBorder(40, 64, 40, 64));
 
         JLabel back = new JLabel("<html><u>Back</u></html>");
         back.setFont(new Font(FONT, Font.PLAIN, 17));
         back.setForeground(new Color(80, 80, 80));
         back.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        back.setBounds(64, 55, 80, 24);
+        back.setAlignmentX(LEFT_ALIGNMENT);
         back.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
                 if (onBack != null) onBack.run();
             }
         });
-        main.add(back);
+        content.add(back);
+        content.add(Box.createVerticalStrut(26));
 
-        addSection(main, "Basic Information", 64, 111,
+        content.add(buildSection("Basic Information",
                 new String[]{
                     "Employee ID", "First Name", "Last Name",
                     "Position", "Immediate Supervisor", "Status"
@@ -94,27 +93,30 @@ public class EmployeeFormPanel extends JPanel {
                 new String[]{
                     "e.g., 10001", "e.g., Juan", "e.g., Dela Cruz",
                     "e.g., Software Engineer", "e.g., Maria Santos", ""
-                });
+                }));
+        content.add(Box.createVerticalStrut(30));
 
-        addSection(main, "Personal Detail", 290, 111,
+        content.add(buildSection("Personal Detail",
                 new String[]{
                     "Birthdate", "Cellphone No.", "E-mail", "Address"
                 },
                 new String[]{
                     "MM-DD-YYYY", "e.g., 917123456",
                     "e.g., juan@email.com", "e.g., Quezon City"
-                });
+                }));
+        content.add(Box.createVerticalStrut(30));
 
-        addSection(main, "Government ID", 516, 111,
+        content.add(buildSection("Government ID",
                 new String[]{
                     "SSS No.", "PhilHealth No.", "PAG-IBIG No.", "TIN"
                 },
                 new String[]{
                     "44-4506057-3", "820126853951",
                     "691295330870", "442-605-657-000"
-                });
+                }));
+        content.add(Box.createVerticalStrut(30));
 
-        addSection(main, "Compensation", 742, 111,
+        content.add(buildSection("Compensation",
                 new String[]{
                     "Basic Salary", "Gross Semi-Monthly Rate", "Hourly Rate",
                     "Rice Subsidy", "Phone Allowance", "Clothing Allowance"
@@ -122,11 +124,13 @@ public class EmployeeFormPanel extends JPanel {
                 new String[]{
                     "e.g., 50000.00", "Auto-computed", "Auto-computed",
                     "e.g., 1500.00", "e.g., 1000.00", "e.g., 1000.00"
-                });
+                }));
+        content.add(Box.createVerticalStrut(30));
 
         submitButton = new JButton("Submit");
-        submitButton.setName("submit");
-        submitButton.setBounds(830, 577, 113, 39);
+        submitButton.setAlignmentX(LEFT_ALIGNMENT);
+        submitButton.setPreferredSize(new Dimension(FIELD_WIDTH, 42));
+        submitButton.setMaximumSize(new Dimension(FIELD_WIDTH, 42));
         submitButton.setBackground(NAVY);
         submitButton.setForeground(Color.WHITE);
         submitButton.setFocusPainted(false);
@@ -134,137 +138,184 @@ public class EmployeeFormPanel extends JPanel {
         submitButton.setFont(new Font(FONT, Font.PLAIN, 14));
         submitButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         submitButton.addActionListener(e -> saveEmployee());
-        main.add(submitButton);
+        content.add(submitButton);
 
-        return main;
+        // Keep the stacked content pinned top-left at its natural size so it
+        // doesn't stretch to fill the viewport; the scroll pane handles overflow.
+        JPanel holder = new JPanel(new BorderLayout());
+        holder.setBackground(Color.WHITE);
+        holder.add(content, BorderLayout.NORTH);
+
+        JScrollPane scroll = new JScrollPane(holder);
+        scroll.setBorder(null);
+        scroll.getViewport().setBackground(Color.WHITE);
+        scroll.getVerticalScrollBar().setUnitIncrement(16);
+        return scroll;
     }
 
-    private void addSection(JPanel parent, String title, int x, int y,
-                            String[] labels, String[] placeholders) {
+    private JPanel buildSection(String title, String[] labels, String[] placeholders) {
         int sectionIndex = getSectionIndex(title);
 
-        JLabel sectionTitle = new JLabel(title);
-        sectionTitle.setName("sectionTitle" + sectionIndex);
-        sectionTitle.setFont(new Font(FONT, Font.BOLD, 20));
-        sectionTitle.setBounds(x, y, 210, 28);
-        parent.add(sectionTitle);
+        JPanel section = new JPanel();
+        section.setOpaque(false);
+        section.setLayout(new BoxLayout(section, BoxLayout.Y_AXIS));
+        section.setAlignmentX(LEFT_ALIGNMENT);
 
-        int currentY = y + 42;
+        JLabel sectionTitle = new JLabel(title);
+        sectionTitle.setFont(new Font(FONT, Font.BOLD, 20));
+        sectionTitle.setAlignmentX(LEFT_ALIGNMENT);
+        section.add(sectionTitle);
+        section.add(Box.createVerticalStrut(16));
 
         for (int i = 0; i < labels.length; i++) {
-            JLabel label = new JLabel(labels[i]);
-            label.setName("fieldLabel_" + sectionIndex + "_" + i);
-            label.setFont(new Font(FONT, Font.PLAIN, 13));
-            label.setBounds(x, currentY, 180, 17);
-            parent.add(label);
-
-            if (sectionIndex == 0 && i == 4) {
-                supervisorComboBox = new JComboBox<>();
-                supervisorComboBox.setName("combo_" + sectionIndex + "_" + i);
-                supervisorComboBox.setFont(new Font(FONT, Font.PLAIN, 13));
-                supervisorComboBox.setBackground(Color.WHITE);
-                supervisorComboBox.setOpaque(true);
-                supervisorComboBox.setBounds(x, currentY + 18, 174, 28);
-                parent.add(supervisorComboBox);
-                loadSupervisorOptions();
-
-                currentY += 57;
-
-            } else if (sectionIndex == 0 && i == 5) {
-                statusComboBox = new JComboBox<>(new String[]{"Regular", "Probationary"});
-                statusComboBox.setName("combo_" + sectionIndex + "_" + i);
-                statusComboBox.setFont(new Font(FONT, Font.PLAIN, 13));
-                statusComboBox.setBackground(Color.WHITE);
-                statusComboBox.setOpaque(true);
-                statusComboBox.setBounds(x, currentY + 18, 174, 28);
-                parent.add(statusComboBox);
-
-                statusField = new JTextField();
-                statusField.setName("field_" + sectionIndex + "_" + i);
-                statusField.setFont(new Font(FONT, Font.PLAIN, 13));
-                statusField.setBackground(Color.WHITE);
-                statusField.setOpaque(true);
-                statusField.setBounds(x, currentY + 18, 174, 28);
-                statusField.setBorder(new CompoundBorder(
-                        new RoundedBorder(6),
-                        new EmptyBorder(2, 8, 2, 8)
-                ));
-                statusField.setEditable(false);
-                statusField.setFocusable(false);
-                statusField.setVisible(false);
-                parent.add(statusField);
-
-                currentY += 57;
-
-            } else if (sectionIndex == 1 && i == 0) {
-                birthdateField = new JTextField();
-                birthdateField.setName("field_" + sectionIndex + "_" + i);
-                birthdateField.setFont(new Font(FONT, Font.PLAIN, 13));
-                birthdateField.setBackground(Color.WHITE);
-                birthdateField.setOpaque(true);
-                birthdateField.setBounds(x, currentY + 18, 136, 28);
-                birthdateField.setBorder(new CompoundBorder(
-                        new RoundedBorder(6),
-                        new EmptyBorder(2, 8, 2, 8)
-                ));
-                setPlaceholder(birthdateField, placeholders[i]);
-                parent.add(birthdateField);
-
-                datePickerButton = new JButton("📅");
-                datePickerButton.setName("dateButton_" + sectionIndex + "_" + i);
-                datePickerButton.setFont(new Font(FONT, Font.PLAIN, 11));
-                datePickerButton.setBounds(x + 140, currentY + 18, 34, 28);
-                datePickerButton.setBackground(Color.WHITE);
-                datePickerButton.setFocusPainted(false);
-                datePickerButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-                datePickerButton.addActionListener(e -> openDatePicker());
-                parent.add(datePickerButton);
-
-                currentY += 57;
-
-            } else if (sectionIndex == 1 && i == 3) {
-                JTextArea area = new JTextArea();
-                area.setName("field_" + sectionIndex + "_" + i);
-                area.setFont(new Font(FONT, Font.PLAIN, 13));
-                area.setLineWrap(true);
-                area.setWrapStyleWord(true);
-                area.setBackground(Color.WHITE);
-                area.setOpaque(true);
-                area.setBounds(x, currentY + 18, 174, 75);
-                area.setBorder(new CompoundBorder(
-                        new RoundedBorder(6),
-                        new EmptyBorder(6, 8, 6, 8)
-                ));
-
-                addressField = area;
-                setPlaceholder(area, placeholders[i]);
-
-                parent.add(area);
-                currentY += 104;
-
-            } else {
-                JTextField field = new JTextField();
-                field.setName("field_" + sectionIndex + "_" + i);
-                field.setFont(new Font(FONT, Font.PLAIN, 13));
-                field.setBackground(Color.WHITE);
-                field.setOpaque(true);
-                field.setBounds(x, currentY + 18, 174, 28);
-                field.setBorder(new CompoundBorder(
-                        new RoundedBorder(6),
-                        new EmptyBorder(2, 8, 2, 8)
-                ));
-
-                assignFieldReference(sectionIndex, i, field);
-                setPlaceholder(field, placeholders[i]);
-
-                if (sectionIndex == 3 && i == 0) {
-                    addSalaryAutoComputeListener(field);
-                }
-
-                parent.add(field);
-                currentY += 57;
-            }
+            section.add(buildRow(labels[i], buildInput(sectionIndex, i, placeholders)));
+            section.add(Box.createVerticalStrut(14));
         }
+
+        return section;
+    }
+
+    // A single "label above input" row, left-aligned.
+    private JComponent buildRow(String labelText, JComponent input) {
+        JPanel row = new JPanel();
+        row.setOpaque(false);
+        row.setLayout(new BoxLayout(row, BoxLayout.Y_AXIS));
+        row.setAlignmentX(LEFT_ALIGNMENT);
+
+        JLabel label = new JLabel(labelText);
+        label.setFont(new Font(FONT, Font.PLAIN, 13));
+        label.setAlignmentX(LEFT_ALIGNMENT);
+
+        input.setAlignmentX(LEFT_ALIGNMENT);
+
+        row.add(label);
+        row.add(Box.createVerticalStrut(5));
+        row.add(input);
+        return row;
+    }
+
+    // Builds the input widget for a given section/field, keeping all the
+    // special cases (supervisor combo, status combo+field, birthdate picker,
+    // address text area) and wiring up the field references exactly as before.
+    private JComponent buildInput(int sectionIndex, int i, String[] placeholders) {
+        if (sectionIndex == 0 && i == 4) {
+            supervisorComboBox = new JComboBox<>();
+            styleCombo(supervisorComboBox);
+            loadSupervisorOptions();
+            return supervisorComboBox;
+        }
+
+        if (sectionIndex == 0 && i == 5) {
+            statusComboBox = new JComboBox<>(new String[]{"Regular", "Probationary"});
+            styleCombo(statusComboBox);
+
+            statusField = new JTextField();
+            statusField.setFont(new Font(FONT, Font.PLAIN, 13));
+            statusField.setBackground(Color.WHITE);
+            statusField.setOpaque(true);
+            statusField.setBorder(new CompoundBorder(
+                    new RoundedBorder(6),
+                    new EmptyBorder(2, 8, 2, 8)
+            ));
+            statusField.setEditable(false);
+            statusField.setFocusable(false);
+            statusField.setVisible(false);
+
+            // Overlap combo + read-only field in one cell; visibility decides
+            // which one shows (combo for add/update, field for view mode).
+            JPanel stack = new JPanel(new GridBagLayout());
+            stack.setOpaque(false);
+            sizeInput(stack);
+            GridBagConstraints gc = new GridBagConstraints();
+            gc.gridx = 0;
+            gc.gridy = 0;
+            gc.fill = GridBagConstraints.BOTH;
+            gc.weightx = 1;
+            gc.weighty = 1;
+            stack.add(statusComboBox, gc);
+            stack.add(statusField, gc);
+            return stack;
+        }
+
+        if (sectionIndex == 1 && i == 0) {
+            birthdateField = new JTextField();
+            birthdateField.setFont(new Font(FONT, Font.PLAIN, 13));
+            birthdateField.setBackground(Color.WHITE);
+            birthdateField.setOpaque(true);
+            birthdateField.setBorder(new CompoundBorder(
+                    new RoundedBorder(6),
+                    new EmptyBorder(2, 8, 2, 8)
+            ));
+            setPlaceholder(birthdateField, placeholders[i]);
+
+            datePickerButton = new JButton("📅");
+            datePickerButton.setFont(new Font(FONT, Font.PLAIN, 11));
+            datePickerButton.setPreferredSize(new Dimension(34, FIELD_HEIGHT));
+            datePickerButton.setBackground(Color.WHITE);
+            datePickerButton.setFocusPainted(false);
+            datePickerButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            datePickerButton.addActionListener(e -> openDatePicker());
+
+            JPanel dateRow = new JPanel(new BorderLayout(6, 0));
+            dateRow.setOpaque(false);
+            sizeInput(dateRow);
+            dateRow.add(birthdateField, BorderLayout.CENTER);
+            dateRow.add(datePickerButton, BorderLayout.EAST);
+            return dateRow;
+        }
+
+        if (sectionIndex == 1 && i == 3) {
+            JTextArea area = new JTextArea();
+            area.setFont(new Font(FONT, Font.PLAIN, 13));
+            area.setLineWrap(true);
+            area.setWrapStyleWord(true);
+            area.setBackground(Color.WHITE);
+            area.setOpaque(true);
+            area.setBorder(new CompoundBorder(
+                    new RoundedBorder(6),
+                    new EmptyBorder(6, 8, 6, 8)
+            ));
+            area.setPreferredSize(new Dimension(FIELD_WIDTH, 84));
+            area.setMaximumSize(new Dimension(FIELD_WIDTH, 84));
+
+            addressField = area;
+            setPlaceholder(area, placeholders[i]);
+            return area;
+        }
+
+        JTextField field = new JTextField();
+        field.setFont(new Font(FONT, Font.PLAIN, 13));
+        field.setBackground(Color.WHITE);
+        field.setOpaque(true);
+        field.setBorder(new CompoundBorder(
+                new RoundedBorder(6),
+                new EmptyBorder(2, 8, 2, 8)
+        ));
+        sizeInput(field);
+
+        assignFieldReference(sectionIndex, i, field);
+        setPlaceholder(field, placeholders[i]);
+
+        if (sectionIndex == 3 && i == 0) {
+            addSalaryAutoComputeListener(field);
+        }
+
+        return field;
+    }
+
+    private void styleCombo(JComboBox<?> combo) {
+        combo.setFont(new Font(FONT, Font.PLAIN, 13));
+        combo.setBackground(Color.WHITE);
+        combo.setOpaque(true);
+        sizeInput(combo);
+    }
+
+    // Locks an input to the standard field width/height so BoxLayout renders a
+    // consistent single column instead of stretching inputs across the page.
+    private void sizeInput(JComponent c) {
+        c.setPreferredSize(new Dimension(FIELD_WIDTH, FIELD_HEIGHT));
+        c.setMaximumSize(new Dimension(FIELD_WIDTH, FIELD_HEIGHT));
+        c.setMinimumSize(new Dimension(160, FIELD_HEIGHT));
     }
 
     private void assignFieldReference(int sectionIndex, int fieldIndex, JTextField field) {
@@ -793,11 +844,10 @@ public class EmployeeFormPanel extends JPanel {
     }
 
     private void refreshFormLayout() {
-        Container parent = birthdateField == null ? null : birthdateField.getParent();
-
-        if (parent instanceof JPanel panel) {
-            resizeForm(panel);
-        }
+        // Visibility of the status combo/field, date-picker button and submit
+        // button changes between modes; a revalidate re-flows the vertical stack.
+        revalidate();
+        repaint();
     }
 
     private void setFieldsEditable(boolean editable) {
@@ -1097,84 +1147,6 @@ public class EmployeeFormPanel extends JPanel {
 
     private String safe(Object value) {
         return value == null ? "" : value.toString();
-    }
-
-    private void resizeForm(JPanel main) {
-        int leftMargin = 64;
-        int rightMargin = 80;
-        int gap = 60;
-        int columnCount = 4;
-
-        int availableWidth = main.getWidth() - leftMargin - rightMargin;
-        int fieldWidth = (availableWidth - (gap * (columnCount - 1))) / columnCount;
-
-        int[] xPositions = new int[columnCount];
-
-        for (int i = 0; i < columnCount; i++) {
-            xPositions[i] = leftMargin + i * (fieldWidth + gap);
-        }
-
-        for (Component c : main.getComponents()) {
-            if (c instanceof JLabel label
-                    && label.getName() != null
-                    && label.getName().startsWith("sectionTitle")) {
-
-                int index = Integer.parseInt(label.getName().replace("sectionTitle", ""));
-                label.setBounds(xPositions[index], label.getY(), fieldWidth, label.getHeight());
-            }
-
-            if (c instanceof JLabel label
-                    && label.getName() != null
-                    && label.getName().startsWith("fieldLabel")) {
-
-                int index = Integer.parseInt(label.getName().split("_")[1]);
-                label.setBounds(xPositions[index], label.getY(), fieldWidth, label.getHeight());
-            }
-
-            if (c instanceof JTextField field
-                    && field.getName() != null
-                    && field.getName().startsWith("field")) {
-
-                int index = Integer.parseInt(field.getName().split("_")[1]);
-
-                if (field == birthdateField && datePickerButton != null && datePickerButton.isVisible()) {
-                    field.setBounds(xPositions[index], field.getY(), fieldWidth - 38, field.getHeight());
-                } else {
-                    field.setBounds(xPositions[index], field.getY(), fieldWidth, field.getHeight());
-                }
-            }
-
-            if (c instanceof JTextArea area
-                    && area.getName() != null
-                    && area.getName().startsWith("field")) {
-
-                int index = Integer.parseInt(area.getName().split("_")[1]);
-                area.setBounds(xPositions[index], area.getY(), fieldWidth, area.getHeight());
-            }
-
-            if (c instanceof JComboBox<?> comboBox
-                    && comboBox.getName() != null
-                    && comboBox.getName().startsWith("combo")) {
-
-                int index = Integer.parseInt(comboBox.getName().split("_")[1]);
-                comboBox.setBounds(xPositions[index], comboBox.getY(), fieldWidth, comboBox.getHeight());
-            }
-
-            if (c instanceof JButton button
-                    && button.getName() != null
-                    && button.getName().startsWith("dateButton")) {
-
-                int index = Integer.parseInt(button.getName().split("_")[1]);
-                button.setBounds(xPositions[index] + fieldWidth - 34, button.getY(), 34, button.getHeight());
-            }
-
-            if (c instanceof JButton button && "submit".equals(button.getName())) {
-                button.setBounds(main.getWidth() - rightMargin - 113, 577, 113, 39);
-            }
-        }
-
-        main.revalidate();
-        main.repaint();
     }
 
     private int getSectionIndex(String title) {

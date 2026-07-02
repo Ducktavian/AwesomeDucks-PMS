@@ -1,6 +1,0 @@
-# Copy this file to database.properties and fill in your local MySQL credentials.
-# database.properties is gitignored — never commit your actual password.
-
-db.url=jdbc:mysql://localhost:3306/motorph_payroll_db
-db.user=root
-db.password=
