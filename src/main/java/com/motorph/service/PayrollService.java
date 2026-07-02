@@ -40,81 +40,40 @@ public class PayrollService {
         this.payslipDAO = payslipDAO;
     }
 
-    public Payslip processPayslip(Employee employee, LocalDate periodStart, LocalDate periodEnd) {
-        int employeeId = Integer.parseInt(employee.getEmployeeId());
+    /**
+     * Computes a payslip in memory WITHOUT writing anything to the database.
+     * Used by the "Generate" preview in the payroll form :D
+     */
+    public Payslip computePayslip(Employee employee, LocalDate periodStart, LocalDate periodEnd) {
+        double basicSalary = rateService.computeBasicSalary(employee);
+        double overtimePay = 0; // overtime not modeled yet
+        double holidayPay = 0; // holiday pay not modeled anywhere yet 
 
-        PayPeriod payPeriod = payPeriodDAO.findOrCreate(periodStart, periodEnd, periodEnd);
+        double cutoffHours = attendanceService.computeTotalHours(employee.getEmployeeId(), periodStart, periodEnd);
+        double hourlyRate = rateService.computeHourlyRate(employee);
+        double cutoffGross = round(cutoffHours * hourlyRate);
 
-        int payrollId = payrollDAO.findPayrollId(employeeId, payPeriod.getPayPeriodId());
-        AllowanceBreakdown allowanceBreakdown;
+        AllowanceBreakdown allowanceBreakdown = computeAllowances(employee);
+        double totalGross = round(cutoffGross + allowanceBreakdown.getTotal());
+
         DeductionBreakdown deductionBreakdown;
-        double cutoffHours;
-        double hourlyRate;
-        double totalGross;
-        double netPay;
-
-        if (payrollId == -1) {
-            // No payroll yet for this employee/period - compute and save it.
-            cutoffHours = attendanceService.computeTotalHours(employee.getEmployeeId(), periodStart, periodEnd);
-            hourlyRate = rateService.computeHourlyRate(employee);
-            double cutoffGross = round(cutoffHours * hourlyRate);
-
-            allowanceBreakdown = computeAllowances(employee);
-            totalGross = round(cutoffGross + allowanceBreakdown.getTotal());
-
-            if (isSecondCutoff(periodEnd)) {
-                LocalDate monthStart = periodStart.withDayOfMonth(1);
-                LocalDate monthEnd = periodStart.withDayOfMonth(periodStart.lengthOfMonth());
-                double monthlyHours = attendanceService.computeTotalHours(employee.getEmployeeId(), monthStart, monthEnd);
-                double monthlyGross = round(monthlyHours * hourlyRate);
-                deductionBreakdown = computeMonthlyDeductions(employee, monthlyGross);
-            } else {
-                deductionBreakdown = computeMonthlyDeductions();
-            }
-
-            netPay = round(totalGross - deductionBreakdown.getTotal());
-
-            Payroll payroll = new Payroll(
-                    employeeId,
-                    payPeriod.getPayPeriodId(),
-                    STATUS_PAID,
-                    rateService.computeBasicSalary(employee),
-                    hourlyRate,
-                    cutoffHours,
-                    cutoffGross,
-                    0, // overtime not modeled yet - plug in when work_time_request integration is added
-                    totalGross,
-                    allowanceBreakdown.getTotal(),
-                    deductionBreakdown.getTotal(),
-                    netPay);
-
-            payrollId = payrollDAO.save(payroll, allowanceBreakdown, deductionBreakdown);
+        if (isSecondCutoff(periodEnd)) {
+            LocalDate monthStart = periodStart.withDayOfMonth(1);
+            LocalDate monthEnd = periodStart.withDayOfMonth(periodStart.lengthOfMonth());
+            double monthlyHours = attendanceService.computeTotalHours(employee.getEmployeeId(), monthStart, monthEnd);
+            double monthlyGross = round(monthlyHours * hourlyRate);
+            deductionBreakdown = computeMonthlyDeductions(employee, monthlyGross);
         } else {
-            // Payroll already exists — recompute figures for the Payslip DTO only,
-            // no duplicate rows written.
-            cutoffHours = attendanceService.computeTotalHours(employee.getEmployeeId(), periodStart, periodEnd);
-            hourlyRate = rateService.computeHourlyRate(employee);
-            allowanceBreakdown = computeAllowances(employee);
-            totalGross = round(cutoffHours * hourlyRate + allowanceBreakdown.getTotal());
-
-            if (isSecondCutoff(periodEnd)) {
-                LocalDate monthStart = periodStart.withDayOfMonth(1);
-                LocalDate monthEnd = periodStart.withDayOfMonth(periodStart.lengthOfMonth());
-                double monthlyHours = attendanceService.computeTotalHours(employee.getEmployeeId(), monthStart, monthEnd);
-                double monthlyGross = round(monthlyHours * hourlyRate);
-                deductionBreakdown = computeMonthlyDeductions(employee, monthlyGross);
-            } else {
-                deductionBreakdown = computeMonthlyDeductions();
-            }
-
-            netPay = round(totalGross - deductionBreakdown.getTotal());
+            deductionBreakdown = computeMonthlyDeductions();
         }
+
+        double netPay = round(totalGross - deductionBreakdown.getTotal());
 
         String payslipNumber = generatePayslipNumber(employee.getEmployeeId(), periodEnd);
 
-        Payslip payslip = new Payslip(
+        return new Payslip(
                 payslipNumber,
-                payrollId,
+                0, // not persisted yet
                 employee.getEmployeeId(),
                 employee.getFullName(),
                 employee.getPosition(),
@@ -122,13 +81,58 @@ public class PayrollService {
                 periodEnd,
                 cutoffHours,
                 hourlyRate,
+                basicSalary,
+                overtimePay,
+                holidayPay,
                 totalGross,
                 allowanceBreakdown,
                 deductionBreakdown,
                 netPay);
+    }
 
-        // Guard by payroll_id (the actual unique constraint) rather than payslip_number,
-        // because the numbering scheme may differ from rows already in the DB.
+    /**
+     * Computes and persists 
+     */
+    public Payslip processPayslip(Employee employee, LocalDate periodStart, LocalDate periodEnd) {
+        Payslip payslip = computePayslip(employee, periodStart, periodEnd);
+        return persistPayslip(employee, payslip);
+    }
+
+    private Payslip persistPayslip(Employee employee, Payslip payslip) {
+        int employeeId = Integer.parseInt(employee.getEmployeeId());
+
+        PayPeriod payPeriod = payPeriodDAO.findOrCreate(
+                payslip.getPeriodStart(), payslip.getPeriodEnd(), payslip.getPeriodEnd());
+
+        int payrollId = payrollDAO.findPayrollId(employeeId, payPeriod.getPayPeriodId());
+
+        if (payrollId == -1) {
+            // No payroll yet for this employee/period - save it. basicPay is the
+            // cutoff gross (gross minus allowances), the same figure computePayslip
+            // derived it from.
+            double basicPay = round(payslip.getGrossPay() - payslip.getAllowances());
+
+            Payroll payroll = new Payroll(
+                    employeeId,
+                    payPeriod.getPayPeriodId(),
+                    STATUS_PAID,
+                    payslip.getBasicSalary(),
+                    payslip.getHourlyRate(),
+                    payslip.getTotalHours(),
+                    basicPay,
+                    payslip.getOvertimePay(),
+                    payslip.getGrossPay(),
+                    payslip.getAllowances(),
+                    payslip.getTotalDeductions(),
+                    payslip.getNetPay());
+
+            payrollId = payrollDAO.save(payroll,
+                    payslip.getAllowanceBreakdown(), payslip.getDeductionBreakdown());
+        }
+
+        payslip.setPayrollId(payrollId);
+
+        // Guard by payroll_id (the actual unique constraint) 
         if (payslipDAO.findByPayrollId(payrollId) == null) {
             payslipDAO.save(payslip);
         }
@@ -147,7 +151,7 @@ public class PayrollService {
         return payslipDAO.findAll();
     }
 
-    // NEW: delete a generated payslip by its id.
+    // delete a generated payslip by its id.
     public void deletePayslip(String payslipId) {
         payslipDAO.delete(payslipId);
     }
