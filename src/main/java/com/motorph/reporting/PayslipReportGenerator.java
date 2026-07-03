@@ -12,13 +12,7 @@ import net.sf.jasperreports.engine.JasperPrint;
 import net.sf.jasperreports.engine.JasperReport;
 import net.sf.jasperreports.view.JasperViewer;
 
-/**
- * Fills the EmployeePayslip.jrxml report for a single payroll record and
- * either shows it in JasperViewer (with its built-in Save/Print toolbar) or
- * exports it straight to a PDF file.
- *
- * @author Ducktavian
- */
+
 public class PayslipReportGenerator {
 
     private static final String REPORT_PATH = "/JasperReport/EmployeePayslip.jrxml";
@@ -43,7 +37,7 @@ public class PayslipReportGenerator {
         }
     }
 
-    /** Opens the payslip in JasperViewer, where the user can save/print/export it. */
+   
     public static void view(int payrollId) throws Exception {
         JasperPrint jasperPrint = fill(payrollId);
         JasperViewer.viewReport(jasperPrint, false);

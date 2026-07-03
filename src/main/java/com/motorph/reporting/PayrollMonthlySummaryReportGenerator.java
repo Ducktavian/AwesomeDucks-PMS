@@ -12,8 +12,7 @@ import net.sf.jasperreports.engine.JasperReport;
 import net.sf.jasperreports.view.JasperViewer;
 
 /**
- * Fills the PayrollSummaryReport.jrxml report (all payroll records) and shows
- * it in JasperViewer, where the user can save/print/export it.
+ * 
  *
  * @author Ducktavian
  */

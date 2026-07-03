@@ -153,10 +153,18 @@ public class DashboardPanel extends JPanel {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setOpaque(false);
 
+        int pendingPayroll = dashboardDAO.getPendingPayrollCount();
+        JdbcDashboardDAO.PayPeriodInfo currentPeriod = dashboardDAO.getCurrentPayPeriod();
+        JdbcDashboardDAO.PayPeriodInfo upcomingPeriod = dashboardDAO.getUpcomingPayPeriod();
+
         JPanel cardsPanel = createCardsPanel();
-        cardsPanel.add(createCard("Pending Payroll", "100", null));
-        cardsPanel.add(createCard("On-Going Period", "June", "16-30, 2026"));
-        cardsPanel.add(createCard("Upcoming Period", "July", "1-15, 2026"));
+        cardsPanel.add(createCard("Pending Payroll", String.valueOf(pendingPayroll), null));
+        cardsPanel.add(createCard("On-Going Period",
+                currentPeriod != null ? currentPeriod.monthLabel : "N/A",
+                currentPeriod != null ? currentPeriod.dateRange : null));
+        cardsPanel.add(createCard("Upcoming Period",
+                upcomingPeriod != null ? upcomingPeriod.monthLabel : "N/A",
+                upcomingPeriod != null ? upcomingPeriod.dateRange : null));
 
         JPanel chartArea = new JPanel(new BorderLayout());
         chartArea.setOpaque(false);
@@ -173,8 +181,12 @@ public class DashboardPanel extends JPanel {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setOpaque(false);
 
+        JdbcDashboardDAO.PayPeriodInfo currentPeriod = dashboardDAO.getCurrentPayPeriod();
+
         JPanel cardsPanel = createCardsPanel();
-        cardsPanel.add(createCard("On-Going Payroll Period", "June", "1-15, 2026"));
+        cardsPanel.add(createCard("On-Going Payroll Period",
+                currentPeriod != null ? currentPeriod.monthLabel : "N/A",
+                currentPeriod != null ? currentPeriod.dateRange : null));
         cardsPanel.add(createMultiValueCard(
                 "Total Hours Worked",
                 new String[]{"80", "10", "0"},
@@ -203,10 +215,14 @@ public class DashboardPanel extends JPanel {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setOpaque(false);
 
+        int totalEmployees = dashboardDAO.getTotalEmployees();
+        JdbcDashboardDAO.TicketCounts ticketCounts = dashboardDAO.getTicketCounts();
+
         JPanel cardsPanel = createCardsPanel();
-        cardsPanel.add(createCard("Total Number of Employees", "100", null));
-        cardsPanel.add(createCard("Pending Tickets", "101", null));
-        cardsPanel.add(createCard("Resolved Tickets", "101", null));
+        cardsPanel.add(createCard("Total Number of Employees",
+                NumberFormat.getNumberInstance(Locale.US).format(totalEmployees), null));
+        cardsPanel.add(createCard("Pending Tickets", String.valueOf(ticketCounts.open), null));
+        cardsPanel.add(createCard("Resolved Tickets", String.valueOf(ticketCounts.resolved), null));
 
         JPanel chartArea = new JPanel(new BorderLayout());
         chartArea.setOpaque(false);
@@ -223,17 +239,22 @@ public class DashboardPanel extends JPanel {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setOpaque(false);
 
+        int totalEmployees = dashboardDAO.getTotalEmployees();
+        JdbcDashboardDAO.LeaveRequestCounts leaveCounts = dashboardDAO.getLeaveRequestCounts();
+        JdbcDashboardDAO.WorkTimeRequestCounts workTimeCounts = dashboardDAO.getPendingWorkTimeRequestCounts();
+
         JPanel cardsPanel = createCardsPanel();
-        cardsPanel.add(createCard("Total Number of Employees", "1,001", null));
+        cardsPanel.add(createCard("Total Number of Employees",
+                NumberFormat.getNumberInstance(Locale.US).format(totalEmployees), null));
         cardsPanel.add(createMultiValueCard(
                 "Leave Request",
-                new String[]{"10", "10", "0"},
+                new String[]{String.valueOf(leaveCounts.pending), String.valueOf(leaveCounts.approved), String.valueOf(leaveCounts.rejected)},
                 new String[]{"Pending", "Approved", "Rejected"},
                 3
         ));
         cardsPanel.add(createMultiValueCard(
                 "Other Requests",
-                new String[]{"15", "15"},
+                new String[]{String.valueOf(workTimeCounts.pendingOvertime), String.valueOf(workTimeCounts.pendingUndertime)},
                 new String[]{"Pending OT", "Pending UT"},
                 2
         ));
@@ -241,8 +262,8 @@ public class DashboardPanel extends JPanel {
         JPanel tablesPanel = new JPanel(new GridLayout(1, 2, 40, 0));
         tablesPanel.setOpaque(false);
         tablesPanel.setBorder(BorderFactory.createEmptyBorder(30, 0, 0, 0));
-        tablesPanel.add(createHRTablePanel("On Leave Today"));
-        tablesPanel.add(createHRTablePanel("On Overtime Today"));
+        tablesPanel.add(createHRTablePanel("On Leave Today", "Reason", dashboardDAO.getEmployeesOnLeaveToday()));
+        tablesPanel.add(createHRTablePanel("On Overtime Today", "Reason", dashboardDAO.getEmployeesOnOvertimeToday()));
 
         panel.add(cardsPanel, BorderLayout.NORTH);
         panel.add(tablesPanel, BorderLayout.CENTER);
@@ -383,7 +404,7 @@ public class DashboardPanel extends JPanel {
         return card;
     }
 
-    private JPanel createHRTablePanel(String titleText) {
+    private JPanel createHRTablePanel(String titleText, String thirdColumnName, java.util.List<String[]> rows) {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setOpaque(false);
 
@@ -391,15 +412,11 @@ public class DashboardPanel extends JPanel {
         title.setFont(new Font(FONT, Font.BOLD, 16));
         title.setBorder(BorderFactory.createEmptyBorder(0, 0, 20, 0));
 
-        String[] columns = {"Name", "Department", "Reason"};
+        String[] columns = {"Name", "Department", thirdColumnName};
 
-        Object[][] data = {
-                {"Juan Cruz", "IT", "Vacation"},
-                {"Super Man", "HR", "Vacation"},
-                {"Juan Cruz", "IT", "Vacation"},
-                {"Super Man", "HR", "Vacation"},
-                {"Juan Cruz", "IT", "Vacation"}
-        };
+        Object[][] data = rows.stream()
+                .map(row -> (Object[]) row)
+                .toArray(Object[][]::new);
 
         DefaultTableModel tableModel = new DefaultTableModel(data, columns) {
             @Override

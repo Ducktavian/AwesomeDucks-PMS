@@ -11,12 +11,7 @@ import net.sf.jasperreports.engine.JasperPrint;
 import net.sf.jasperreports.engine.JasperReport;
 import net.sf.jasperreports.view.JasperViewer;
 
-/**
- * Fills the EmployeeTimecard.jrxml report for a single employee's attendance
- * records and shows it in JasperViewer, where the user can save/print/export it.
- *
- * @author Ducktavian
- */
+
 public class TimeCardReportGenerator {
 
     private static final String REPORT_PATH = "/JasperReport/EmployeeTimecard.jrxml";

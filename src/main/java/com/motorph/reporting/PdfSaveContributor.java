@@ -12,10 +12,6 @@ import net.sf.jasperreports.view.SaveContributorFactory;
 
 /**
  * Adds a "PDF Document (*.pdf)" option to JasperViewer's Save dialog.
- * JasperReports' built-in viewer ships with save contributors for RTF, ODT,
- * ODS, DOCX, PPTX, XLSX, HTML, CSV and XML, but not PDF - this fills that gap.
- * Registered via META-INF/services/net.sf.jasperreports.view.SaveContributorFactory.
- *
  * @author Ducktavian
  */
 public class PdfSaveContributor extends JRSaveContributor {
