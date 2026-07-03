@@ -24,9 +24,6 @@ public class EmployeePanel extends JPanel {
     private static final Color BORDER_GRAY = new Color(210, 210, 210);
     private static final Color SELECTED_ROW = new Color(225, 230, 245);
 
-    private static final String EMPLOYEE_LIST = "EMPLOYEE_LIST";
-    private static final String EMPLOYEE_FORM = "EMPLOYEE_FORM";
-
     private static final String[] COLUMNS = {
         "Employee No.", "Name", "Status", "Position",
         "Immediate Supervisor"
@@ -35,9 +32,8 @@ public class EmployeePanel extends JPanel {
     private final EmployeeService employeeService = AppContext.getEmployeeService();
     private final UserService userService = AppContext.getUserService();
 
-    private CardLayout cardLayout;
-    private JPanel cardPanel;
     private EmployeeFormPanel formPanel;
+    private JDialog employeeDialog;
 
     private DefaultTableModel tableModel;
     private JTable employeeTable;
@@ -62,20 +58,14 @@ public class EmployeePanel extends JPanel {
 
         applyRBAC();
 
-        cardLayout = new CardLayout();
-        cardPanel = new JPanel(cardLayout);
-
         JPanel listPanel = buildEmployeeListPanel();
 
         formPanel = new EmployeeFormPanel(() -> {
-            cardLayout.show(cardPanel, EMPLOYEE_LIST);
+            closeEmployeeDialog();
             refreshTable();
         });
 
-        cardPanel.add(listPanel, EMPLOYEE_LIST);
-        cardPanel.add(formPanel, EMPLOYEE_FORM);
-
-        add(cardPanel, BorderLayout.CENTER);
+        add(listPanel, BorderLayout.CENTER);
 
         loadEmployees();
     }
@@ -285,7 +275,7 @@ public class EmployeePanel extends JPanel {
         }
 
         formPanel.setViewMode(selectedEmployee);
-        cardLayout.show(cardPanel, EMPLOYEE_FORM);
+        showEmployeeDialog("Employee Details");
     }
 
     /** Opens the logged-in employee's own record without changing list scope. */
@@ -309,7 +299,7 @@ public class EmployeePanel extends JPanel {
         }
 
         formPanel.setViewMode(employee);
-        cardLayout.show(cardPanel, EMPLOYEE_FORM);
+        showEmployeeDialog("Employee Details");
     }
 
     private Employee getSelectedEmployee() {
@@ -515,7 +505,7 @@ public class EmployeePanel extends JPanel {
         if (!canModifyEmployees) return;
 
         formPanel.setAddMode();
-        cardLayout.show(cardPanel, EMPLOYEE_FORM);
+        showEmployeeDialog("Add Employee");
     }
 
     private void updateEmployee() {
@@ -529,7 +519,27 @@ public class EmployeePanel extends JPanel {
         }
 
         formPanel.setUpdateMode(selectedEmployee);
-        cardLayout.show(cardPanel, EMPLOYEE_FORM);
+        showEmployeeDialog("Update Employee");
+    }
+
+    private void showEmployeeDialog(String title) {
+        closeEmployeeDialog();
+
+        Window owner = SwingUtilities.getWindowAncestor(this);
+        employeeDialog = new JDialog(owner, title, Dialog.ModalityType.APPLICATION_MODAL);
+        employeeDialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+        employeeDialog.setContentPane(formPanel);
+        employeeDialog.setSize(720, 760);
+        employeeDialog.setMinimumSize(new Dimension(640, 560));
+        employeeDialog.setLocationRelativeTo(this);
+        employeeDialog.setVisible(true);
+    }
+
+    private void closeEmployeeDialog() {
+        if (employeeDialog != null) {
+            employeeDialog.dispose();
+            employeeDialog = null;
+        }
     }
     private void deleteEmployee() {
         if (!canModifyEmployees) return;
