@@ -6,6 +6,7 @@ import com.motorph.dao.PayslipDAO;
 import com.motorph.model.AllowanceBreakdown;
 import com.motorph.model.DeductionBreakdown;
 import com.motorph.model.Employee;
+import com.motorph.model.FinancialSummary;
 import com.motorph.model.PayPeriod;
 import com.motorph.model.Payroll;
 import com.motorph.model.Payslip;
@@ -154,6 +155,26 @@ public class PayrollService {
     // delete a generated payslip by its id.
     public void deletePayslip(String payslipId) {
         payslipDAO.delete(payslipId);
+    }
+
+    // Count of payroll runs not yet paid (Draft/Processing) - used by the finance dashboard.
+    public int getPendingPayrollCount() {
+        return payrollDAO.countPending();
+    }
+
+    // Revenue vs. expenses per pay period - used by the finance/admin dashboard charts.
+    public FinancialSummary getFinancialSummary() {
+        return payrollDAO.findFinancialSummary();
+    }
+
+    // Pay period that today falls within, or null if none is set up yet.
+    public PayPeriod getCurrentPayPeriod() {
+        return payPeriodDAO.findCurrent(LocalDate.now());
+    }
+
+    // Earliest pay period starting after today, or null if none is set up yet.
+    public PayPeriod getUpcomingPayPeriod() {
+        return payPeriodDAO.findUpcoming(LocalDate.now());
     }
 
     // Divide allowances by 2 (semi-monthly)

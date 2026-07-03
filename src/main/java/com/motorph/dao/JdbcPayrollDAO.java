@@ -3,6 +3,7 @@ package com.motorph.dao;
 import com.motorph.config.DatabaseConnection;
 import com.motorph.model.AllowanceBreakdown;
 import com.motorph.model.DeductionBreakdown;
+import com.motorph.model.FinancialSummary;
 import com.motorph.model.Payroll;
 
 import java.sql.*;
@@ -145,6 +146,51 @@ public class JdbcPayrollDAO implements PayrollDAO {
         } catch (SQLException e) {
             throw new RuntimeException("Failed to look up payroll for employee " + employeeId, e);
         }
+    }
+
+    @Override
+    public int countPending() {
+        String sql = "SELECT COUNT(*) FROM payroll p " +
+                "JOIN payroll_status ps ON p.payroll_status_id = ps.payroll_status_id " +
+                "WHERE ps.status_name IN ('Draft', 'Processing')";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            return rs.next() ? rs.getInt(1) : 0;
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to count pending payroll", e);
+        }
+    }
+
+    @Override
+    public FinancialSummary findFinancialSummary() {
+        // GROUP BY the label expression itself (plus year/month) and order by the
+        // earliest period date - satisfies MySQL's only_full_group_by mode.
+        String sql = "SELECT DATE_FORMAT(pp.period_start_date, '%b %Y') AS period_label, " +
+                "SUM(p.gross_pay) AS revenue, SUM(p.total_benefits + p.total_deductions) AS expenses " +
+                "FROM payroll p " +
+                "JOIN pay_period pp ON p.pay_period_id = pp.pay_period_id " +
+                "GROUP BY period_label, YEAR(pp.period_start_date), MONTH(pp.period_start_date) " +
+                "ORDER BY MIN(pp.period_start_date)";
+
+        List<String> labels = new ArrayList<>();
+        List<Integer> revenue = new ArrayList<>();
+        List<Integer> expenses = new ArrayList<>();
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+
+            while (rs.next()) {
+                labels.add(rs.getString("period_label"));
+                revenue.add(rs.getBigDecimal("revenue").intValue());
+                expenses.add(rs.getBigDecimal("expenses").intValue());
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to compute financial summary", e);
+        }
+
+        return new FinancialSummary(labels, revenue, expenses);
     }
 
     private void insertBenefitRow(PreparedStatement stmt, int payrollId, int benefitTypeId, double amount) throws SQLException {
