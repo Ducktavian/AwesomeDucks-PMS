@@ -1,4 +1,4 @@
--- Auto-generated payroll seed  |  period: 2024-06-01 to 2026-06-29
+-- Auto-generated payroll seed  |  period: 2024-06-01 to 2026-07-03
 -- Run this to replace pay_period/payroll/payslip/benefit/deduction seed rows.
 
 SET FOREIGN_KEY_CHECKS = 0;
@@ -24,7 +24,8 @@ INSERT INTO `pay_period` (`pay_period_id`, `period_start_date`, `period_end_date
 (11, '2024-11-01', '2024-11-15', '2024-11-20', 4, NOW(), NULL),
 (12, '2024-11-16', '2024-11-30', '2024-12-05', 4, NOW(), NULL),
 (13, '2024-12-01', '2024-12-15', '2024-12-20', 4, NOW(), NULL),
-(14, '2024-12-16', '2024-12-31', '2025-01-05', 4, NOW(), NULL);
+(14, '2024-12-16', '2024-12-31', '2025-01-05', 4, NOW(), NULL),
+(15, '2026-07-01', '2026-07-15', '2026-07-20', 4, NOW(), NULL);
 
 -- Payroll Records
 INSERT INTO `payroll` (`payroll_id`, `employee_id`, `pay_period_id`, `payroll_status_id`, `basic_salary`, `hourly_rate`, `hours_worked`, `basic_pay`, `overtime_pay`, `gross_pay`, `total_benefits`, `total_deductions`, `net_pay`, `created_at`, `created_by`) VALUES
@@ -503,7 +504,8 @@ INSERT INTO `payroll` (`payroll_id`, `employee_id`, `pay_period_id`, `payroll_st
 (473, 10033, 13, 4, 52670.00, 313.51, 91.88, 28805.30, 0.00, 30555.30, 1750.00, 0.00, 30555.30, NOW(), NULL),
 (474, 10033, 14, 4, 52670.00, 313.51, 112.92, 35401.55, 0.00, 37151.55, 1750.00, 11812.21, 25339.34, NOW(), NULL),
 (475, 10034, 13, 4, 52670.00, 313.51, 101.15, 31711.54, 0.00, 33461.54, 1750.00, 0.00, 33461.54, NOW(), NULL),
-(476, 10034, 14, 4, 52670.00, 313.51, 105.28, 33006.33, 0.00, 34756.33, 1750.00, 11939.97, 22816.36, NOW(), NULL);
+(476, 10034, 14, 4, 52670.00, 313.51, 105.28, 33006.33, 0.00, 34756.33, 1750.00, 11939.97, 22816.36, NOW(), NULL),
+(477, 10001, 15, 4, 90000.00, 535.71, 0.02, 10.71, 0.00, 2260.71, 2250.00, 0.00, 2260.71, NOW(), NULL);
 
 -- Payslips
 INSERT INTO `payslip` (`payslip_id`, `payroll_id`, `payslip_number`, `generated_at`, `created_at`, `created_by`) VALUES
@@ -982,7 +984,8 @@ INSERT INTO `payslip` (`payslip_id`, `payroll_id`, `payslip_number`, `generated_
 (473, 473, '10033-2024-12-C1', NOW(), NOW(), NULL),
 (474, 474, '10033-2024-12-C2', NOW(), NOW(), NULL),
 (475, 475, '10034-2024-12-C1', NOW(), NOW(), NULL),
-(476, 476, '10034-2024-12-C2', NOW(), NOW(), NULL);
+(476, 476, '10034-2024-12-C2', NOW(), NOW(), NULL),
+(477, 477, '10001-2026-07-C1', NOW(), NOW(), NULL);
 
 -- Payroll Benefits
 INSERT INTO `payroll_benefit` (`payroll_id`, `benefit_type_id`, `amount`, `created_at`, `created_by`) VALUES
@@ -2413,7 +2416,10 @@ INSERT INTO `payroll_benefit` (`payroll_id`, `benefit_type_id`, `amount`, `creat
 (475, 3, 500.00, NOW(), NULL),
 (476, 1, 750.00, NOW(), NULL),
 (476, 2, 500.00, NOW(), NULL),
-(476, 3, 500.00, NOW(), NULL);
+(476, 3, 500.00, NOW(), NULL),
+(477, 1, 750.00, NOW(), NULL),
+(477, 2, 1000.00, NOW(), NULL),
+(477, 3, 500.00, NOW(), NULL);
 
 -- Payroll Deductions
 INSERT INTO `payroll_deduction` (`payroll_id`, `deduction_type_id`, `amount`, `created_at`, `created_by`) VALUES
@@ -4320,4 +4326,8 @@ INSERT INTO `payroll_deduction` (`payroll_id`, `deduction_type_id`, `amount`, `c
 (476, 1, 1125.00, NOW(), NULL),
 (476, 2, 900.00, NOW(), NULL),
 (476, 3, 100.00, NOW(), NULL),
-(476, 4, 9814.97, NOW(), NULL);
+(476, 4, 9814.97, NOW(), NULL),
+(477, 1, 0.00, NOW(), NULL),
+(477, 2, 0.00, NOW(), NULL),
+(477, 3, 0.00, NOW(), NULL),
+(477, 4, 0.00, NOW(), NULL);

@@ -207,7 +207,7 @@ public class AttendanceService {
         UserAccount currentUser = requireCurrentUser();
         Role role = currentUser.getRole();
 
-        if (isAdminOrHr(role) || role == Role.FINANCE) {
+        if (canViewRoleAttendance(role)) {
             return attendanceDAO.findAll();
         }
 
@@ -220,7 +220,7 @@ public class AttendanceService {
         UserAccount currentUser = requireCurrentUser();
         Role role = currentUser.getRole();
 
-        if (isAdminOrHr(role) || role == Role.FINANCE) {
+        if (canViewRoleAttendance(role)) {
             return attendanceDAO.findByEmployeeId(employeeId);
         }
 
@@ -245,7 +245,7 @@ public class AttendanceService {
         UserAccount currentUser = requireCurrentUser();
         Role role = currentUser.getRole();
 
-        if (isAdminOrHr(role) || role == Role.FINANCE) {
+        if (canViewRoleAttendance(role)) {
             return attendance;
         }
 
@@ -300,6 +300,10 @@ public class AttendanceService {
 
     private boolean isAdminOrHr(Role role) {
         return role == Role.ADMIN || role == Role.HR;
+    }
+
+    private boolean canViewRoleAttendance(Role role) {
+        return isAdminOrHr(role) || role == Role.FINANCE || role == Role.IT;
     }
 
     private double round(double value) {
