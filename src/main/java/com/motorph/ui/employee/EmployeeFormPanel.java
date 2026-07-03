@@ -147,7 +147,14 @@ public class EmployeeFormPanel extends JPanel {
         submitButton.setFont(new Font(FONT, Font.PLAIN, 14));
         submitButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         submitButton.addActionListener(e -> saveEmployee());
-        content.add(submitButton);
+
+        JPanel submitRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+        submitRow.setOpaque(false);
+        submitRow.setAlignmentX(LEFT_ALIGNMENT);
+        submitRow.setPreferredSize(new Dimension(LABEL_WIDTH + FIELD_WIDTH + 16, 42));
+        submitRow.setMaximumSize(new Dimension(LABEL_WIDTH + FIELD_WIDTH + 16, 42));
+        submitRow.add(submitButton);
+        content.add(submitRow);
 
         // Keep the stacked content pinned top-left at its natural size so it
         // doesn't stretch to fill the viewport; the scroll pane handles overflow.
@@ -312,8 +319,7 @@ public class EmployeeFormPanel extends JPanel {
 
     private void styleCombo(JComboBox<?> combo) {
         combo.setFont(new Font(FONT, Font.PLAIN, 13));
-        combo.setBackground(Color.WHITE);
-        combo.setOpaque(true);
+        combo.setOpaque(false);
         sizeInput(combo);
     }
 
