@@ -20,9 +20,8 @@
 	<style name="RowValue" forecolor="#000000" fontName="SansSerif" fontSize="7.0"/>
 	<style name="TotalLabel" forecolor="#000000" fontName="SansSerif" fontSize="7.0" bold="true"/>
 	<style name="TotalValue" forecolor="#000000" fontName="SansSerif" fontSize="7.0" bold="true"/>
-	<parameter name="LOGO" class="java.lang.String">
-		<defaultValueExpression><![CDATA["C:/Users/Lenovo/Downloads/Work_S/MMDC/AOOP/MotorPH-icon.png"]]></defaultValueExpression>
-	</parameter>
+	<parameter name="LOGO" class="java.io.InputStream"/>
+	<parameter name="PAYROLL_ID" class="java.lang.Integer"/>
 	<query language="SQL"><![CDATA[SELECT
     pr.payroll_id,
     COALESCE(ps.payslip_number, CONCAT('PAY-', pr.employee_id)) AS payslip_number,
@@ -143,6 +142,8 @@ LEFT JOIN (
     GROUP BY payroll_id
 ) pd
     ON pr.payroll_id = pd.payroll_id
+
+WHERE pr.payroll_id = $P{PAYROLL_ID}
 
 ORDER BY pr.payroll_id DESC]]></query>
 	<field name="payroll_id" class="java.lang.Integer"/>

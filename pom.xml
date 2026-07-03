@@ -51,14 +51,14 @@
         <dependency>
             <groupId>net.sf.jasperreports</groupId>
             <artifactId>jasperreports</artifactId>
-            <version>6.21.0</version>
+            <version>7.0.6</version>
         </dependency>
-        
+
         <!-- Add this for JasperViewer support -->
         <dependency>
             <groupId>net.sf.jasperreports</groupId>
             <artifactId>jasperreports-fonts</artifactId>
-            <version>6.21.0</version>
+            <version>7.0.6</version>
         </dependency>
 
 
