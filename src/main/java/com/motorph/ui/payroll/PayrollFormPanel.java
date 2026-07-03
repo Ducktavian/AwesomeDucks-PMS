@@ -54,6 +54,7 @@ import com.motorph.model.PayrollPeriod;
 import com.motorph.service.EmployeeService;
 import com.motorph.service.PayrollService;
 import com.motorph.util.AppContext;
+import reporting.PayslipReportGenerator;
 
 public class PayrollFormPanel extends JPanel {
 
@@ -80,6 +81,7 @@ public class PayrollFormPanel extends JPanel {
 
    
     private boolean generated = false;
+    private Payslip currentPayslip;
 
     // Earning fields
     private JTextField basicSalaryField;
@@ -572,6 +574,7 @@ public class PayrollFormPanel extends JPanel {
         JButton submit = navyButton("Submit", null);
 
         generate.addActionListener(e -> handleGenerate());
+        savePdf.addActionListener(e -> handleSavePdf());
         submit.addActionListener(e -> handleSubmit());
 
         row.add(generate);
@@ -599,6 +602,7 @@ public class PayrollFormPanel extends JPanel {
         try {
             Payslip payslip = payrollService.computePayslip(employee, period[0], period[1]);
             populateFromPayslip(payslip);
+            currentPayslip = payslip;
             generated = true;
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -655,7 +659,26 @@ public class PayrollFormPanel extends JPanel {
         }
     }
 
-  
+    /* Opens the currently loaded payslip in JasperViewer, where the user can save it as a PDF */
+    private void handleSavePdf() {
+        if (currentPayslip == null || currentPayslip.getPayrollId() <= 0) {
+            JOptionPane.showMessageDialog(this,
+                    "This payroll hasn't been submitted yet. Submit it first before saving a PDF.",
+                    "Save PDF", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        try {
+            PayslipReportGenerator.view(currentPayslip.getPayrollId());
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this,
+                    "Failed to generate PDF:\n" + ex.getMessage(),
+                    "Save PDF Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+
     private LocalDate[] parseSelectedPeriod() {
         String dateText = payrollDateField.getText().trim();
         if (dateText.isEmpty()) {
@@ -858,6 +881,7 @@ public class PayrollFormPanel extends JPanel {
         // be set here for those fields to show the right values.
         if (payslip != null) {
             populateFromPayslip(payslip);
+            currentPayslip = payslip;
         }
 
         if (viewOnly) {
