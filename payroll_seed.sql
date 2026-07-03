@@ -1,4 +1,4 @@
--- Auto-generated payroll seed  |  period: 2024-06-01 to 2026-06-29
+-- Auto-generated payroll seed  |  period: 2024-06-01 to 2026-07-03
 -- Run this to replace pay_period/payroll/payslip/benefit/deduction seed rows.
 
 SET FOREIGN_KEY_CHECKS = 0;
