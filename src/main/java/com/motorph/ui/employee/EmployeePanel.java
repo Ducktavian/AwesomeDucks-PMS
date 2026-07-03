@@ -4,6 +4,7 @@ import com.motorph.model.Employee;
 import com.motorph.model.Role;
 import com.motorph.model.UserAccount;
 import com.motorph.service.EmployeeService;
+import com.motorph.service.UserService;
 import com.motorph.util.AppContext;
 import com.motorph.util.Session;
 
@@ -11,6 +12,7 @@ import java.awt.*;
 import java.awt.event.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import javax.swing.*;
 import javax.swing.border.*;
 import javax.swing.table.*;
@@ -25,15 +27,13 @@ public class EmployeePanel extends JPanel {
     private static final String EMPLOYEE_LIST = "EMPLOYEE_LIST";
     private static final String EMPLOYEE_FORM = "EMPLOYEE_FORM";
 
-    private static final String VIEW_ALL = "View All";
-    private static final String VIEW_MINE = "View Mine";
-
     private static final String[] COLUMNS = {
         "Employee No.", "Name", "Status", "Position",
         "Immediate Supervisor"
     };
 
     private final EmployeeService employeeService = AppContext.getEmployeeService();
+    private final UserService userService = AppContext.getUserService();
 
     private CardLayout cardLayout;
     private JPanel cardPanel;
@@ -50,13 +50,11 @@ public class EmployeePanel extends JPanel {
     private final List<Employee> allEmployees = new ArrayList<>();
 
     private boolean canModifyEmployees;
-    private boolean canViewAllEmployees;
     private boolean canOpenAnyoneDetails;
     private String currentEmployeeId;
+    private Role currentRole;
 
-    // scope toggle: true = all employees, false = only the logged-in user's record
-    private JComboBox<String> scopeFilter;
-    private boolean viewAllSelected = true;
+    private JComboBox<String> roleFilter;
 
     public EmployeePanel() {
         setLayout(new BorderLayout());
@@ -85,15 +83,11 @@ public class EmployeePanel extends JPanel {
     private void applyRBAC() {
         UserAccount user = Session.getCurrentUser();
         Role role = user == null ? null : user.getRole();
+        currentRole = role == null ? Role.EMPLOYEE : role;
 
         currentEmployeeId = user == null ? "" : String.valueOf(user.getEmployeeId());
 
         canModifyEmployees = role == Role.ADMIN || role == Role.HR;
-        canViewAllEmployees = role == Role.ADMIN
-                || role == Role.HR
-                || role == Role.IT
-                || role == Role.FINANCE;
-
         // Finance and IT can view all employees but cannot edit them.
         canOpenAnyoneDetails = role == Role.ADMIN
                 || role == Role.HR
@@ -176,7 +170,7 @@ public class EmployeePanel extends JPanel {
 
         JPanel leftControls = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         leftControls.setOpaque(false);
-        leftControls.add(buildScopeFilter());
+        leftControls.add(buildRoleFilter());
 
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         buttons.setOpaque(false);
@@ -194,27 +188,26 @@ public class EmployeePanel extends JPanel {
         return row;
     }
 
-    // NEW: builds the View All / View Mine scope dropdown. Privileged roles can
-    // switch between all employees and just their own record; everyone else is
-    // locked to their own record.
-    private JComboBox<String> buildScopeFilter() {
-        scopeFilter = new JComboBox<>(new String[]{ VIEW_ALL, VIEW_MINE });
-        scopeFilter.setFont(new Font("SansSerif", Font.PLAIN, 13));
-        scopeFilter.setPreferredSize(new Dimension(140, 37));
-        scopeFilter.setBackground(Color.WHITE);
+    private JComboBox<String> buildRoleFilter() {
+        roleFilter = new JComboBox<>(getAllowedEmployeeRoles(currentRole));
+        roleFilter.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        roleFilter.setPreferredSize(new Dimension(140, 37));
+        roleFilter.setBackground(Color.WHITE);
+        roleFilter.setFocusable(false);
+        roleFilter.addActionListener(e -> loadEmployees());
+        return roleFilter;
+    }
 
-        if (canViewAllEmployees) {
-            scopeFilter.setSelectedItem(viewAllSelected ? VIEW_ALL : VIEW_MINE);
-            scopeFilter.addActionListener(e -> {
-                viewAllSelected = VIEW_ALL.equals(scopeFilter.getSelectedItem());
-                loadEmployees();
-            });
-        } else {
-            scopeFilter.setSelectedItem(VIEW_MINE);
-            scopeFilter.setEnabled(false);
-        }
-
-        return scopeFilter;
+    /** Returns permitted filters in the canonical Admin, Finance, HR, IT, Employee order. */
+    private static String[] getAllowedEmployeeRoles(Role role) {
+        if (role == null) return new String[]{"Employee"};
+        return switch (role) {
+            case ADMIN -> new String[]{"Admin", "Finance", "HR", "IT", "Employee"};
+            case FINANCE -> new String[]{"Finance", "Employee"};
+            case HR -> new String[]{"HR", "Employee"};
+            case IT -> new String[]{"IT", "Employee"};
+            case EMPLOYEE -> new String[]{"Employee"};
+        };
     }
 
     private JPanel buildTablePanel() {
@@ -439,16 +432,28 @@ public class EmployeePanel extends JPanel {
         allEmployees.clear();
 
         List<Employee> employees = employeeService.getAllEmployees();
+        Role selectedRole = Role.fromName(
+                roleFilter == null ? currentRole.getRoleName() : (String) roleFilter.getSelectedItem());
 
-        boolean showAll = canViewAllEmployees && viewAllSelected;
-
-        if (showAll) {
-            allEmployees.addAll(employees);
-        } else {
-            for (Employee emp : employees) {
-                if (emp.getEmployeeId().equals(currentEmployeeId)) {
-                    allEmployees.add(emp);
+        // Regular employees remain restricted to their own directory record.
+        if (currentRole == Role.EMPLOYEE) {
+            for (Employee employee : employees) {
+                if (employee.getEmployeeId().equals(currentEmployeeId)) {
+                    allEmployees.add(employee);
                     break;
+                }
+            }
+        } else {
+            Map<Integer, Role> rolesByEmployeeId = userService.getEmployeeRoles();
+            for (Employee employee : employees) {
+                try {
+                    int employeeId = Integer.parseInt(employee.getEmployeeId());
+                    Role employeeRole = rolesByEmployeeId.getOrDefault(employeeId, Role.EMPLOYEE);
+                    if (employeeRole == selectedRole) {
+                        allEmployees.add(employee);
+                    }
+                } catch (NumberFormatException ignored) {
+                    // Employee IDs used by account-role assignments are numeric.
                 }
             }
         }

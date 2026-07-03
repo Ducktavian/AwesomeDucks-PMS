@@ -22,6 +22,7 @@ import java.awt.event.MouseEvent;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -57,6 +58,7 @@ import com.motorph.model.Attendance;
 import com.motorph.model.Role;
 import com.motorph.model.UserAccount;
 import com.motorph.service.AttendanceService;
+import com.motorph.service.UserService;
 import com.motorph.util.AppContext;
 import com.motorph.util.Session;
 
@@ -67,9 +69,6 @@ public class AttendancePanel extends JPanel {
     private static final Color BORDER_GRAY = new Color(210, 210, 210);
     private static final Color SELECTED_ROW = new Color(225, 230, 245);
     private static final String FONT = "Segoe UI";
-
-    private static final String VIEW_ALL = "View All";
-    private static final String VIEW_MINE = "View Mine";
 
     private static final String[] COLUMNS = {
         "Employee ID", "Type", "Date", "Time In",
@@ -84,6 +83,7 @@ public class AttendancePanel extends JPanel {
 
     // connection to the database via service -> dao
     private final AttendanceService attendanceService = AppContext.getAttendanceService();
+    private final UserService userService = AppContext.getUserService();
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("MM/dd/yyyy");
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("h:mm a");     
 
@@ -92,14 +92,12 @@ public class AttendancePanel extends JPanel {
     private JTextField searchField;
     private TableRowSorter<DefaultTableModel> sorter;
 
-    private boolean canViewAllAttendance;
     private boolean canAddAttendance;
     private boolean canModifyAttendance;
     private String currentEmployeeId;
+    private Role currentRole;
 
-    // scope toggle: true = everyone's records, false = only the logged-in user's
-    private JComboBox<String> scopeFilter;
-    private boolean viewAllSelected = true;
+    private JComboBox<String> roleFilter;
 
     private int sortedColumn = -1;
     private SortOrder currentSortOrder = SortOrder.UNSORTED;
@@ -116,10 +114,10 @@ public class AttendancePanel extends JPanel {
     private void applyRBAC() {
         UserAccount user = Session.getCurrentUser();
         Role role = user == null ? null : user.getRole();
+        currentRole = role == null ? Role.EMPLOYEE : role;
 
         currentEmployeeId = user == null ? "" : String.valueOf(user.getEmployeeId());
 
-        canViewAllAttendance = role == Role.ADMIN || role == Role.HR;
         canModifyAttendance = role == Role.ADMIN || role == Role.HR;
 
         canAddAttendance = role == Role.ADMIN
@@ -127,10 +125,6 @@ public class AttendancePanel extends JPanel {
                 || role == Role.IT
                 || role == Role.FINANCE
                 || role == Role.EMPLOYEE;
-    }
-
-    private boolean canSeeRow(String employeeId) {
-        return canViewAllAttendance || employeeId.equals(currentEmployeeId);
     }
 
     private void showAttendanceList() {
@@ -151,12 +145,27 @@ public class AttendancePanel extends JPanel {
         records.clear();
 
         try {
-            boolean showAll = canViewAllAttendance && viewAllSelected;
-            List<Attendance> loaded = showAll
-                    ? attendanceService.getAllAttendance()
-                    : attendanceService.getAllAttendance(currentEmployeeId);
+            List<Attendance> loaded = currentRole == Role.EMPLOYEE
+                    ? attendanceService.getAllAttendance(currentEmployeeId)
+                    : attendanceService.getAllAttendance();
+            Map<Integer, Role> rolesByEmployeeId = currentRole == Role.EMPLOYEE
+                    ? Map.of()
+                    : userService.getEmployeeRoles();
+            Role selectedRole = Role.fromName(roleFilter == null
+                    ? currentRole.getRoleName()
+                    : (String) roleFilter.getSelectedItem());
 
             for (Attendance record : loaded) {
+                if (currentRole != Role.EMPLOYEE) {
+                    try {
+                        int employeeId = Integer.parseInt(record.getEmployeeId());
+                        if (rolesByEmployeeId.getOrDefault(employeeId, Role.EMPLOYEE) != selectedRole) {
+                            continue;
+                        }
+                    } catch (NumberFormatException ex) {
+                        continue;
+                    }
+                }
                 records.add(record);
                 attendanceRows.add(toTableRow(record));
             }
@@ -256,7 +265,7 @@ public class AttendancePanel extends JPanel {
 
         JPanel leftControls = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         leftControls.setOpaque(false);
-        leftControls.add(buildScopeFilter());
+        leftControls.add(buildRoleFilter());
 
         JPanel rightButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         rightButtons.setOpaque(false);
@@ -285,28 +294,28 @@ public class AttendancePanel extends JPanel {
         return row;
     }
 
-    // NEW: builds the View All / View Mine scope dropdown. Privileged roles can
-    // switch between everyone's attendance and their own; everyone else is locked
-    // to their own records.
-    private JComboBox<String> buildScopeFilter() {
-        scopeFilter = new JComboBox<>(new String[]{ VIEW_ALL, VIEW_MINE });
-        scopeFilter.setFont(new Font(FONT, Font.PLAIN, 13));
-        scopeFilter.setPreferredSize(new Dimension(140, 37));
-        scopeFilter.setBackground(Color.WHITE);
+    private JComboBox<String> buildRoleFilter() {
+        roleFilter = new JComboBox<>(getAllowedAttendanceRoles(currentRole));
+        roleFilter.setFont(new Font(FONT, Font.PLAIN, 13));
+        roleFilter.setPreferredSize(new Dimension(140, 37));
+        roleFilter.setBackground(Color.WHITE);
+        roleFilter.setFocusable(false);
+        roleFilter.addActionListener(e -> {
+            loadSampleRows();
+            refreshTableRows();
+        });
+        return roleFilter;
+    }
 
-        if (canViewAllAttendance) {
-            scopeFilter.setSelectedItem(viewAllSelected ? VIEW_ALL : VIEW_MINE);
-            scopeFilter.addActionListener(e -> {
-                viewAllSelected = VIEW_ALL.equals(scopeFilter.getSelectedItem());
-                loadSampleRows();
-                refreshTableRows();
-            });
-        } else {
-            scopeFilter.setSelectedItem(VIEW_MINE);
-            scopeFilter.setEnabled(false);
-        }
-
-        return scopeFilter;
+    private static String[] getAllowedAttendanceRoles(Role role) {
+        if (role == null) return new String[]{"Employee"};
+        return switch (role) {
+            case ADMIN -> new String[]{"Admin", "Finance", "HR", "IT", "Employee"};
+            case FINANCE -> new String[]{"Finance", "Employee"};
+            case HR -> new String[]{"HR", "Employee"};
+            case IT -> new String[]{"IT", "Employee"};
+            case EMPLOYEE -> new String[]{"Employee"};
+        };
     }
 
     // NEW: repopulate the table from the currently loaded rows. Used when the
@@ -319,9 +328,7 @@ public class AttendancePanel extends JPanel {
         tableModel.setRowCount(0);
 
         for (Object[] row : attendanceRows) {
-            if (canSeeRow(String.valueOf(row[0]))) {
-                tableModel.addRow(row);
-            }
+            tableModel.addRow(row);
         }
     }
 
@@ -492,11 +499,7 @@ public class AttendancePanel extends JPanel {
         };
 
         for (Object[] row : attendanceRows) {
-            String employeeId = String.valueOf(row[0]);
-
-            if (canSeeRow(employeeId)) {
-                tableModel.addRow(row);
-            }
+            tableModel.addRow(row);
         }
 
         attendanceTable = new JTable(tableModel);
