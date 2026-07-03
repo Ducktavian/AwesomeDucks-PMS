@@ -16,4 +16,6 @@ public interface EmployeeDAO extends BaseDAO {
     void delete(String employeeId);
     Map<String, Integer> findAllPositions();
     Map<String, Integer> findAllEmploymentStatuses();
+    Map<String, Integer> findAllDepartments();
+    Map<String, Integer> findPositionsByDepartment(int departmentId);
 }

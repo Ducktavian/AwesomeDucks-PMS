@@ -57,7 +57,7 @@ public class HelpCenterPanel extends JPanel {
     // ── UI components ─────────────────────────────────────────────────────────
     private CardLayout    rootCard;
     private JPanel        rootPanel;
-    private DisputeDetail detailPanel;
+    private HelpCenterFormPanel detailPanel;
 
     private DefaultTableModel                tableModel;
     private JTable                           disputeTable;
@@ -88,7 +88,7 @@ public class HelpCenterPanel extends JPanel {
         rootPanel = new JPanel(rootCard);
         rootPanel.setBackground(Color.WHITE);
 
-        detailPanel = new DisputeDetail(() -> {
+        detailPanel = new HelpCenterFormPanel(() -> {
             loadData();
             rootCard.show(rootPanel, LIST_CARD);
         });
@@ -233,17 +233,7 @@ public class HelpCenterPanel extends JPanel {
         body.setBorder(new EmptyBorder(17, 78, 40, 78));
 
         body.add(buildSearchRow());
-
-        // Role-view picker sits directly below the search field. Lower roles
-        // (plain Employee) only have a single view, so the picker is omitted
-        // for them — matching the Dashboard's behaviour.
-        JPanel rolePicker = buildRolePickerRow();
-        if (rolePicker != null) {
-            body.add(Box.createVerticalStrut(12));
-            body.add(rolePicker);
-        }
-
-        body.add(Box.createVerticalStrut(15));
+        body.add(Box.createVerticalStrut(12));
         body.add(buildControlRow());
         body.add(Box.createVerticalStrut(22));
         body.add(buildTablePanel());
@@ -277,12 +267,6 @@ public class HelpCenterPanel extends JPanel {
         row.setAlignmentX(Component.LEFT_ALIGNMENT);
         row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
 
-        JLabel lbl = new JLabel("Viewing as:");
-        lbl.setFont(new Font("SansSerif", Font.PLAIN, 13));
-        lbl.setForeground(new Color(70, 80, 100));
-        lbl.setBorder(new EmptyBorder(0, 0, 0, 10));
-
-        row.add(lbl);
         row.add(roleCombo);
         return row;
     }
@@ -330,6 +314,14 @@ public class HelpCenterPanel extends JPanel {
         row.setAlignmentX(Component.LEFT_ALIGNMENT);
         row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
 
+        JPanel leftControls = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        leftControls.setOpaque(false);
+
+        JPanel rolePicker = buildRolePickerRow();
+        if (rolePicker != null) {
+            leftControls.add(rolePicker);
+        }
+
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         buttons.setOpaque(false);
 
@@ -343,6 +335,7 @@ public class HelpCenterPanel extends JPanel {
 
         buttons.add(navyButton("⟳", "Refresh", 110, this::refreshTable));
 
+        row.add(leftControls, BorderLayout.WEST);
         row.add(buttons, BorderLayout.EAST);
         return row;
     }
