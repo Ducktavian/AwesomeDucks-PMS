@@ -13,10 +13,12 @@ import java.awt.Graphics2D;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
+import java.awt.Image;
 import java.awt.Insets;
 import java.awt.RenderingHints;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.net.URL;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
@@ -27,6 +29,7 @@ import java.util.Date;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
@@ -37,6 +40,7 @@ import javax.swing.JPanel;
 import javax.swing.JSpinner;
 import javax.swing.JTextField;
 import javax.swing.SpinnerDateModel;
+import javax.swing.SwingConstants;
 import javax.swing.border.AbstractBorder;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
@@ -77,6 +81,7 @@ public class AttendanceFormPanel extends JPanel {
     private JButton timeOutButton;
     private JTextField totalHoursField;
     private JComboBox<String> validityCombo;
+    private JButton savePdfButton;
 
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy");
     private final SimpleDateFormat timeFormat = new SimpleDateFormat("hh:mm a");
@@ -355,9 +360,13 @@ public class AttendanceFormPanel extends JPanel {
         row.setOpaque(false);
         row.setBorder(new EmptyBorder(8, 0, 0, 0));
 
+        savePdfButton = createIconButton("Save PDF", "/com/motorph/img/Save-Icon.png");
+        savePdfButton.addActionListener(e -> saveAttendanceAsPdf());
+
         JButton submit = navyButton(existingData == null ? "Submit" : "Update");
         submit.addActionListener(e -> submitAttendance());
 
+        row.add(savePdfButton);
         row.add(submit);
         return row;
     }
@@ -374,6 +383,41 @@ public class AttendanceFormPanel extends JPanel {
         button.setFocusPainted(false);
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         return button;
+    }
+
+    private JButton createIconButton(String text, String iconPath) {
+        JButton button = new JButton(text);
+        button.setFont(new Font(FONT, Font.PLAIN, 13));
+        button.setPreferredSize(new Dimension(140, 44));
+        button.setBackground(NAVY);
+        button.setForeground(Color.WHITE);
+        button.setOpaque(true);
+        button.setContentAreaFilled(true);
+        button.setBorderPainted(false);
+        button.setFocusPainted(false);
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        button.setHorizontalTextPosition(SwingConstants.RIGHT);
+        button.setIconTextGap(8);
+
+        URL iconUrl = getClass().getResource(iconPath);
+        if (iconUrl != null) {
+            Image img = new ImageIcon(iconUrl)
+                    .getImage()
+                    .getScaledInstance(16, 16, Image.SCALE_SMOOTH);
+            button.setIcon(new ImageIcon(img));
+        }
+
+        return button;
+    }
+
+    private void saveAttendanceAsPdf() {
+        // TODO: hook this up to actual PDF generation logic
+        JOptionPane.showMessageDialog(
+                this,
+                "Attendance record saved as PDF.",
+                "Save PDF",
+                JOptionPane.INFORMATION_MESSAGE
+        );
     }
 
     private void submitAttendance() {

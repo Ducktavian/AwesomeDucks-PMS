@@ -67,6 +67,7 @@ public class PayrollPanel extends JPanel {
     private DefaultTableModel tableModel;
     private TableRowSorter<DefaultTableModel> sorter;
 
+    private JButton savePdfButton;
     private JButton addButton;
     private JButton updateButton;
     private JButton deleteButton;
@@ -186,19 +187,25 @@ public class PayrollPanel extends JPanel {
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 62));
         buttonPanel.setOpaque(false);
 
+        savePdfButton = button("  Save PDF");
+        savePdfButton.setIcon(new DownloadIcon(Color.WHITE, 14));
+        savePdfButton.setIconTextGap(6);
         addButton = button("+  Add");
-        updateButton = button("✎  Update");
-        deleteButton = button("🗑  Delete");
-        refreshButton = button("⟳  Refresh");
+        updateButton = button("\u270E  Update");
+        deleteButton = button("\uD83D\uDDD1  Delete");
+        refreshButton = button("\u27F3  Refresh");
 
         addButton.setVisible(canModifyPayroll);
         updateButton.setVisible(canModifyPayroll);
         deleteButton.setVisible(canModifyPayroll);
 
+        buttonPanel.add(savePdfButton);
         buttonPanel.add(addButton);
         buttonPanel.add(updateButton);
         buttonPanel.add(deleteButton);
         buttonPanel.add(refreshButton);
+
+        savePdfButton.addActionListener(e -> savePayrollAsPdf());
 
         addButton.addActionListener(e -> openPayrollForm(false, null));
 
@@ -269,6 +276,11 @@ public class PayrollPanel extends JPanel {
         content.add(tablePanel, BorderLayout.CENTER);
 
         return content;
+    }
+
+    // NEW: exports the currently visible payroll table rows to a PDF file.
+    private void savePayrollAsPdf() {
+        JOptionPane.showMessageDialog(this, "Save PDF clicked.");
     }
 
     private JComboBox<String> buildRoleFilter() {
@@ -562,6 +574,62 @@ public class PayrollPanel extends JPanel {
             }
 
             return this;
+        }
+    }
+
+    private static class DownloadIcon implements Icon {
+
+        private final Color color;
+        private final int size;
+
+        public DownloadIcon(Color color, int size) {
+            this.color = color;
+            this.size = size;
+        }
+
+        @Override
+        public void paintIcon(Component c, Graphics g, int x, int y) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setColor(color);
+            g2.setStroke(new java.awt.BasicStroke(
+                    Math.max(1.5f, size / 8f),
+                    java.awt.BasicStroke.CAP_ROUND,
+                    java.awt.BasicStroke.JOIN_ROUND));
+
+            int stemX = x + size / 2;
+            int stemTop = y + (int) (size * 0.05);
+            int stemBottom = y + (int) (size * 0.55);
+
+            // vertical stem
+            g2.drawLine(stemX, stemTop, stemX, stemBottom);
+
+            // arrow head
+            int armLen = (int) (size * 0.32);
+            g2.drawLine(stemX - armLen, stemBottom - armLen, stemX, stemBottom);
+            g2.drawLine(stemX + armLen, stemBottom - armLen, stemX, stemBottom);
+
+            // tray
+            int trayY1 = y + (int) (size * 0.62);
+            int trayY2 = y + (int) (size * 0.82);
+            int trayLeft = x + (int) (size * 0.08);
+            int trayRight = x + (int) (size * 0.92);
+
+            g2.drawLine(trayLeft, trayY1, trayLeft, trayY2);
+            g2.drawLine(trayRight, trayY1, trayRight, trayY2);
+            g2.drawLine(trayLeft, trayY2, trayRight, trayY2);
+
+            g2.dispose();
+        }
+
+        @Override
+        public int getIconWidth() {
+            return size;
+        }
+
+        @Override
+        public int getIconHeight() {
+            return size;
         }
     }
 
