@@ -79,8 +79,6 @@ public class UserAccountPanel extends JPanel {
     private static final Color BORDER_GRAY = new Color(210, 210, 210);
     private static final Color SELECTED_ROW = new Color(225, 230, 245);
 
-    private static final String ALL_ROLES = "All Roles";
-
     private static final String[] COLUMNS = {
         "Employee No.", "Name", "Status", "Position",
         "Immediate Supervisor", "Role"
@@ -97,11 +95,16 @@ public class UserAccountPanel extends JPanel {
     private JTextField searchField;
     private JComboBox<String> roleFilter;
     private TableRowSorter<DefaultTableModel> sorter;
+    private final Role currentRole;
 
     private int sortedColumn = -1;
     private SortOrder currentSortOrder = SortOrder.UNSORTED;
 
     public UserAccountPanel() {
+        UserAccount currentUser = Session.getCurrentUser();
+        currentRole = currentUser == null || currentUser.getRole() == null
+                ? Role.EMPLOYEE
+                : currentUser.getRole();
         setLayout(new BorderLayout());
         setBackground(Color.WHITE);
 
@@ -176,12 +179,11 @@ public class UserAccountPanel extends JPanel {
         row.setAlignmentX(Component.LEFT_ALIGNMENT);
         row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
 
-        roleFilter = new JComboBox<>(new String[] {
-            ALL_ROLES, "Admin", "HR", "IT", "Finance", "Employee"
-        });
+        roleFilter = new JComboBox<>(getAllowedUserRoles(currentRole));
         roleFilter.setFont(new Font("SansSerif", Font.PLAIN, 13));
         roleFilter.setPreferredSize(new Dimension(140, 37));
         roleFilter.setBackground(Color.WHITE);
+        roleFilter.setFocusable(false);
         roleFilter.addActionListener(e -> applyFilters());
 
         JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
@@ -198,6 +200,17 @@ public class UserAccountPanel extends JPanel {
         row.add(left, BorderLayout.WEST);
         row.add(buttons, BorderLayout.EAST);
         return row;
+    }
+
+    private static String[] getAllowedUserRoles(Role role) {
+        if (role == null) return new String[]{"Employee"};
+        return switch (role) {
+            case ADMIN -> new String[]{"Admin", "Finance", "HR", "IT", "Employee"};
+            case FINANCE -> new String[]{"Finance", "Employee"};
+            case HR -> new String[]{"HR", "Employee"};
+            case IT -> new String[]{"IT", "Employee"};
+            case EMPLOYEE -> new String[]{"Employee"};
+        };
     }
 
     private JPanel buildTablePanel() {
@@ -296,14 +309,16 @@ public class UserAccountPanel extends JPanel {
         String query = searchField != null && !searchField.getText().equals("Search")
                 ? searchField.getText().trim().toLowerCase()
                 : "";
-        String role = roleFilter != null ? (String) roleFilter.getSelectedItem() : ALL_ROLES;
+        String role = roleFilter != null
+                ? (String) roleFilter.getSelectedItem()
+                : currentRole.getRoleName();
 
         tableModel.setRowCount(0);
 
         for (UserAccountEntry entry : allEntries) {
             String[] row = entry.toTableRow();
 
-            if (role != null && !ALL_ROLES.equals(role) && !role.equalsIgnoreCase(row[5])) {
+            if (role != null && !role.equalsIgnoreCase(row[5])) {
                 continue;
             }
 
@@ -436,7 +451,7 @@ public class UserAccountPanel extends JPanel {
             searchField.setForeground(new Color(200, 200, 200));
         }
         if (roleFilter != null) {
-            roleFilter.setSelectedItem(ALL_ROLES);
+            roleFilter.setSelectedIndex(0);
         }
         sortedColumn = -1;
         currentSortOrder = SortOrder.UNSORTED;

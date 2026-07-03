@@ -71,6 +71,7 @@ import com.motorph.model.UndertimeRequest;
 import com.motorph.model.UserAccount;
 import com.motorph.service.EmployeeService;
 import com.motorph.service.RequestService;
+import com.motorph.service.UserService;
 import com.motorph.util.AppContext;
 import com.motorph.util.Session;
 
@@ -84,9 +85,6 @@ public class RequestPanel extends JPanel {
 
     private static final int STATUS_COL = 9;
     private static final int EMPLOYEE_ID_COL = 10;
-
-    private static final String VIEW_ALL = "View All";
-    private static final String VIEW_MINE = "View Mine";
 
     private static final String[] COLUMNS = {
         "Name", "Position", "Request Type", "Start Date", "End Date",
@@ -107,16 +105,16 @@ public class RequestPanel extends JPanel {
     private boolean canViewAllRequests;
     private boolean canModifyAllRequests;
     private String currentEmployeeId;
+    private Role currentRole;
 
-    // scope toggle: true = everyone's requests, false = only the logged-in user's
-    private JComboBox<String> scopeFilter;
-    private boolean viewAllSelected = true;
+    private JComboBox<String> roleFilter;
 
     private int sortedColumn = -1;
     private SortOrder currentSortOrder = SortOrder.UNSORTED;
 
     private final RequestService requestService = AppContext.getRequestService();
     private final EmployeeService employeeService = AppContext.getEmployeeService();
+    private final UserService userService = AppContext.getUserService();
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("MM/dd/yyyy");
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("h:mm a");
@@ -133,14 +131,11 @@ public class RequestPanel extends JPanel {
     private void applyRBAC() {
         UserAccount user = Session.getCurrentUser();
         Role role = user == null ? null : user.getRole();
+        currentRole = role == null ? Role.EMPLOYEE : role;
 
         currentEmployeeId = user == null ? "" : String.valueOf(user.getEmployeeId());
         canViewAllRequests = role == Role.ADMIN || role == Role.HR;
         canModifyAllRequests = role == Role.ADMIN || role == Role.HR;
-    }
-
-    private boolean canSeeRow(String employeeId) {
-        return canViewAllRequests || employeeId.equals(currentEmployeeId);
     }
 
     private boolean isPending(Object[] row) {
@@ -175,19 +170,28 @@ public class RequestPanel extends JPanel {
         try {
             List<Request> loaded;
 
-            boolean showAll = canViewAllRequests && viewAllSelected;
-
-            if (showAll) {
-                loaded = requestService.findAll();
-            } else if (!currentEmployeeId.isBlank()) {
+            if (currentRole == Role.EMPLOYEE && !currentEmployeeId.isBlank()) {
                 loaded = requestService.findByEmployee(Integer.parseInt(currentEmployeeId));
+            } else if (currentRole != Role.EMPLOYEE) {
+                loaded = requestService.findAll();
             } else {
                 loaded = new ArrayList<>();
             }
 
             Map<String, Employee> employeeCache = new HashMap<>();
+            Map<Integer, Role> rolesByEmployeeId = currentRole == Role.EMPLOYEE
+                    ? Map.of()
+                    : userService.getEmployeeRoles();
+            Role selectedRole = Role.fromName(roleFilter == null
+                    ? currentRole.getRoleName()
+                    : (String) roleFilter.getSelectedItem());
 
             for (Request request : loaded) {
+                if (currentRole != Role.EMPLOYEE
+                        && rolesByEmployeeId.getOrDefault(
+                                request.getEmployeeId(), Role.EMPLOYEE) != selectedRole) {
+                    continue;
+                }
                 requests.add(request);
                 requestRows.add(toTableRow(request, employeeCache));
             }
@@ -328,7 +332,7 @@ public class RequestPanel extends JPanel {
 
         JPanel leftControls = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         leftControls.setOpaque(false);
-        leftControls.add(buildScopeFilter());
+        leftControls.add(buildRoleFilter());
 
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         buttons.setOpaque(false);
@@ -356,28 +360,29 @@ public class RequestPanel extends JPanel {
         return row;
     }
 
-    // NEW: builds the View All / View Mine scope dropdown. Privileged roles can
-    // switch between everyone's requests and their own; everyone else is locked
-    // to their own records.
-    private JComboBox<String> buildScopeFilter() {
-        scopeFilter = new JComboBox<>(new String[]{ VIEW_ALL, VIEW_MINE });
-        scopeFilter.setFont(new Font(FONT, Font.PLAIN, 13));
-        scopeFilter.setPreferredSize(new Dimension(140, 37));
-        scopeFilter.setBackground(Color.WHITE);
+    private JComboBox<String> buildRoleFilter() {
+        roleFilter = new JComboBox<>(getAllowedRequestRoles(currentRole));
+        roleFilter.setFont(new Font(FONT, Font.PLAIN, 13));
+        roleFilter.setPreferredSize(new Dimension(140, 37));
+        roleFilter.setBackground(Color.WHITE);
+        roleFilter.setFocusable(false);
+        roleFilter.addActionListener(e -> {
+            loadRequestRows();
+            refreshTableRows();
+        });
+        return roleFilter;
+    }
 
-        if (canViewAllRequests) {
-            scopeFilter.setSelectedItem(viewAllSelected ? VIEW_ALL : VIEW_MINE);
-            scopeFilter.addActionListener(e -> {
-                viewAllSelected = VIEW_ALL.equals(scopeFilter.getSelectedItem());
-                loadRequestRows();
-                refreshTableRows();
-            });
-        } else {
-            scopeFilter.setSelectedItem(VIEW_MINE);
-            scopeFilter.setEnabled(false);
-        }
-
-        return scopeFilter;
+    /** Returns permitted filters in the canonical Admin, Finance, HR, IT, Employee order. */
+    private static String[] getAllowedRequestRoles(Role role) {
+        if (role == null) return new String[]{"Employee"};
+        return switch (role) {
+            case ADMIN -> new String[]{"Admin", "Finance", "HR", "IT", "Employee"};
+            case FINANCE -> new String[]{"Finance", "Employee"};
+            case HR -> new String[]{"HR", "Employee"};
+            case IT -> new String[]{"IT", "Employee"};
+            case EMPLOYEE -> new String[]{"Employee"};
+        };
     }
 
     // NEW: repopulate the table from the currently loaded rows. Used when the
@@ -390,9 +395,7 @@ public class RequestPanel extends JPanel {
         tableModel.setRowCount(0);
 
         for (Object[] row : requestRows) {
-            if (canSeeRow(String.valueOf(row[EMPLOYEE_ID_COL]))) {
-                tableModel.addRow(row);
-            }
+            tableModel.addRow(row);
         }
     }
 
@@ -595,9 +598,7 @@ public class RequestPanel extends JPanel {
         };
 
         for (Object[] row : requestRows) {
-            if (canSeeRow(String.valueOf(row[EMPLOYEE_ID_COL]))) {
-                tableModel.addRow(row);
-            }
+            tableModel.addRow(row);
         }
 
         requestTable = new JTable(tableModel);
