@@ -1,9 +1,14 @@
 package com.motorph.ui.dashboard;
 
 import java.awt.*;
+import java.text.NumberFormat;
+import java.time.LocalDate;
+import java.util.Locale;
+
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 
+import com.motorph.dao.JdbcDashboardDAO;
 import com.motorph.model.Role;
 import com.motorph.util.Session;
 
@@ -13,6 +18,8 @@ public class DashboardPanel extends JPanel {
     private static final Color GRID_GRAY = new Color(200, 200, 200);
     private static final Color EXPENSE_GRAY = new Color(150, 150, 150);
     private static final String FONT = "Segoe UI";
+
+    private final JdbcDashboardDAO dashboardDAO = new JdbcDashboardDAO();
 
     private JPanel contentSwitcher;
     private CardLayout cardLayout;
@@ -90,16 +97,12 @@ public class DashboardPanel extends JPanel {
         switch (role) {
             case "Admin":
                 return new String[]{"Admin", "Finance", "HR", "IT", "Employee"};
-
             case "Finance":
                 return new String[]{"Finance", "Employee"};
-
             case "HR":
                 return new String[]{"HR", "Employee"};
-
             case "IT":
                 return new String[]{"IT", "Employee"};
-
             case "Employee":
             default:
                 return new String[]{"Employee"};
@@ -110,15 +113,35 @@ public class DashboardPanel extends JPanel {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setOpaque(false);
 
+        int totalEmployees = dashboardDAO.getTotalEmployees();
+
+        QuarterInfo currentQuarter = getCurrentQuarter();
+        QuarterInfo upcomingQuarter = getUpcomingQuarter(currentQuarter);
+
         JPanel cardsPanel = createCardsPanel();
-        cardsPanel.add(createCard("Total Number of Employees", "1,001", null));
-        cardsPanel.add(createCard("On-Going Quarter", "Q2", "April to June 2026"));
-        cardsPanel.add(createCard("Upcoming Quarter", "Q3", "July to September 2026"));
+
+        cardsPanel.add(createCard(
+                "Total Number of Employees",
+                NumberFormat.getNumberInstance(Locale.US).format(totalEmployees),
+                null
+        ));
+
+        cardsPanel.add(createCard(
+                "On-Going Quarter",
+                currentQuarter.name,
+                currentQuarter.months + " " + currentQuarter.year
+        ));
+
+        cardsPanel.add(createCard(
+                "Upcoming Quarter",
+                upcomingQuarter.name,
+                upcomingQuarter.months + " " + upcomingQuarter.year
+        ));
 
         JPanel chartArea = new JPanel(new BorderLayout());
         chartArea.setOpaque(false);
         chartArea.add(createSectionTitle("Financial Overview"), BorderLayout.NORTH);
-        chartArea.add(new FinancialChartPanel(), BorderLayout.CENTER);
+        chartArea.add(new FinancialChartPanel(dashboardDAO.getFinancialData()), BorderLayout.CENTER);
 
         panel.add(cardsPanel, BorderLayout.NORTH);
         panel.add(chartArea, BorderLayout.CENTER);
@@ -138,7 +161,7 @@ public class DashboardPanel extends JPanel {
         JPanel chartArea = new JPanel(new BorderLayout());
         chartArea.setOpaque(false);
         chartArea.add(createSectionTitle("Financial Overview"), BorderLayout.NORTH);
-        chartArea.add(new FinancialChartPanel(), BorderLayout.CENTER);
+        chartArea.add(new FinancialChartPanel(dashboardDAO.getFinancialData()), BorderLayout.CENTER);
 
         panel.add(cardsPanel, BorderLayout.NORTH);
         panel.add(chartArea, BorderLayout.CENTER);
@@ -225,6 +248,50 @@ public class DashboardPanel extends JPanel {
         panel.add(tablesPanel, BorderLayout.CENTER);
 
         return panel;
+    }
+
+    private QuarterInfo getCurrentQuarter() {
+        LocalDate now = LocalDate.now();
+        int month = now.getMonthValue();
+        int quarter = ((month - 1) / 3) + 1;
+
+        return buildQuarterInfo(quarter, now.getYear());
+    }
+
+    private QuarterInfo getUpcomingQuarter(QuarterInfo current) {
+        int nextQuarter = current.number + 1;
+        int year = current.year;
+
+        if (nextQuarter > 4) {
+            nextQuarter = 1;
+            year++;
+        }
+
+        return buildQuarterInfo(nextQuarter, year);
+    }
+
+    private QuarterInfo buildQuarterInfo(int quarter, int year) {
+        return switch (quarter) {
+            case 1 -> new QuarterInfo(1, "Q1", "January to March", year);
+            case 2 -> new QuarterInfo(2, "Q2", "April to June", year);
+            case 3 -> new QuarterInfo(3, "Q3", "July to September", year);
+            case 4 -> new QuarterInfo(4, "Q4", "October to December", year);
+            default -> new QuarterInfo(1, "Q1", "January to March", year);
+        };
+    }
+
+    private static class QuarterInfo {
+        int number;
+        String name;
+        String months;
+        int year;
+
+        QuarterInfo(int number, String name, String months, int year) {
+            this.number = number;
+            this.name = name;
+            this.months = months;
+            this.year = year;
+        }
     }
 
     private JPanel createCardsPanel() {
@@ -391,7 +458,11 @@ public class DashboardPanel extends JPanel {
     }
 
     private class FinancialChartPanel extends JPanel {
-        public FinancialChartPanel() {
+
+        private final JdbcDashboardDAO.FinancialData data;
+
+        public FinancialChartPanel(JdbcDashboardDAO.FinancialData data) {
+            this.data = data;
             setBackground(Color.WHITE);
             setMinimumSize(new Dimension(650, 320));
         }
@@ -411,25 +482,33 @@ public class DashboardPanel extends JPanel {
 
             drawFinancialLegend(g2, getWidth() / 2 - 115, 25);
 
-            drawLineGrid(g2, new String[]{
-                    "1,000,000", "800,000", "600,000",
-                    "400,000", "200,000", "0"
-            }, left, top, chartWidth, chartHeight);
+            if (data == null || data.labels.isEmpty()) {
+                g2.setColor(Color.BLACK);
+                g2.drawString("No financial data available.", left, top + 40);
+                return;
+            }
 
-            drawXLabels(g2, new String[]{
-                    "Jan 2022", "Jul 2022", "Jan 2023", "Jul 2023",
-                    "Jan 2024", "Jul 2024", "Jan 2025", "Jul 2025", "Jan 2026"
-            }, left, top, chartWidth, chartHeight);
+            int[] revenueValues = data.revenue.stream().mapToInt(Integer::intValue).toArray();
+            int[] expenseValues = data.expenses.stream().mapToInt(Integer::intValue).toArray();
+            String[] xLabels = data.labels.toArray(new String[0]);
 
-            drawDataLine(g2, new int[]{
-                    100000, 160000, 200000, 250000, 300000,
-                    320000, 400000, 650000, 1000000
-            }, left, top, chartWidth, chartHeight, 1000000, NAVY);
+            int maxValue = 1;
 
-            drawDataLine(g2, new int[]{
-                    70000, 80000, 100000, 150000, 200000,
-                    230000, 300000, 340000, 400000
-            }, left, top, chartWidth, chartHeight, 1000000, EXPENSE_GRAY);
+            for (int value : revenueValues) {
+                maxValue = Math.max(maxValue, value);
+            }
+
+            for (int value : expenseValues) {
+                maxValue = Math.max(maxValue, value);
+            }
+
+            maxValue = ((maxValue / 100000) + 1) * 100000;
+
+            drawLineGrid(g2, createMoneyLabels(maxValue), left, top, chartWidth, chartHeight);
+            drawXLabels(g2, xLabels, left, top, chartWidth, chartHeight);
+
+            drawDataLine(g2, revenueValues, left, top, chartWidth, chartHeight, maxValue, NAVY);
+            drawDataLine(g2, expenseValues, left, top, chartWidth, chartHeight, maxValue, EXPENSE_GRAY);
         }
     }
 
@@ -536,6 +615,17 @@ public class DashboardPanel extends JPanel {
         }
     }
 
+    private String[] createMoneyLabels(int maxValue) {
+        String[] labels = new String[6];
+
+        for (int i = 0; i < labels.length; i++) {
+            int value = maxValue - (i * maxValue / 5);
+            labels[i] = NumberFormat.getNumberInstance(Locale.US).format(value);
+        }
+
+        return labels;
+    }
+
     private Graphics2D setupGraphics(Graphics g) {
         Graphics2D g2 = (Graphics2D) g;
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
@@ -558,6 +648,11 @@ public class DashboardPanel extends JPanel {
     private void drawXLabels(Graphics2D g2, String[] xLabels, int left, int top, int chartWidth, int chartHeight) {
         g2.setColor(Color.BLACK);
 
+        if (xLabels.length == 1) {
+            g2.drawString(xLabels[0], left + chartWidth / 2 - 28, top + chartHeight + 25);
+            return;
+        }
+
         for (int i = 0; i < xLabels.length; i++) {
             int x = left + (i * chartWidth / (xLabels.length - 1));
             g2.drawString(xLabels[i], x - 28, top + chartHeight + 25);
@@ -566,8 +661,21 @@ public class DashboardPanel extends JPanel {
 
     private void drawDataLine(Graphics2D g2, int[] values, int left, int top,
                               int chartWidth, int chartHeight, int maxValue, Color color) {
+        if (values == null || values.length == 0) {
+            return;
+        }
+
         int[] x = new int[values.length];
         int[] y = new int[values.length];
+
+        if (values.length == 1) {
+            x[0] = left + chartWidth / 2;
+            y[0] = top + chartHeight - (int) ((values[0] / (double) maxValue) * chartHeight);
+
+            g2.setColor(color);
+            g2.fillOval(x[0] - 7, y[0] - 7, 14, 14);
+            return;
+        }
 
         for (int i = 0; i < values.length; i++) {
             x[i] = left + (i * chartWidth / (values.length - 1));

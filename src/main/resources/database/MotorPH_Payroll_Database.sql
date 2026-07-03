@@ -565,6 +565,21 @@ CREATE TABLE `action_log` (
   CONSTRAINT `fk_action_log_user` FOREIGN KEY (`user_account_id`) REFERENCES `user_account` (`user_account_id`) ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB;
 
+DROP TABLE IF EXISTS `company_financial_summary`;
+CREATE TABLE `company_financial_summary` (
+  `financial_summary_id` INT NOT NULL AUTO_INCREMENT,
+  `year` INT NOT NULL,
+  `quarter` VARCHAR(10) NOT NULL,
+  `revenue` DECIMAL(15,2) NOT NULL,
+  `expense` DECIMAL(15,2) NOT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NULL ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`financial_summary_id`),
+  UNIQUE KEY `uq_financial_year_quarter` (`year`, `quarter`)
+) ENGINE=InnoDB;
+
+
+
 -- =============================================================================
 -- PART 2: SEED DATA (real employee_id 10001..10034, audit fields populated)
 -- =============================================================================
@@ -6196,7 +6211,15 @@ INSERT INTO `user_account` (`employee_id`, `username`, `password_hash`, `is_acti
 (10033, 'carlosian.martinez', '/2+atBZu3CmxOMsIB+Wx8g==:y6xfaX4TLjbjreONtvA3zXzzPrri9OhFSj2QmvPCAVc=', 1, NOW(), NULL),
 (10034, 'beatriz.santos', '/rvZUSL63H73GZn4c/UrmQ==:NP67NfIx7ygEoAfYarDMAXdZ42wGS9Ga99LitqKumMg=', 1, NOW(), NULL);
 
+-- 20. Financial Overview
 
+INSERT INTO `company_financial_summary`
+(`year`, `quarter`, `revenue`, `expense`, `created_at`)
+VALUES
+(2024, 'Q1', 1000000.00, 500000.00, NOW()),
+(2024, 'Q2', 1000000.00, 500000.00, NOW()),
+(2024, 'Q3', 1000000.00, 500000.00, NOW()),
+(2024, 'Q4', 1000000.00, 500000.00, NOW());
 
 -- Account-Role mapping (user_account_id follows insertion order 1=10001 ... 34=10034)
 -- Role IDs: 1=Admin  2=HR  3=IT  4=Finance  5=Employee
@@ -6325,11 +6348,15 @@ INSERT INTO `payroll_deduction` (`payroll_id`, `deduction_type_id`, `amount`, `c
 (3, 4, 3450.00, NOW(), NULL);
 
 
-INSERT INTO `payslip` (`payroll_id`, `payslip_number`, `generated_at`, `created_at`, `created_by`) VALUES
-(1, 'PS-2024-07-0001', NOW(), NOW(), NULL),
-(2, 'PS-2024-07-0002', NOW(), NOW(), NULL),
-(3, 'PS-2024-07-0003', NOW(), NOW(), NULL);
+-- 20. Financial Overview
 
+INSERT INTO company_financial_summary
+(year, quarter, revenue, expense, created_at)
+VALUES
+(2024, 'Q1', 10000000.00, 500000.00, NOW()),
+(2024, 'Q2', 20000000.00, 600000.00, NOW()),
+(2024, 'Q3', 24067000.00, 890089.00, NOW()),
+(2024, 'Q4', 30150000.00, 500000.00, NOW());
 
 -- =============================================================
 -- VIEWS
