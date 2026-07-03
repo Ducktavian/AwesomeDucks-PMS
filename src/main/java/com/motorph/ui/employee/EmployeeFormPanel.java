@@ -65,6 +65,7 @@ public class EmployeeFormPanel extends JPanel {
 
     private static final int FIELD_WIDTH = 360;
     private static final int FIELD_HEIGHT = 30;
+    private static final int LABEL_WIDTH = 180;
 
     public EmployeeFormPanel(Runnable onBack) {
         this.onBack = onBack;
@@ -77,7 +78,7 @@ public class EmployeeFormPanel extends JPanel {
         JPanel content = new JPanel();
         content.setBackground(Color.WHITE);
         content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
-        content.setBorder(new EmptyBorder(40, 64, 40, 64));
+        content.setBorder(new EmptyBorder(28, 40, 32, 40));
 
         JLabel back = new JLabel("<html><u>Back</u></html>");
         back.setFont(new Font(FONT, Font.PLAIN, 17));
@@ -146,7 +147,14 @@ public class EmployeeFormPanel extends JPanel {
         submitButton.setFont(new Font(FONT, Font.PLAIN, 14));
         submitButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         submitButton.addActionListener(e -> saveEmployee());
-        content.add(submitButton);
+
+        JPanel submitRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+        submitRow.setOpaque(false);
+        submitRow.setAlignmentX(LEFT_ALIGNMENT);
+        submitRow.setPreferredSize(new Dimension(LABEL_WIDTH + FIELD_WIDTH + 16, 42));
+        submitRow.setMaximumSize(new Dimension(LABEL_WIDTH + FIELD_WIDTH + 16, 42));
+        submitRow.add(submitButton);
+        content.add(submitRow);
 
         // Keep the stacked content pinned top-left at its natural size so it
         // doesn't stretch to fill the viewport; the scroll pane handles overflow.
@@ -183,22 +191,23 @@ public class EmployeeFormPanel extends JPanel {
         return section;
     }
 
-    // A single "label above input" row, left-aligned.
+    // One field per row: a consistent label column followed by its input.
     private JComponent buildRow(String labelText, JComponent input) {
-        JPanel row = new JPanel();
+        JPanel row = new JPanel(new BorderLayout(16, 0));
         row.setOpaque(false);
-        row.setLayout(new BoxLayout(row, BoxLayout.Y_AXIS));
         row.setAlignmentX(LEFT_ALIGNMENT);
+        row.setPreferredSize(new Dimension(LABEL_WIDTH + FIELD_WIDTH + 16,
+                Math.max(FIELD_HEIGHT, input.getPreferredSize().height)));
+        row.setMaximumSize(new Dimension(LABEL_WIDTH + FIELD_WIDTH + 16,
+                Math.max(FIELD_HEIGHT, input.getPreferredSize().height)));
 
         JLabel label = new JLabel(labelText);
         label.setFont(new Font(FONT, Font.PLAIN, 13));
-        label.setAlignmentX(LEFT_ALIGNMENT);
+        label.setPreferredSize(new Dimension(LABEL_WIDTH, FIELD_HEIGHT));
+        label.setVerticalAlignment(SwingConstants.CENTER);
 
-        input.setAlignmentX(LEFT_ALIGNMENT);
-
-        row.add(label);
-        row.add(Box.createVerticalStrut(5));
-        row.add(input);
+        row.add(label, BorderLayout.WEST);
+        row.add(input, BorderLayout.CENTER);
         return row;
     }
 
@@ -310,8 +319,7 @@ public class EmployeeFormPanel extends JPanel {
 
     private void styleCombo(JComboBox<?> combo) {
         combo.setFont(new Font(FONT, Font.PLAIN, 13));
-        combo.setBackground(Color.WHITE);
-        combo.setOpaque(true);
+        combo.setOpaque(false);
         sizeInput(combo);
     }
 
