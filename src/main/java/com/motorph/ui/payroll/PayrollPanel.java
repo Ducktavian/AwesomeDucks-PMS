@@ -54,8 +54,9 @@ import com.motorph.model.Role;
 import com.motorph.model.UserAccount;
 import com.motorph.service.PayrollService;
 import com.motorph.service.UserService;
-import com.motorph.util.AppContext;            
+import com.motorph.util.AppContext;
 import com.motorph.util.Session;
+import com.motorph.reporting.PayrollMonthlySummaryReportGenerator;
 
 public class PayrollPanel extends JPanel {
 
@@ -278,9 +279,16 @@ public class PayrollPanel extends JPanel {
         return content;
     }
 
-    // NEW: exports the currently visible payroll table rows to a PDF file.
+    // Opens the payroll summary report in JasperViewer, where the user can save it as a PDF.
     private void savePayrollAsPdf() {
-        JOptionPane.showMessageDialog(this, "Save PDF clicked.");
+        try {
+            PayrollMonthlySummaryReportGenerator.view();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this,
+                    "Failed to generate PDF:\n" + ex.getMessage(),
+                    "Save PDF Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private JComboBox<String> buildRoleFilter() {

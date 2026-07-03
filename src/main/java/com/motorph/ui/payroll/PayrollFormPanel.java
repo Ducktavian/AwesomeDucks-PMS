@@ -54,7 +54,7 @@ import com.motorph.model.PayrollPeriod;
 import com.motorph.service.EmployeeService;
 import com.motorph.service.PayrollService;
 import com.motorph.util.AppContext;
-import reporting.PayslipReportGenerator;
+import com.motorph.reporting.PayslipReportGenerator;
 
 public class PayrollFormPanel extends JPanel {
 

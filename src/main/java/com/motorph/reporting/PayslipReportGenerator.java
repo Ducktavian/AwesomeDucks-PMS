@@ -1,4 +1,4 @@
-package reporting;
+package com.motorph.reporting;
 
 import com.motorph.config.DatabaseConnection;
 import java.io.InputStream;

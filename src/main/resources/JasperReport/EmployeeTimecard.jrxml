@@ -30,9 +30,8 @@
 			<conditionExpression><![CDATA["Invalid".equals($F{validity})]]></conditionExpression>
 		</conditionalStyle>
 	</style>
-	<parameter name="LOGO_PATH" class="java.lang.String">
-		<defaultValueExpression><![CDATA["C:/Users/Lenovo/Downloads/Work_S/MMDC/AOOP/MotorPH-icon.png"]]></defaultValueExpression>
-	</parameter>
+	<parameter name="LOGO_PATH" class="java.io.InputStream"/>
+	<parameter name="EMPLOYEE_ID" class="java.lang.Integer"/>
 	<query language="SQL"><![CDATA[SELECT
     a.employee_id,
     CONCAT(e.last_name, ', ', e.first_name) AS employee_name,
@@ -79,6 +78,7 @@ LEFT JOIN employee e
     ON a.employee_id = e.employee_id
 LEFT JOIN attendance_status ats
     ON a.attendance_status_id = ats.attendance_status_id
+WHERE a.employee_id = $P{EMPLOYEE_ID}
 ORDER BY
     a.employee_id,
     a.attendance_date]]></query>

@@ -48,6 +48,7 @@ import javax.swing.border.EmptyBorder;
 import com.motorph.model.Attendance;
 import com.motorph.model.Role;
 import com.motorph.model.UserAccount;
+import com.motorph.reporting.TimeCardReportGenerator;
 import com.motorph.service.AttendanceService;
 import com.motorph.util.AppContext;
 import com.motorph.util.Session;
@@ -410,14 +411,27 @@ public class AttendanceFormPanel extends JPanel {
         return button;
     }
 
+    // Opens the employee's timecard in JasperViewer, where the user can save it as a PDF.
     private void saveAttendanceAsPdf() {
-        // TODO: hook this up to actual PDF generation logic
-        JOptionPane.showMessageDialog(
-                this,
-                "Attendance record saved as PDF.",
-                "Save PDF",
-                JOptionPane.INFORMATION_MESSAGE
-        );
+        String employeeId = employeeIdField.getText().trim();
+
+        if (employeeId.isEmpty()) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Please select an employee first.",
+                    "Save PDF", JOptionPane.WARNING_MESSAGE
+            );
+            return;
+        }
+
+        try {
+            TimeCardReportGenerator.view(Integer.parseInt(employeeId));
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this,
+                    "Failed to generate PDF:\n" + ex.getMessage(),
+                    "Save PDF Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private void submitAttendance() {

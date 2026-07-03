@@ -6348,15 +6348,7 @@ INSERT INTO `payroll_deduction` (`payroll_id`, `deduction_type_id`, `amount`, `c
 (3, 4, 3450.00, NOW(), NULL);
 
 
--- 20. Financial Overview
 
-INSERT INTO company_financial_summary
-(year, quarter, revenue, expense, created_at)
-VALUES
-(2024, 'Q1', 10000000.00, 500000.00, NOW()),
-(2024, 'Q2', 20000000.00, 600000.00, NOW()),
-(2024, 'Q3', 24067000.00, 890089.00, NOW()),
-(2024, 'Q4', 30150000.00, 500000.00, NOW());
 
 -- =============================================================
 -- VIEWS
