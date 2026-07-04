@@ -29,7 +29,6 @@ import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
-import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -93,18 +92,15 @@ public class UserAccountPanel extends JPanel {
     private DefaultTableModel tableModel;
     private JTable userTable;
     private JTextField searchField;
-    private JComboBox<String> roleFilter;
     private TableRowSorter<DefaultTableModel> sorter;
-    private final Role currentRole;
 
     private int sortedColumn = -1;
     private SortOrder currentSortOrder = SortOrder.UNSORTED;
 
     public UserAccountPanel() {
-        UserAccount currentUser = Session.getCurrentUser();
-        currentRole = currentUser == null || currentUser.getRole() == null
-                ? Role.EMPLOYEE
-                : currentUser.getRole();
+        // The Users tab is reachable only by Admin and IT (gated in MainFrame),
+        // and both have identical full management, so there is no lower-privilege
+        // view to switch to — hence no role changer here.
         setLayout(new BorderLayout());
         setBackground(Color.WHITE);
 
@@ -179,17 +175,6 @@ public class UserAccountPanel extends JPanel {
         row.setAlignmentX(Component.LEFT_ALIGNMENT);
         row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 42));
 
-        roleFilter = new JComboBox<>(getAllowedUserRoles(currentRole));
-        roleFilter.setFont(new Font("SansSerif", Font.PLAIN, 13));
-        roleFilter.setPreferredSize(new Dimension(140, 37));
-        roleFilter.setBackground(Color.WHITE);
-        roleFilter.setFocusable(false);
-        roleFilter.addActionListener(e -> applyFilters());
-
-        JPanel left = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        left.setOpaque(false);
-        left.add(roleFilter);
-
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         buttons.setOpaque(false);
         buttons.add(navyButton("+", "Add", 90, this::addUser));
@@ -197,20 +182,8 @@ public class UserAccountPanel extends JPanel {
         buttons.add(navyButton("🗑", "Delete", 105, this::deleteUser));
         buttons.add(navyButton("⟳", "Refresh", 110, this::refreshTable));
 
-        row.add(left, BorderLayout.WEST);
         row.add(buttons, BorderLayout.EAST);
         return row;
-    }
-
-    private static String[] getAllowedUserRoles(Role role) {
-        if (role == null) return new String[]{"Employee"};
-        return switch (role) {
-            case ADMIN -> new String[]{"Admin", "Finance", "HR", "IT", "Employee"};
-            case FINANCE -> new String[]{"Finance", "Employee"};
-            case HR -> new String[]{"HR", "Employee"};
-            case IT -> new String[]{"IT", "Employee"};
-            case EMPLOYEE -> new String[]{"Employee"};
-        };
     }
 
     private JPanel buildTablePanel() {
@@ -309,18 +282,11 @@ public class UserAccountPanel extends JPanel {
         String query = searchField != null && !searchField.getText().equals("Search")
                 ? searchField.getText().trim().toLowerCase()
                 : "";
-        String role = roleFilter != null
-                ? (String) roleFilter.getSelectedItem()
-                : currentRole.getRoleName();
 
         tableModel.setRowCount(0);
 
         for (UserAccountEntry entry : allEntries) {
             String[] row = entry.toTableRow();
-
-            if (role != null && !role.equalsIgnoreCase(row[5])) {
-                continue;
-            }
 
             if (!query.isEmpty()) {
                 boolean match = false;
@@ -449,9 +415,6 @@ public class UserAccountPanel extends JPanel {
         if (searchField != null) {
             searchField.setText("Search");
             searchField.setForeground(new Color(200, 200, 200));
-        }
-        if (roleFilter != null) {
-            roleFilter.setSelectedIndex(0);
         }
         sortedColumn = -1;
         currentSortOrder = SortOrder.UNSORTED;

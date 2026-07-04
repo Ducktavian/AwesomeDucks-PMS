@@ -20,7 +20,6 @@ import java.awt.event.MouseEvent;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -53,7 +52,6 @@ import com.motorph.model.Payslip;
 import com.motorph.model.Role;
 import com.motorph.model.UserAccount;
 import com.motorph.service.PayrollService;
-import com.motorph.service.UserService;
 import com.motorph.util.AppContext;
 import com.motorph.util.Session;
 import com.motorph.reporting.PayrollMonthlySummaryReportGenerator;
@@ -74,9 +72,9 @@ public class PayrollPanel extends JPanel {
     private JButton deleteButton;
     private JButton refreshButton;
 
-    private boolean canModifyPayroll;
     private String currentEmployeeId;
-    private Role currentRole;
+    private Role currentRole;   // the real logged-in role
+    private Role viewAsRole;    // the role whose access is currently active
 
     private JComboBox<String> roleFilter;
 
@@ -85,7 +83,6 @@ public class PayrollPanel extends JPanel {
 
     // connection to the database via service -> dao
     private final PayrollService payrollService = AppContext.getPayrollService();
-    private final UserService userService = AppContext.getUserService();
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("MM/dd/yyyy");
 
     public PayrollPanel() {
@@ -103,22 +100,23 @@ public class PayrollPanel extends JPanel {
 
         currentEmployeeId = user == null ? "" : String.valueOf(user.getEmployeeId());
 
-        canModifyPayroll = role == Role.ADMIN || role == Role.FINANCE;
+        // The dropdown acts as a role changer; access starts at the real role.
+        viewAsRole = currentRole;
     }
 
-    private boolean canSeeRow(String employeeId, Map<Integer, Role> rolesByEmployeeId) {
-        if (currentRole == Role.EMPLOYEE) {
-            return employeeId.equals(currentEmployeeId);
-        }
+    /** Only Admin and Finance see all payroll; other views see their own only. */
+    private boolean canViewAll() {
+        return viewAsRole == Role.ADMIN || viewAsRole == Role.FINANCE;
+    }
 
-        try {
-            Role selectedRole = Role.fromName((String) roleFilter.getSelectedItem());
-            Role employeeRole = rolesByEmployeeId.getOrDefault(
-                    Integer.parseInt(employeeId), Role.EMPLOYEE);
-            return employeeRole == selectedRole;
-        } catch (NumberFormatException ex) {
-            return false;
-        }
+    /** Add/Update/Delete are limited to Admin and Finance. */
+    private boolean canModify() {
+        return viewAsRole == Role.ADMIN || viewAsRole == Role.FINANCE;
+    }
+
+    /** Role changer, not a filter: all-access views see everyone, else own only. */
+    private boolean canSeeRow(String employeeId) {
+        return canViewAll() || employeeId.equals(currentEmployeeId);
     }
 
     private JPanel createContentPanel() {
@@ -176,7 +174,10 @@ public class PayrollPanel extends JPanel {
 
         JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         filterPanel.setOpaque(false);
-        filterPanel.add(buildRoleFilter());
+        JComboBox<String> filter = buildRoleFilter();
+        if (filter != null) {
+            filterPanel.add(filter);
+        }
 
         JPanel leftColumn = new JPanel();
         leftColumn.setOpaque(false);
@@ -196,9 +197,7 @@ public class PayrollPanel extends JPanel {
         deleteButton = button("\uD83D\uDDD1  Delete");
         refreshButton = button("\u27F3  Refresh");
 
-        addButton.setVisible(canModifyPayroll);
-        updateButton.setVisible(canModifyPayroll);
-        deleteButton.setVisible(canModifyPayroll);
+        applyViewCapabilities();
 
         buttonPanel.add(savePdfButton);
         buttonPanel.add(addButton);
@@ -292,16 +291,32 @@ public class PayrollPanel extends JPanel {
     }
 
     private JComboBox<String> buildRoleFilter() {
-        roleFilter = new JComboBox<>(getAllowedPayrollRoles(currentRole));
+        String[] views = getAllowedPayrollRoles(currentRole);
+        if (views.length <= 1) {
+            return null; // pure Employee: nothing to switch, so no role changer
+        }
+        roleFilter = new JComboBox<>(views);
         roleFilter.setFont(new Font("SansSerif", Font.PLAIN, 13));
         roleFilter.setPreferredSize(new Dimension(140, 37));
         roleFilter.setBackground(Color.WHITE);
         roleFilter.setFocusable(false);
-        roleFilter.addActionListener(e -> addSampleRows());
+        roleFilter.addActionListener(e -> {
+            viewAsRole = Role.fromName((String) roleFilter.getSelectedItem());
+            applyViewCapabilities();
+            addSampleRows();
+        });
         return roleFilter;
     }
 
-    /** Returns permitted filters in the canonical Admin, Finance, HR, IT, Employee order. */
+    /** Shows the modify buttons only for views that may edit payroll. */
+    private void applyViewCapabilities() {
+        boolean modify = canModify();
+        if (addButton != null) addButton.setVisible(modify);
+        if (updateButton != null) updateButton.setVisible(modify);
+        if (deleteButton != null) deleteButton.setVisible(modify);
+    }
+
+    /** Returns the roles this login may view the panel as (own role + Employee; Admin sees all). */
     private static String[] getAllowedPayrollRoles(Role role) {
         if (role == null) return new String[]{"Employee"};
         return switch (role) {
@@ -496,9 +511,6 @@ public class PayrollPanel extends JPanel {
 
         try {
             List<Payslip> payslips = payrollService.getAllPayslips();
-            Map<Integer, Role> rolesByEmployeeId = currentRole == Role.EMPLOYEE
-                    ? Map.of()
-                    : userService.getEmployeeRoles();
 
             for (Payslip p : payslips) {
                 addPayrollRow(new Object[]{
@@ -510,7 +522,7 @@ public class PayrollPanel extends JPanel {
                     money(p.getAllowances()),
                     money(p.getTotalDeductions()),
                     money(p.getNetPay())
-                }, rolesByEmployeeId);
+                });
             }
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -528,10 +540,10 @@ public class PayrollPanel extends JPanel {
         return String.format("%,.2f", value);
     }
 
-    private void addPayrollRow(Object[] row, Map<Integer, Role> rolesByEmployeeId) {
+    private void addPayrollRow(Object[] row) {
         String employeeId = String.valueOf(row[1]);
 
-        if (canSeeRow(employeeId, rolesByEmployeeId)) {
+        if (canSeeRow(employeeId)) {
             tableModel.addRow(row);
         }
     }

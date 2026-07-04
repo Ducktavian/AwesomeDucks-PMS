@@ -4,7 +4,6 @@ import com.motorph.model.Employee;
 import com.motorph.model.Role;
 import com.motorph.model.UserAccount;
 import com.motorph.service.EmployeeService;
-import com.motorph.service.UserService;
 import com.motorph.util.AppContext;
 import com.motorph.util.Session;
 
@@ -12,7 +11,6 @@ import java.awt.*;
 import java.awt.event.*;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import javax.swing.*;
 import javax.swing.border.*;
 import javax.swing.table.*;
@@ -30,7 +28,6 @@ public class EmployeePanel extends JPanel {
     };
 
     private final EmployeeService employeeService = AppContext.getEmployeeService();
-    private final UserService userService = AppContext.getUserService();
 
     private EmployeeFormPanel formPanel;
     private JDialog employeeDialog;
@@ -45,12 +42,14 @@ public class EmployeePanel extends JPanel {
 
     private final List<Employee> allEmployees = new ArrayList<>();
 
-    private boolean canModifyEmployees;
-    private boolean canOpenAnyoneDetails;
     private String currentEmployeeId;
-    private Role currentRole;
+    private Role currentRole;   // the real logged-in role
+    private Role viewAsRole;    // the role whose access is currently active
 
     private JComboBox<String> roleFilter;
+    private JButton addButton;
+    private JButton updateButton;
+    private JButton deleteButton;
 
     public EmployeePanel() {
         setLayout(new BorderLayout());
@@ -77,12 +76,19 @@ public class EmployeePanel extends JPanel {
 
         currentEmployeeId = user == null ? "" : String.valueOf(user.getEmployeeId());
 
-        canModifyEmployees = role == Role.ADMIN || role == Role.HR;
-        // Finance and IT can view all employees but cannot edit them.
-        canOpenAnyoneDetails = role == Role.ADMIN
-                || role == Role.HR
-                || role == Role.FINANCE
-                || role == Role.IT;
+        // The dropdown lets a privileged user act as a lower role; access always
+        // starts at their real role and follows the selected view thereafter.
+        viewAsRole = currentRole;
+    }
+
+    /** Admin/HR/Finance/IT all see the full directory; Employee sees only self. */
+    private boolean canViewAll() {
+        return viewAsRole != Role.EMPLOYEE;
+    }
+
+    /** Only Admin and HR may add/update/delete employees. */
+    private boolean canModify() {
+        return viewAsRole == Role.ADMIN || viewAsRole == Role.HR;
     }
 
     private JPanel buildEmployeeListPanel() {
@@ -160,18 +166,24 @@ public class EmployeePanel extends JPanel {
 
         JPanel leftControls = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         leftControls.setOpaque(false);
-        leftControls.add(buildRoleFilter());
+        JComboBox<String> filter = buildRoleFilter();
+        if (filter != null) {
+            leftControls.add(filter);
+        }
 
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         buttons.setOpaque(false);
 
-        if (canModifyEmployees) {
-            buttons.add(navyButton("+", "Add", 90, this::addEmployee));
-            buttons.add(navyButton("✎", "Update", 105, this::updateEmployee));
-            buttons.add(navyButton("🗑", "Delete", 105, this::deleteEmployee));
-        }
+        addButton = navyButton("+", "Add", 90, this::addEmployee);
+        updateButton = navyButton("✎", "Update", 105, this::updateEmployee);
+        deleteButton = navyButton("🗑", "Delete", 105, this::deleteEmployee);
+        buttons.add(addButton);
+        buttons.add(updateButton);
+        buttons.add(deleteButton);
 
         buttons.add(navyButton("⟳", "Refresh", 110, this::refreshTable));
+
+        applyViewCapabilities();
 
         row.add(leftControls, BorderLayout.WEST);
         row.add(buttons, BorderLayout.EAST);
@@ -179,16 +191,32 @@ public class EmployeePanel extends JPanel {
     }
 
     private JComboBox<String> buildRoleFilter() {
-        roleFilter = new JComboBox<>(getAllowedEmployeeRoles(currentRole));
+        String[] views = getAllowedEmployeeRoles(currentRole);
+        if (views.length <= 1) {
+            return null; // pure Employee: nothing to switch, so no role changer
+        }
+        roleFilter = new JComboBox<>(views);
         roleFilter.setFont(new Font("SansSerif", Font.PLAIN, 13));
         roleFilter.setPreferredSize(new Dimension(140, 37));
         roleFilter.setBackground(Color.WHITE);
         roleFilter.setFocusable(false);
-        roleFilter.addActionListener(e -> loadEmployees());
+        roleFilter.addActionListener(e -> {
+            viewAsRole = Role.fromName((String) roleFilter.getSelectedItem());
+            applyViewCapabilities();
+            loadEmployees();
+        });
         return roleFilter;
     }
 
-    /** Returns permitted filters in the canonical Admin, Finance, HR, IT, Employee order. */
+    /** Shows the modify buttons only for views that may edit the directory. */
+    private void applyViewCapabilities() {
+        boolean modify = canModify();
+        if (addButton != null) addButton.setVisible(modify);
+        if (updateButton != null) updateButton.setVisible(modify);
+        if (deleteButton != null) deleteButton.setVisible(modify);
+    }
+
+    /** Returns the roles this login may view the panel as (own role + Employee; Admin sees all). */
     private static String[] getAllowedEmployeeRoles(Role role) {
         if (role == null) return new String[]{"Employee"};
         return switch (role) {
@@ -264,7 +292,7 @@ public class EmployeePanel extends JPanel {
 
         boolean isSelf = selectedEmployee.getEmployeeId().equals(currentEmployeeId);
 
-        if (!canOpenAnyoneDetails && !isSelf) {
+        if (!canViewAll() && !isSelf) {
             JOptionPane.showMessageDialog(
                     this,
                     "You can only view your own employee details.",
@@ -422,28 +450,16 @@ public class EmployeePanel extends JPanel {
         allEmployees.clear();
 
         List<Employee> employees = employeeService.getAllEmployees();
-        Role selectedRole = Role.fromName(
-                roleFilter == null ? currentRole.getRoleName() : (String) roleFilter.getSelectedItem());
 
-        // Regular employees remain restricted to their own directory record.
-        if (currentRole == Role.EMPLOYEE) {
+        // The dropdown is a role changer, not a directory filter: an all-access
+        // view shows every employee, while the Employee view shows only self.
+        if (canViewAll()) {
+            allEmployees.addAll(employees);
+        } else {
             for (Employee employee : employees) {
                 if (employee.getEmployeeId().equals(currentEmployeeId)) {
                     allEmployees.add(employee);
                     break;
-                }
-            }
-        } else {
-            Map<Integer, Role> rolesByEmployeeId = userService.getEmployeeRoles();
-            for (Employee employee : employees) {
-                try {
-                    int employeeId = Integer.parseInt(employee.getEmployeeId());
-                    Role employeeRole = rolesByEmployeeId.getOrDefault(employeeId, Role.EMPLOYEE);
-                    if (employeeRole == selectedRole) {
-                        allEmployees.add(employee);
-                    }
-                } catch (NumberFormatException ignored) {
-                    // Employee IDs used by account-role assignments are numeric.
                 }
             }
         }
@@ -502,14 +518,14 @@ public class EmployeePanel extends JPanel {
     }
 
     private void addEmployee() {
-        if (!canModifyEmployees) return;
+        if (!canModify()) return;
 
         formPanel.setAddMode();
         showEmployeeDialog("Add Employee");
     }
 
     private void updateEmployee() {
-        if (!canModifyEmployees) return;
+        if (!canModify()) return;
 
         Employee selectedEmployee = getSelectedEmployee();
 
@@ -542,7 +558,7 @@ public class EmployeePanel extends JPanel {
         }
     }
     private void deleteEmployee() {
-        if (!canModifyEmployees) return;
+        if (!canModify()) return;
 
         Employee selectedEmployee = getSelectedEmployee();
 

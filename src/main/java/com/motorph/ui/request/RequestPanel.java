@@ -71,7 +71,6 @@ import com.motorph.model.UndertimeRequest;
 import com.motorph.model.UserAccount;
 import com.motorph.service.EmployeeService;
 import com.motorph.service.RequestService;
-import com.motorph.service.UserService;
 import com.motorph.util.AppContext;
 import com.motorph.util.Session;
 
@@ -102,19 +101,20 @@ public class RequestPanel extends JPanel {
     private JTextField searchField;
     private TableRowSorter<DefaultTableModel> sorter;
 
-    private boolean canViewAllRequests;
-    private boolean canModifyAllRequests;
     private String currentEmployeeId;
-    private Role currentRole;
+    private Role currentRole;   // the real logged-in role
+    private Role viewAsRole;    // the role whose access is currently active
 
     private JComboBox<String> roleFilter;
+    private JButton addButton;
+    private JButton updateButton;
+    private JButton deleteButton;
 
     private int sortedColumn = -1;
     private SortOrder currentSortOrder = SortOrder.UNSORTED;
 
     private final RequestService requestService = AppContext.getRequestService();
     private final EmployeeService employeeService = AppContext.getEmployeeService();
-    private final UserService userService = AppContext.getUserService();
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("MM/dd/yyyy");
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("h:mm a");
@@ -134,8 +134,19 @@ public class RequestPanel extends JPanel {
         currentRole = role == null ? Role.EMPLOYEE : role;
 
         currentEmployeeId = user == null ? "" : String.valueOf(user.getEmployeeId());
-        canViewAllRequests = role == Role.ADMIN || role == Role.HR;
-        canModifyAllRequests = role == Role.ADMIN || role == Role.HR;
+
+        // The dropdown acts as a role changer; access starts at the real role.
+        viewAsRole = currentRole;
+    }
+
+    /** Only Admin and HR see every request; other views see their own only. */
+    private boolean canViewAll() {
+        return viewAsRole == Role.ADMIN || viewAsRole == Role.HR;
+    }
+
+    /** Update/Delete of any request are limited to Admin and HR. */
+    private boolean canModify() {
+        return viewAsRole == Role.ADMIN || viewAsRole == Role.HR;
     }
 
     private boolean isPending(Object[] row) {
@@ -145,7 +156,7 @@ public class RequestPanel extends JPanel {
     }
 
     private boolean canModifyRequest(Object[] row) {
-        if (canViewAllRequests) {
+        if (canViewAll()) {
             return true;
         }
 
@@ -168,30 +179,20 @@ public class RequestPanel extends JPanel {
         requests.clear();
 
         try {
+            // Role changer, not a filter: all-access views pull every request,
+            // self-scoped views pull only the logged-in user's own requests.
             List<Request> loaded;
-
-            if (currentRole == Role.EMPLOYEE && !currentEmployeeId.isBlank()) {
-                loaded = requestService.findByEmployee(Integer.parseInt(currentEmployeeId));
-            } else if (currentRole != Role.EMPLOYEE) {
+            if (canViewAll()) {
                 loaded = requestService.findAll();
+            } else if (!currentEmployeeId.isBlank()) {
+                loaded = requestService.findByEmployee(Integer.parseInt(currentEmployeeId));
             } else {
                 loaded = new ArrayList<>();
             }
 
             Map<String, Employee> employeeCache = new HashMap<>();
-            Map<Integer, Role> rolesByEmployeeId = currentRole == Role.EMPLOYEE
-                    ? Map.of()
-                    : userService.getEmployeeRoles();
-            Role selectedRole = Role.fromName(roleFilter == null
-                    ? currentRole.getRoleName()
-                    : (String) roleFilter.getSelectedItem());
 
             for (Request request : loaded) {
-                if (currentRole != Role.EMPLOYEE
-                        && rolesByEmployeeId.getOrDefault(
-                                request.getEmployeeId(), Role.EMPLOYEE) != selectedRole) {
-                    continue;
-                }
                 requests.add(request);
                 requestRows.add(toTableRow(request, employeeCache));
             }
@@ -332,22 +333,25 @@ public class RequestPanel extends JPanel {
 
         JPanel leftControls = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         leftControls.setOpaque(false);
-        leftControls.add(buildRoleFilter());
+        JComboBox<String> filter = buildRoleFilter();
+        if (filter != null) {
+            leftControls.add(filter);
+        }
 
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         buttons.setOpaque(false);
 
-        JButton addButton = button("+  Add", 90);
+        // Add is always present; in a self-scoped view it becomes "File Request"
+        // (you file your own), while Admin/HR use it to add for anyone.
+        addButton = button("+  Add", 120);
         addButton.addActionListener(e -> openAddForm());
         buttons.add(addButton);
 
-        JButton updateButton = button("✎  Update", 105);
-        updateButton.setVisible(canModifyAllRequests);
+        updateButton = button("✎  Update", 105);
         updateButton.addActionListener(e -> openUpdateForm());
         buttons.add(updateButton);
 
-        JButton deleteButton = button("🗑  Delete", 105);
-        deleteButton.setVisible(canModifyAllRequests);
+        deleteButton = button("🗑  Delete", 105);
         deleteButton.addActionListener(e -> deleteSelectedRequest());
         buttons.add(deleteButton);
 
@@ -355,25 +359,43 @@ public class RequestPanel extends JPanel {
         refreshButton.addActionListener(e -> showRequestList()); // reloads from DB
         buttons.add(refreshButton);
 
+        applyViewCapabilities();
+
         row.add(leftControls, BorderLayout.WEST);
         row.add(buttons, BorderLayout.EAST);
         return row;
     }
 
     private JComboBox<String> buildRoleFilter() {
-        roleFilter = new JComboBox<>(getAllowedRequestRoles(currentRole));
+        String[] views = getAllowedRequestRoles(currentRole);
+        if (views.length <= 1) {
+            return null; // pure Employee: nothing to switch, so no role changer
+        }
+        roleFilter = new JComboBox<>(views);
         roleFilter.setFont(new Font(FONT, Font.PLAIN, 13));
         roleFilter.setPreferredSize(new Dimension(140, 37));
         roleFilter.setBackground(Color.WHITE);
         roleFilter.setFocusable(false);
         roleFilter.addActionListener(e -> {
+            viewAsRole = Role.fromName((String) roleFilter.getSelectedItem());
+            applyViewCapabilities();
             loadRequestRows();
             refreshTableRows();
         });
         return roleFilter;
     }
 
-    /** Returns permitted filters in the canonical Admin, Finance, HR, IT, Employee order. */
+    /** Relabels Add and toggles Update/Delete to match the active view. */
+    private void applyViewCapabilities() {
+        if (addButton != null) {
+            addButton.setText(canViewAll() ? "+  Add" : "+  File Request");
+        }
+        boolean modify = canModify();
+        if (updateButton != null) updateButton.setVisible(modify);
+        if (deleteButton != null) deleteButton.setVisible(modify);
+    }
+
+    /** Returns the roles this login may view the panel as (own role + Employee; Admin sees all). */
     private static String[] getAllowedRequestRoles(Role role) {
         if (role == null) return new String[]{"Employee"};
         return switch (role) {

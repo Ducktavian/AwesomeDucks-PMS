@@ -22,7 +22,6 @@ import java.awt.event.MouseEvent;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -58,7 +57,6 @@ import com.motorph.model.Attendance;
 import com.motorph.model.Role;
 import com.motorph.model.UserAccount;
 import com.motorph.service.AttendanceService;
-import com.motorph.service.UserService;
 import com.motorph.util.AppContext;
 import com.motorph.util.Session;
 
@@ -83,7 +81,6 @@ public class AttendancePanel extends JPanel {
 
     // connection to the database via service -> dao
     private final AttendanceService attendanceService = AppContext.getAttendanceService();
-    private final UserService userService = AppContext.getUserService();
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("MM/dd/yyyy");
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("h:mm a");     
 
@@ -92,12 +89,14 @@ public class AttendancePanel extends JPanel {
     private JTextField searchField;
     private TableRowSorter<DefaultTableModel> sorter;
 
-    private boolean canAddAttendance;
-    private boolean canModifyAttendance;
     private String currentEmployeeId;
-    private Role currentRole;
+    private Role currentRole;   // the real logged-in role
+    private Role viewAsRole;    // the role whose access is currently active
 
     private JComboBox<String> roleFilter;
+    private JButton addButton;
+    private JButton updateButton;
+    private JButton deleteButton;
 
     private int sortedColumn = -1;
     private SortOrder currentSortOrder = SortOrder.UNSORTED;
@@ -118,13 +117,18 @@ public class AttendancePanel extends JPanel {
 
         currentEmployeeId = user == null ? "" : String.valueOf(user.getEmployeeId());
 
-        canModifyAttendance = role == Role.ADMIN || role == Role.HR;
+        // The dropdown acts as a role changer; access starts at the real role.
+        viewAsRole = currentRole;
+    }
 
-        canAddAttendance = role == Role.ADMIN
-                || role == Role.HR
-                || role == Role.IT
-                || role == Role.FINANCE
-                || role == Role.EMPLOYEE;
+    /** Only Admin and HR see every employee's attendance; others see their own. */
+    private boolean canViewAll() {
+        return viewAsRole == Role.ADMIN || viewAsRole == Role.HR;
+    }
+
+    /** Update/Delete are limited to Admin and HR. */
+    private boolean canModify() {
+        return viewAsRole == Role.ADMIN || viewAsRole == Role.HR;
     }
 
     private void showAttendanceList() {
@@ -145,27 +149,13 @@ public class AttendancePanel extends JPanel {
         records.clear();
 
         try {
-            List<Attendance> loaded = currentRole == Role.EMPLOYEE
-                    ? attendanceService.getAllAttendance(currentEmployeeId)
-                    : attendanceService.getAllAttendance();
-            Map<Integer, Role> rolesByEmployeeId = currentRole == Role.EMPLOYEE
-                    ? Map.of()
-                    : userService.getEmployeeRoles();
-            Role selectedRole = Role.fromName(roleFilter == null
-                    ? currentRole.getRoleName()
-                    : (String) roleFilter.getSelectedItem());
+            // Role changer, not a filter: all-access views pull every record,
+            // self-scoped views pull only the logged-in user's own attendance.
+            List<Attendance> loaded = canViewAll()
+                    ? attendanceService.getAllAttendance()
+                    : attendanceService.getAllAttendance(currentEmployeeId);
 
             for (Attendance record : loaded) {
-                if (currentRole != Role.EMPLOYEE) {
-                    try {
-                        int employeeId = Integer.parseInt(record.getEmployeeId());
-                        if (rolesByEmployeeId.getOrDefault(employeeId, Role.EMPLOYEE) != selectedRole) {
-                            continue;
-                        }
-                    } catch (NumberFormatException ex) {
-                        continue;
-                    }
-                }
                 records.add(record);
                 attendanceRows.add(toTableRow(record));
             }
@@ -265,23 +255,25 @@ public class AttendancePanel extends JPanel {
 
         JPanel leftControls = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         leftControls.setOpaque(false);
-        leftControls.add(buildRoleFilter());
+        JComboBox<String> filter = buildRoleFilter();
+        if (filter != null) {
+            leftControls.add(filter);
+        }
 
         JPanel rightButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         rightButtons.setOpaque(false);
 
-        JButton addButton = button("+  Add", 90);
-        addButton.setVisible(canAddAttendance);
+        // Everyone may log attendance, so Add is always present; its label
+        // becomes "File Attendance" in a self-scoped view (you log your own).
+        addButton = button("+  Add", 130);
         addButton.addActionListener(e -> openAddForm());
         rightButtons.add(addButton);
 
-        JButton updateButton = button("✎  Update", 105);
-        updateButton.setVisible(canModifyAttendance);
+        updateButton = button("✎  Update", 105);
         updateButton.addActionListener(e -> openUpdateForm());
         rightButtons.add(updateButton);
 
-        JButton deleteButton = button("🗑  Delete", 105);
-        deleteButton.setVisible(canModifyAttendance);
+        deleteButton = button("🗑  Delete", 105);
         deleteButton.addActionListener(e -> deleteSelectedRow());
         rightButtons.add(deleteButton);
 
@@ -289,22 +281,40 @@ public class AttendancePanel extends JPanel {
         refreshButton.addActionListener(e -> showAttendanceList()); // reloads from DB
         rightButtons.add(refreshButton);
 
+        applyViewCapabilities();
+
         row.add(leftControls, BorderLayout.WEST);
         row.add(rightButtons, BorderLayout.EAST);
         return row;
     }
 
     private JComboBox<String> buildRoleFilter() {
-        roleFilter = new JComboBox<>(getAllowedAttendanceRoles(currentRole));
+        String[] views = getAllowedAttendanceRoles(currentRole);
+        if (views.length <= 1) {
+            return null; // pure Employee: nothing to switch, so no role changer
+        }
+        roleFilter = new JComboBox<>(views);
         roleFilter.setFont(new Font(FONT, Font.PLAIN, 13));
         roleFilter.setPreferredSize(new Dimension(140, 37));
         roleFilter.setBackground(Color.WHITE);
         roleFilter.setFocusable(false);
         roleFilter.addActionListener(e -> {
+            viewAsRole = Role.fromName((String) roleFilter.getSelectedItem());
+            applyViewCapabilities();
             loadSampleRows();
             refreshTableRows();
         });
         return roleFilter;
+    }
+
+    /** Relabels Add and toggles Update/Delete to match the active view. */
+    private void applyViewCapabilities() {
+        if (addButton != null) {
+            addButton.setText(canViewAll() ? "+  Add" : "+  File Attendance");
+        }
+        boolean modify = canModify();
+        if (updateButton != null) updateButton.setVisible(modify);
+        if (deleteButton != null) deleteButton.setVisible(modify);
     }
 
     private static String[] getAllowedAttendanceRoles(Role role) {
