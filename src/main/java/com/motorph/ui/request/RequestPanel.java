@@ -3,10 +3,11 @@ package com.motorph.ui.request;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
-import java.awt.Container;
 import java.awt.Cursor;
+import java.awt.Dialog;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.Window;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
@@ -32,12 +33,11 @@ import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
-import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
+import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JRadioButton;
 import javax.swing.JScrollBar;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
@@ -48,6 +48,8 @@ import javax.swing.RowFilter;
 import javax.swing.RowSorter;
 import javax.swing.SortOrder;
 import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
+import javax.swing.WindowConstants;
 import javax.swing.border.AbstractBorder;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
@@ -109,6 +111,7 @@ public class RequestPanel extends JPanel {
     private JButton addButton;
     private JButton updateButton;
     private JButton deleteButton;
+    private JDialog requestDialog;
 
     private int sortedColumn = -1;
     private SortOrder currentSortOrder = SortOrder.UNSORTED;
@@ -422,14 +425,16 @@ public class RequestPanel extends JPanel {
     }
 
     private void openAddForm() {
-        removeAll();
-        setLayout(new BorderLayout());
+        // Employee view files their own (name/position auto-filled); privileged
+        // views file for anyone through an employee picker.
+        RequestFormPanel.Mode mode = canViewAll()
+                ? RequestFormPanel.Mode.ADD_OTHER
+                : RequestFormPanel.Mode.ADD_SELF;
 
-        // the form submits the new request to the DB itself; just reload on back
-        add(new RequestFormPanel(this::showRequestList), BorderLayout.CENTER);
+        RequestFormPanel form = new RequestFormPanel(
+                this::onRequestFormClosed, mode, null, null);
 
-        revalidate();
-        repaint();
+        showRequestDialog(form, canViewAll() ? "Add Request" : "File Request");
     }
 
     private void openUpdateForm() {
@@ -455,21 +460,14 @@ public class RequestPanel extends JPanel {
         Object[] existingData = toFormData(selectedRow);
         Request original = requests.get(selectedIndex); // real request behind the row
 
-        removeAll();
-        setLayout(new BorderLayout());
-
         // persist the edit to the DB, keeping the original request's identity/type
-        add(new RequestFormPanel(
-                this::showRequestList,
+        RequestFormPanel form = new RequestFormPanel(
+                this::onRequestFormClosed,
+                RequestFormPanel.Mode.EDIT,
                 existingData,
-                updatedData -> {
-                    persistUpdate(original, updatedData);
-                    showRequestList();
-                }
-        ), BorderLayout.CENTER);
+                updatedData -> persistUpdate(original, updatedData));
 
-        revalidate();
-        repaint();
+        showRequestDialog(form, "Update Request");
     }
 
     private void openViewOnlyForm() {
@@ -479,20 +477,38 @@ public class RequestPanel extends JPanel {
             return;
         }
 
-        RequestFormPanel formPanel = new RequestFormPanel(
-                this::showRequestList,
+        RequestFormPanel form = new RequestFormPanel(
+                this::onRequestFormClosed,
+                RequestFormPanel.Mode.VIEW,
                 toFormData(requestRows.get(selectedIndex)),
-                updatedData -> {
-                }
-        );
+                null);
 
-        setViewOnly(formPanel);
+        showRequestDialog(form, "Request Details");
+    }
 
-        removeAll();
-        setLayout(new BorderLayout());
-        add(formPanel, BorderLayout.CENTER);
-        revalidate();
-        repaint();
+    private void showRequestDialog(RequestFormPanel form, String title) {
+        closeRequestDialog();
+
+        Window owner = SwingUtilities.getWindowAncestor(this);
+        requestDialog = new JDialog(owner, title, Dialog.ModalityType.APPLICATION_MODAL);
+        requestDialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+        requestDialog.setContentPane(form);
+        requestDialog.setSize(560, 720);
+        requestDialog.setMinimumSize(new Dimension(520, 560));
+        requestDialog.setLocationRelativeTo(this);
+        requestDialog.setVisible(true);
+    }
+
+    private void onRequestFormClosed() {
+        closeRequestDialog();
+        showRequestList();
+    }
+
+    private void closeRequestDialog() {
+        if (requestDialog != null) {
+            requestDialog.dispose();
+            requestDialog = null;
+        }
     }
 
     private void deleteSelectedRequest() {
@@ -772,36 +788,6 @@ public class RequestPanel extends JPanel {
         }
 
         sorter.setRowFilter(RowFilter.regexFilter("(?i)" + java.util.regex.Pattern.quote(query)));
-    }
-
-    private void setViewOnly(Container container) {
-        for (Component component : container.getComponents()) {
-            if (component instanceof JTextField textField) {
-                textField.setEditable(false);
-            } else if (component instanceof JTextArea textArea) {
-                textArea.setEditable(false);
-            } else if (component instanceof JComboBox<?>) {
-                component.setEnabled(false);
-            } else if (component instanceof JCheckBox) {
-                component.setEnabled(false);
-            } else if (component instanceof JRadioButton) {
-                component.setEnabled(false);
-            } else if (component instanceof JButton button) {
-                String text = button.getText() == null ? "" : button.getText().trim();
-
-                if (text.equalsIgnoreCase("Submit")
-                        || text.equalsIgnoreCase("Save")
-                        || text.equalsIgnoreCase("Confirm")
-                        || text.equalsIgnoreCase("Add")
-                        || text.equalsIgnoreCase("Update")) {
-                    button.setVisible(false);
-                }
-            }
-
-            if (component instanceof Container child) {
-                setViewOnly(child);
-            }
-        }
     }
 
     private JButton button(String text, int width) {
