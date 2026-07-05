@@ -1,10 +1,10 @@
 package com.motorph.ui.attendance;
 
-import java.awt.BorderLayout;         
+import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
-import java.awt.Container;
 import java.awt.Cursor;
+import java.awt.Dialog;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
@@ -13,6 +13,7 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Insets;
 import java.awt.RenderingHints;
+import java.awt.Window;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.awt.event.KeyAdapter;
@@ -27,21 +28,21 @@ import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
-import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
+import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
-import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
 import javax.swing.RowFilter;
 import javax.swing.RowSorter;
 import javax.swing.SortOrder;
 import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
+import javax.swing.WindowConstants;
 import javax.swing.border.AbstractBorder;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
@@ -98,6 +99,8 @@ public class AttendancePanel extends JPanel {
     private JButton updateButton;
     private JButton deleteButton;
 
+    private JDialog attendanceDialog;
+
     private int sortedColumn = -1;
     private SortOrder currentSortOrder = SortOrder.UNSORTED;
 
@@ -143,7 +146,6 @@ public class AttendancePanel extends JPanel {
 
     // NEW: loads attendance from the database (service -> dao)
     // Privileged roles pull every record; everyone else only pulls their own.
-    // kala ko may toggle dito for all vs own records?
     private void loadSampleRows() {
         attendanceRows.clear();
         records.clear();
@@ -155,7 +157,9 @@ public class AttendancePanel extends JPanel {
                     ? attendanceService.getAllAttendance()
                     : attendanceService.getAllAttendance(currentEmployeeId);
 
-            for (Attendance record : loaded) {
+            // The DAO returns records oldest-first; show the most recent on top.
+            for (int i = loaded.size() - 1; i >= 0; i--) {
+                Attendance record = loaded.get(i);
                 records.add(record);
                 attendanceRows.add(toTableRow(record));
             }
@@ -345,14 +349,14 @@ public class AttendancePanel extends JPanel {
     }
 
     private void openAddForm() {
-        removeAll();
-        setLayout(new BorderLayout());
+        // "View All" (Admin/HR) files for anyone through an employee picker;
+        // self-scoped views auto-fill and lock the logged-in user's identity.
+        AttendanceFormPanel.Mode mode = canViewAll()
+                ? AttendanceFormPanel.Mode.ADD_OTHER
+                : AttendanceFormPanel.Mode.ADD_SELF;
 
-        // the form persists the new record itself; showAttendanceList reloads from DB
-        add(new AttendanceFormPanel(this::showAttendanceList), BorderLayout.CENTER);
-
-        revalidate();
-        repaint();
+        AttendanceFormPanel form = new AttendanceFormPanel(this::onFormClosed, mode);
+        showAttendanceDialog(form, canViewAll() ? "Add Attendance" : "File Attendance");
     }
 
     private void openUpdateForm() {
@@ -371,19 +375,9 @@ public class AttendancePanel extends JPanel {
         Object[] existingData = attendanceRows.get(selectedIndex);
         int attendanceId = records.get(selectedIndex).getAttendanceId(); // real id for the update
 
-        removeAll();
-        setLayout(new BorderLayout());
-
-        // the form persists the update itself; showAttendanceList reloads from DB
-        add(new AttendanceFormPanel(
-                this::showAttendanceList,
-                existingData,
-                attendanceId,
-                null
-        ), BorderLayout.CENTER);
-
-        revalidate();
-        repaint();
+        AttendanceFormPanel form = new AttendanceFormPanel(
+                this::onFormClosed, AttendanceFormPanel.Mode.EDIT, existingData, attendanceId);
+        showAttendanceDialog(form, "Update Attendance");
     }
 
     private void openViewOnlyForm() {
@@ -393,23 +387,35 @@ public class AttendancePanel extends JPanel {
             return;
         }
 
-        Object[] existingData = attendanceRows.get(selectedIndex);
+        AttendanceFormPanel form = new AttendanceFormPanel(
+                this::onFormClosed, AttendanceFormPanel.Mode.VIEW,
+                attendanceRows.get(selectedIndex), null);
+        showAttendanceDialog(form, "Attendance Details");
+    }
 
-        AttendanceFormPanel formPanel = new AttendanceFormPanel(
-                this::showAttendanceList,
-                existingData,
-                updatedData -> {
-                    // View-only mode. No update action.
-                }
-        );
+    private void showAttendanceDialog(AttendanceFormPanel form, String title) {
+        closeAttendanceDialog();
 
-        setViewOnly(formPanel);
+        Window owner = SwingUtilities.getWindowAncestor(this);
+        attendanceDialog = new JDialog(owner, title, Dialog.ModalityType.APPLICATION_MODAL);
+        attendanceDialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+        attendanceDialog.setContentPane(form);
+        attendanceDialog.setSize(560, 640);
+        attendanceDialog.setMinimumSize(new Dimension(520, 520));
+        attendanceDialog.setLocationRelativeTo(this);
+        attendanceDialog.setVisible(true);
+    }
 
-        removeAll();
-        setLayout(new BorderLayout());
-        add(formPanel, BorderLayout.CENTER);
-        revalidate();
-        repaint();
+    private void onFormClosed() {
+        closeAttendanceDialog();
+        showAttendanceList();
+    }
+
+    private void closeAttendanceDialog() {
+        if (attendanceDialog != null) {
+            attendanceDialog.dispose();
+            attendanceDialog = null;
+        }
     }
 
     private void deleteSelectedRow() {
@@ -620,37 +626,6 @@ public class AttendancePanel extends JPanel {
         }
 
         sorter.setRowFilter(RowFilter.regexFilter("(?i)" + java.util.regex.Pattern.quote(query)));
-    }
-
-    private void setViewOnly(Container container) {
-        for (Component component : container.getComponents()) {
-            if (component instanceof JTextField) {
-                ((JTextField) component).setEditable(false);
-            } else if (component instanceof JTextArea) {
-                ((JTextArea) component).setEditable(false);
-            } else if (component instanceof JComboBox) {
-                component.setEnabled(false);
-            } else if (component instanceof JCheckBox) {
-                component.setEnabled(false);
-            } else if (component instanceof JRadioButton) {
-                component.setEnabled(false);
-            } else if (component instanceof JButton) {
-                JButton button = (JButton) component;
-                String text = button.getText() == null ? "" : button.getText().trim();
-
-                if (text.equalsIgnoreCase("Submit")
-                        || text.equalsIgnoreCase("Save")
-                        || text.equalsIgnoreCase("Confirm")
-                        || text.equalsIgnoreCase("Add")
-                        || text.equalsIgnoreCase("Update")) {
-                    button.setVisible(false);
-                }
-            }
-
-            if (component instanceof Container) {
-                setViewOnly((Container) component);
-            }
-        }
     }
 
     private JButton button(String text, int width) {

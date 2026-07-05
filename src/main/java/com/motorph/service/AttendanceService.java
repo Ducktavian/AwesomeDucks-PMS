@@ -59,6 +59,19 @@ public class AttendanceService {
         return open;
     }
 
+    
+    public Attendance getTodaysAttendance(String employeeId) {
+        validateEmployeeId(employeeId);
+
+        LocalDate today = LocalDate.now();
+        for (Attendance record : attendanceDAO.findByEmployeeId(employeeId)) {
+            if (today.equals(record.getDate())) {
+                return record;
+            }
+        }
+        return null;
+    }
+
     public void submitAttendance(Attendance attendance) {
         validateAttendanceForCurrentUser(attendance);
         attendanceDAO.save(attendance);
