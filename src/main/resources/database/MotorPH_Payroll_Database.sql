@@ -579,7 +579,6 @@ CREATE TABLE `company_financial_summary` (
 ) ENGINE=InnoDB;
 
 
-
 -- =============================================================================
 -- PART 2: SEED DATA (real employee_id 10001..10034, audit fields populated)
 -- =============================================================================
@@ -6216,10 +6215,20 @@ INSERT INTO `user_account` (`employee_id`, `username`, `password_hash`, `is_acti
 INSERT INTO `company_financial_summary`
 (`year`, `quarter`, `revenue`, `expense`, `created_at`)
 VALUES
-(2024, 'Q1', 1000000.00, 500000.00, NOW()),
-(2024, 'Q2', 1000000.00, 500000.00, NOW()),
-(2024, 'Q3', 1000000.00, 500000.00, NOW()),
-(2024, 'Q4', 1000000.00, 500000.00, NOW());
+(2024, 'Q1', 850000.00, 420000.00, NOW()),
+(2024, 'Q2', 920000.00, 465000.00, NOW()),
+(2024, 'Q3', 1030000.00, 515000.00, NOW()),
+(2024, 'Q4', 1180000.00, 590000.00, NOW()),
+
+(2025, 'Q1', 1320000.00, 655000.00, NOW()),
+(2025, 'Q2', 1480000.00, 720000.00, NOW()),
+(2025, 'Q3', 1650000.00, 805000.00, NOW()),
+(2025, 'Q4', 1820000.00, 895000.00, NOW()),
+
+(2026, 'Q1', 2010000.00, 980000.00, NOW()),
+(2026, 'Q2', 2250000.00, 1090000.00, NOW()),
+(2026, 'Q3', 2480000.00, 1215000.00, NOW())
+
 
 -- Account-Role mapping (user_account_id follows insertion order 1=10001 ... 34=10034)
 -- Role IDs: 1=Admin  2=HR  3=IT  4=Finance  5=Employee
@@ -6347,16 +6356,6 @@ INSERT INTO `payroll_deduction` (`payroll_id`, `deduction_type_id`, `amount`, `c
 (3, 3,  100.00, NOW(), NULL),
 (3, 4, 3450.00, NOW(), NULL);
 
-
--- 20. Financial Overview
-
-INSERT INTO company_financial_summary
-(year, quarter, revenue, expense, created_at)
-VALUES
-(2024, 'Q1', 10000000.00, 500000.00, NOW()),
-(2024, 'Q2', 20000000.00, 600000.00, NOW()),
-(2024, 'Q3', 24067000.00, 890089.00, NOW()),
-(2024, 'Q4', 30150000.00, 500000.00, NOW());
 
 -- =============================================================
 -- VIEWS
