@@ -29,6 +29,32 @@ public class JdbcEmployeeDAO implements EmployeeDAO {
                 "status_type", "employment_status_id");
     }
 
+    @Override
+    public Map<String, Integer> findAllDepartments() {
+        return findLookupValues(
+                "SELECT department_id, department_name FROM department ORDER BY department_name",
+                "department_name", "department_id");
+    }
+
+    @Override
+    public Map<String, Integer> findPositionsByDepartment(int departmentId) {
+        Map<String, Integer> values = new LinkedHashMap<>();
+        String sql = "SELECT position_id, position_name FROM employee_position "
+                + "WHERE department_id = ? ORDER BY position_name";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, departmentId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    values.put(rs.getString("position_name"), rs.getInt("position_id"));
+                }
+            }
+        } catch (SQLException e) {
+            throw new IllegalStateException("Unable to load positions for department " + departmentId, e);
+        }
+        return values;
+    }
+
     private Map<String, Integer> findLookupValues(String sql, String nameColumn, String idColumn) {
         Map<String, Integer> values = new LinkedHashMap<>();
         try (Connection conn = DatabaseConnection.getConnection();
@@ -376,6 +402,7 @@ public class JdbcEmployeeDAO implements EmployeeDAO {
         // Populate the raw FK IDs so callers can use them for further writes
         // without an extra query.  getInt() returns 0 for SQL NULL; wasNull()
         // lets us turn that back into a Java null for the nullable supervisor.
+        emp.setDepartment(rs.getString("department_name")); // from the view's dept join
         emp.setPositionId(rs.getInt("position_id")); // never null (DB constraint)
 
         int supervisorId = rs.getInt("immediate_supervisor_id");

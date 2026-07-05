@@ -1,19 +1,19 @@
 package com.motorph.ui.attendance;
 
-import java.awt.BorderLayout;         
+import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
-import java.awt.Container;
 import java.awt.Cursor;
+import java.awt.Dialog;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.Image;
 import java.awt.Insets;
 import java.awt.RenderingHints;
+import java.awt.Window;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.awt.event.KeyAdapter;
@@ -27,23 +27,22 @@ import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
-import javax.swing.ImageIcon;
 import javax.swing.JButton;
-import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
+import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
-import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
 import javax.swing.RowFilter;
 import javax.swing.RowSorter;
 import javax.swing.SortOrder;
 import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
+import javax.swing.WindowConstants;
 import javax.swing.border.AbstractBorder;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
@@ -70,9 +69,6 @@ public class AttendancePanel extends JPanel {
     private static final Color SELECTED_ROW = new Color(225, 230, 245);
     private static final String FONT = "Segoe UI";
 
-    private static final String VIEW_ALL = "View All";
-    private static final String VIEW_MINE = "View Mine";
-
     private static final String[] COLUMNS = {
         "Employee ID", "Type", "Date", "Time In",
         "Time Out", "Total Hours Worked", "Validity"
@@ -94,14 +90,16 @@ public class AttendancePanel extends JPanel {
     private JTextField searchField;
     private TableRowSorter<DefaultTableModel> sorter;
 
-    private boolean canViewAllAttendance;
-    private boolean canAddAttendance;
-    private boolean canModifyAttendance;
     private String currentEmployeeId;
+    private Role currentRole;   // the real logged-in role
+    private Role viewAsRole;    // the role whose access is currently active
 
-    // scope toggle: true = everyone's records, false = only the logged-in user's
-    private JComboBox<String> scopeFilter;
-    private boolean viewAllSelected = true;
+    private JComboBox<String> roleFilter;
+    private JButton addButton;
+    private JButton updateButton;
+    private JButton deleteButton;
+
+    private JDialog attendanceDialog;
 
     private int sortedColumn = -1;
     private SortOrder currentSortOrder = SortOrder.UNSORTED;
@@ -118,21 +116,26 @@ public class AttendancePanel extends JPanel {
     private void applyRBAC() {
         UserAccount user = Session.getCurrentUser();
         Role role = user == null ? null : user.getRole();
+        currentRole = role == null ? Role.EMPLOYEE : role;
 
         currentEmployeeId = user == null ? "" : String.valueOf(user.getEmployeeId());
 
-        canViewAllAttendance = role == Role.ADMIN || role == Role.HR;
-        canModifyAttendance = role == Role.ADMIN || role == Role.HR;
-
-        canAddAttendance = role == Role.ADMIN
-                || role == Role.HR
-                || role == Role.IT
-                || role == Role.FINANCE
-                || role == Role.EMPLOYEE;
+        // The dropdown acts as a role changer; access starts at the real role
+        // on first load, but a previously chosen view is preserved across
+        // refreshes (e.g. after a modal closes) so it doesn't snap back.
+        if (viewAsRole == null) {
+            viewAsRole = currentRole;
+        }
     }
 
-    private boolean canSeeRow(String employeeId) {
-        return canViewAllAttendance || employeeId.equals(currentEmployeeId);
+    /** Only Admin and HR see every employee's attendance; others see their own. */
+    private boolean canViewAll() {
+        return viewAsRole == Role.ADMIN || viewAsRole == Role.HR;
+    }
+
+    /** Update/Delete are limited to Admin and HR. */
+    private boolean canModify() {
+        return viewAsRole == Role.ADMIN || viewAsRole == Role.HR;
     }
 
     private void showAttendanceList() {
@@ -147,18 +150,20 @@ public class AttendancePanel extends JPanel {
 
     // NEW: loads attendance from the database (service -> dao)
     // Privileged roles pull every record; everyone else only pulls their own.
-    // kala ko may toggle dito for all vs own records?
     private void loadSampleRows() {
         attendanceRows.clear();
         records.clear();
 
         try {
-            boolean showAll = canViewAllAttendance && viewAllSelected;
-            List<Attendance> loaded = showAll
+            // Role changer, not a filter: all-access views pull every record,
+            // self-scoped views pull only the logged-in user's own attendance.
+            List<Attendance> loaded = canViewAll()
                     ? attendanceService.getAllAttendance()
                     : attendanceService.getAllAttendance(currentEmployeeId);
 
-            for (Attendance record : loaded) {
+            // The DAO returns records oldest-first; show the most recent on top.
+            for (int i = loaded.size() - 1; i >= 0; i--) {
+                Attendance record = loaded.get(i);
                 records.add(record);
                 attendanceRows.add(toTableRow(record));
             }
@@ -177,7 +182,9 @@ public class AttendancePanel extends JPanel {
     // Type ay wala pa, so that cell is left blank.
     private Object[] toTableRow(Attendance a) {
         double hours = attendanceService.computeDailyHours(a);
-        boolean complete = a.getLogIn() != null && a.getLogOut() != null;
+        // "Valid" mirrors payroll: a record only counts when it is complete AND
+        // its status is payable (see AttendanceService.isValidForPayroll).
+        boolean valid = attendanceService.isValidForPayroll(a);
 
         return new Object[]{
             a.getEmployeeId(),
@@ -185,8 +192,8 @@ public class AttendancePanel extends JPanel {
             a.getDate() == null ? "" : a.getDate().format(DATE_FMT),
             a.getLogIn() == null ? "" : a.getLogIn().format(TIME_FMT),
             a.getLogOut() == null ? "" : a.getLogOut().format(TIME_FMT),
-            complete ? hours + " hrs" : "",
-            complete ? "Valid" : "Invalid"
+            valid ? hours + " hrs" : "",
+            valid ? "Valid" : "Invalid"
         };
     }
 
@@ -258,57 +265,80 @@ public class AttendancePanel extends JPanel {
 
         JPanel leftControls = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         leftControls.setOpaque(false);
-        leftControls.add(buildScopeFilter());
+        JComboBox<String> filter = buildRoleFilter();
+        if (filter != null) {
+            leftControls.add(filter);
+        }
 
         JPanel rightButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         rightButtons.setOpaque(false);
 
-        JButton addButton = navyButton("Add-Icon.png", "Add", 90);
-        addButton.setVisible(canAddAttendance);
+        // Everyone may log attendance, so Add is always present; its label
+        // becomes "File Attendance" in a self-scoped view (you log your own).
+        addButton = button("+  Add", 130);
         addButton.addActionListener(e -> openAddForm());
         rightButtons.add(addButton);
 
-        JButton updateButton = navyButton("Update-Icon.png", "Update", 105);
-        updateButton.setVisible(canModifyAttendance);
+        updateButton = button("✎  Update", 105);
         updateButton.addActionListener(e -> openUpdateForm());
         rightButtons.add(updateButton);
 
-        JButton deleteButton = navyButton("Delete-Icon.png", "Delete", 105);
-        deleteButton.setVisible(canModifyAttendance);
+        deleteButton = button("🗑  Delete", 105);
         deleteButton.addActionListener(e -> deleteSelectedRow());
         rightButtons.add(deleteButton);
 
-        JButton refreshButton = navyButton("Refresh-Icon.png", "Refresh", 110);
+        JButton refreshButton = button("⟳  Refresh", 110);
         refreshButton.addActionListener(e -> showAttendanceList()); // reloads from DB
         rightButtons.add(refreshButton);
+
+        applyViewCapabilities();
 
         row.add(leftControls, BorderLayout.WEST);
         row.add(rightButtons, BorderLayout.EAST);
         return row;
     }
 
-    // NEW: builds the View All / View Mine scope dropdown. Privileged roles can
-    // switch between everyone's attendance and their own; everyone else is locked
-    // to their own records.
-    private JComboBox<String> buildScopeFilter() {
-        scopeFilter = new JComboBox<>(new String[]{ VIEW_ALL, VIEW_MINE });
-        scopeFilter.setFont(new Font(FONT, Font.PLAIN, 13));
-        scopeFilter.setPreferredSize(new Dimension(140, 37));
-        scopeFilter.setBackground(Color.WHITE);
-
-        if (canViewAllAttendance) {
-            scopeFilter.setSelectedItem(viewAllSelected ? VIEW_ALL : VIEW_MINE);
-            scopeFilter.addActionListener(e -> {
-                viewAllSelected = VIEW_ALL.equals(scopeFilter.getSelectedItem());
-                loadSampleRows();
-                refreshTableRows();
-            });
-        } else {
-            scopeFilter.setSelectedItem(VIEW_MINE);
-            scopeFilter.setEnabled(false);
+    private JComboBox<String> buildRoleFilter() {
+        String[] views = getAllowedAttendanceRoles(currentRole);
+        if (views.length <= 1) {
+            return null; // pure Employee: nothing to switch, so no role changer
         }
+        roleFilter = new JComboBox<>(views);
+        // Reflect the currently active view so a rebuilt combo (after a modal
+        // closes) stays on the last-selected role instead of resetting.
+        roleFilter.setSelectedItem(viewAsRole.getRoleName());
+        roleFilter.setFont(new Font(FONT, Font.PLAIN, 13));
+        roleFilter.setPreferredSize(new Dimension(140, 37));
+        roleFilter.setBackground(Color.WHITE);
+        roleFilter.setFocusable(false);
+        roleFilter.addActionListener(e -> {
+            viewAsRole = Role.fromName((String) roleFilter.getSelectedItem());
+            applyViewCapabilities();
+            loadSampleRows();
+            refreshTableRows();
+        });
+        return roleFilter;
+    }
 
-        return scopeFilter;
+    /** Relabels Add and toggles Update/Delete to match the active view. */
+    private void applyViewCapabilities() {
+        if (addButton != null) {
+            addButton.setText(canViewAll() ? "+  Add" : "+  File Attendance");
+        }
+        boolean modify = canModify();
+        if (updateButton != null) updateButton.setVisible(modify);
+        if (deleteButton != null) deleteButton.setVisible(modify);
+    }
+
+    private static String[] getAllowedAttendanceRoles(Role role) {
+        if (role == null) return new String[]{"Employee"};
+        return switch (role) {
+            case ADMIN -> new String[]{"Admin", "Finance", "HR", "IT", "Employee"};
+            case FINANCE -> new String[]{"Finance", "Employee"};
+            case HR -> new String[]{"HR", "Employee"};
+            case IT -> new String[]{"IT", "Employee"};
+            case EMPLOYEE -> new String[]{"Employee"};
+        };
     }
 
     // NEW: repopulate the table from the currently loaded rows. Used when the
@@ -321,21 +351,19 @@ public class AttendancePanel extends JPanel {
         tableModel.setRowCount(0);
 
         for (Object[] row : attendanceRows) {
-            if (canSeeRow(String.valueOf(row[0]))) {
-                tableModel.addRow(row);
-            }
+            tableModel.addRow(row);
         }
     }
 
     private void openAddForm() {
-        removeAll();
-        setLayout(new BorderLayout());
+        // "View All" (Admin/HR) files for anyone through an employee picker;
+        // self-scoped views auto-fill and lock the logged-in user's identity.
+        AttendanceFormPanel.Mode mode = canViewAll()
+                ? AttendanceFormPanel.Mode.ADD_OTHER
+                : AttendanceFormPanel.Mode.ADD_SELF;
 
-        // the form persists the new record itself; showAttendanceList reloads from DB
-        add(new AttendanceFormPanel(this::showAttendanceList), BorderLayout.CENTER);
-
-        revalidate();
-        repaint();
+        AttendanceFormPanel form = new AttendanceFormPanel(this::onFormClosed, mode);
+        showAttendanceDialog(form, canViewAll() ? "Add Attendance" : "File Attendance");
     }
 
     private void openUpdateForm() {
@@ -354,19 +382,9 @@ public class AttendancePanel extends JPanel {
         Object[] existingData = attendanceRows.get(selectedIndex);
         int attendanceId = records.get(selectedIndex).getAttendanceId(); // real id for the update
 
-        removeAll();
-        setLayout(new BorderLayout());
-
-        // the form persists the update itself; showAttendanceList reloads from DB
-        add(new AttendanceFormPanel(
-                this::showAttendanceList,
-                existingData,
-                attendanceId,
-                null
-        ), BorderLayout.CENTER);
-
-        revalidate();
-        repaint();
+        AttendanceFormPanel form = new AttendanceFormPanel(
+                this::onFormClosed, AttendanceFormPanel.Mode.EDIT, existingData, attendanceId);
+        showAttendanceDialog(form, "Update Attendance");
     }
 
     private void openViewOnlyForm() {
@@ -376,23 +394,35 @@ public class AttendancePanel extends JPanel {
             return;
         }
 
-        Object[] existingData = attendanceRows.get(selectedIndex);
+        AttendanceFormPanel form = new AttendanceFormPanel(
+                this::onFormClosed, AttendanceFormPanel.Mode.VIEW,
+                attendanceRows.get(selectedIndex), null);
+        showAttendanceDialog(form, "Attendance Details");
+    }
 
-        AttendanceFormPanel formPanel = new AttendanceFormPanel(
-                this::showAttendanceList,
-                existingData,
-                updatedData -> {
-                    // View-only mode. No update action.
-                }
-        );
+    private void showAttendanceDialog(AttendanceFormPanel form, String title) {
+        closeAttendanceDialog();
 
-        setViewOnly(formPanel);
+        Window owner = SwingUtilities.getWindowAncestor(this);
+        attendanceDialog = new JDialog(owner, title, Dialog.ModalityType.APPLICATION_MODAL);
+        attendanceDialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+        attendanceDialog.setContentPane(form);
+        attendanceDialog.setSize(560, 640);
+        attendanceDialog.setMinimumSize(new Dimension(520, 520));
+        attendanceDialog.setLocationRelativeTo(this);
+        attendanceDialog.setVisible(true);
+    }
 
-        removeAll();
-        setLayout(new BorderLayout());
-        add(formPanel, BorderLayout.CENTER);
-        revalidate();
-        repaint();
+    private void onFormClosed() {
+        closeAttendanceDialog();
+        showAttendanceList();
+    }
+
+    private void closeAttendanceDialog() {
+        if (attendanceDialog != null) {
+            attendanceDialog.dispose();
+            attendanceDialog = null;
+        }
     }
 
     private void deleteSelectedRow() {
@@ -494,11 +524,7 @@ public class AttendancePanel extends JPanel {
         };
 
         for (Object[] row : attendanceRows) {
-            String employeeId = String.valueOf(row[0]);
-
-            if (canSeeRow(employeeId)) {
-                tableModel.addRow(row);
-            }
+            tableModel.addRow(row);
         }
 
         attendanceTable = new JTable(tableModel);
@@ -609,71 +635,17 @@ public class AttendancePanel extends JPanel {
         sorter.setRowFilter(RowFilter.regexFilter("(?i)" + java.util.regex.Pattern.quote(query)));
     }
 
-    private void setViewOnly(Container container) {
-        for (Component component : container.getComponents()) {
-            if (component instanceof JTextField) {
-                ((JTextField) component).setEditable(false);
-            } else if (component instanceof JTextArea) {
-                ((JTextArea) component).setEditable(false);
-            } else if (component instanceof JComboBox) {
-                component.setEnabled(false);
-            } else if (component instanceof JCheckBox) {
-                component.setEnabled(false);
-            } else if (component instanceof JRadioButton) {
-                component.setEnabled(false);
-            } else if (component instanceof JButton) {
-                JButton button = (JButton) component;
-                String text = button.getText() == null ? "" : button.getText().trim();
-
-                if (text.equalsIgnoreCase("Submit")
-                        || text.equalsIgnoreCase("Save")
-                        || text.equalsIgnoreCase("Confirm")
-                        || text.equalsIgnoreCase("Add")
-                        || text.equalsIgnoreCase("Update")) {
-                    button.setVisible(false);
-                }
-            }
-
-            if (component instanceof Container) {
-                setViewOnly((Container) component);
-            }
-        }
-    }
-
-    private JButton navyButton(String iconFileName, String text, int width) {
-        JButton button = new JButton(text);
-        button.setPreferredSize(new Dimension(width, 37));
-        button.setBackground(NAVY);
-        button.setForeground(Color.WHITE);
-        button.setFont(new Font(FONT, Font.PLAIN, 13));
-        button.setFocusPainted(false);
-        button.setBorderPainted(false);
-        button.setMargin(new Insets(0, 10, 0, 10));
-        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-
-        ImageIcon icon = loadIcon(iconFileName, 16, 16);
-        if (icon != null) {
-            button.setIcon(icon);
-            button.setIconTextGap(8);
-        }
-
-        return button;
-    }
-
-    // Loads an icon from the classpath (src/main/java/com/motorph/img/) and
-    // scales it. Returns null (button falls back to text-only) if the file
-    // isn't found, so a bad path never crashes the UI.
-    private ImageIcon loadIcon(String fileName, int width, int height) {
-        java.net.URL url = getClass().getResource("/com/motorph/img/" + fileName);
-
-        if (url == null) {
-            System.err.println("Icon not found: /com/motorph/img/" + fileName);
-            return null;
-        }
-
-        ImageIcon rawIcon = new ImageIcon(url);
-        Image scaled = rawIcon.getImage().getScaledInstance(width, height, Image.SCALE_SMOOTH);
-        return new ImageIcon(scaled);
+    private JButton button(String text, int width) {
+        JButton btn = new JButton(text);
+        btn.setPreferredSize(new Dimension(width, 37));
+        btn.setBackground(NAVY);
+        btn.setForeground(Color.WHITE);
+        btn.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        btn.setFocusPainted(false);
+        btn.setBorderPainted(false);
+        btn.setMargin(new Insets(0, 8, 0, 8));
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        return btn;
     }
 
     private class HeaderFilterRenderer extends JPanel implements TableCellRenderer {

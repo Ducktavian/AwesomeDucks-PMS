@@ -88,12 +88,8 @@ public class Login extends JFrame {
         forgotPasswordLabel.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                JOptionPane.showMessageDialog(
-                        Login.this,
-                        "Please contact your administrator to reset your password.",
-                        "Forgot Password",
-                        JOptionPane.INFORMATION_MESSAGE
-                );
+                Login.this.setVisible(false);
+                new Reset(Login.this).setVisible(true);
             }
 
             @Override

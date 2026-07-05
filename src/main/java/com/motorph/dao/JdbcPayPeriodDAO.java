@@ -48,6 +48,34 @@ public class JdbcPayPeriodDAO implements PayPeriodDAO {
         }
     }
 
+    @Override
+    public PayPeriod findCurrent(LocalDate date) {
+        String sql = "SELECT pay_period_id, period_start_date, period_end_date, pay_date, payroll_status_id " +
+                "FROM pay_period WHERE ? BETWEEN period_start_date AND period_end_date " +
+                "ORDER BY period_start_date DESC LIMIT 1";
+        return findOne(sql, date);
+    }
+
+    @Override
+    public PayPeriod findUpcoming(LocalDate date) {
+        String sql = "SELECT pay_period_id, period_start_date, period_end_date, pay_date, payroll_status_id " +
+                "FROM pay_period WHERE period_start_date > ? " +
+                "ORDER BY period_start_date ASC LIMIT 1";
+        return findOne(sql, date);
+    }
+
+    private PayPeriod findOne(String sql, LocalDate date) {
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setDate(1, Date.valueOf(date));
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next() ? mapRow(rs) : null;
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to look up pay period for " + date, e);
+        }
+    }
+
     private PayPeriod mapRow(ResultSet rs) throws SQLException {
         return new PayPeriod(
                 rs.getInt("pay_period_id"),

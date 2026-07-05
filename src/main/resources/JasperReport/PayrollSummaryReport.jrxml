@@ -23,9 +23,7 @@
 			<conditionExpression><![CDATA[$V{REPORT_COUNT}.intValue() % 2 != 0]]></conditionExpression>
 		</conditionalStyle>
 	</style>
-	<parameter name="LOGO_PATH" class="java.lang.String">
-		<defaultValueExpression><![CDATA["C:/Users/Lenovo/Downloads/Work_S/MMDC/AOOP/MotorPH-icon.png"]]></defaultValueExpression>
-	</parameter>
+	<parameter name="LOGO_PATH" class="java.io.InputStream"/>
 	<parameter name="REPORT_PERIOD" class="java.lang.String">
 		<defaultValueExpression><![CDATA["All Payroll Records"]]></defaultValueExpression>
 	</parameter>

@@ -22,12 +22,6 @@ public class EmployeePanel extends JPanel {
     private static final Color BORDER_GRAY = new Color(210, 210, 210);
     private static final Color SELECTED_ROW = new Color(225, 230, 245);
 
-    private static final String EMPLOYEE_LIST = "EMPLOYEE_LIST";
-    private static final String EMPLOYEE_FORM = "EMPLOYEE_FORM";
-
-    private static final String VIEW_ALL = "View All";
-    private static final String VIEW_MINE = "View Mine";
-
     private static final String[] COLUMNS = {
         "Employee No.", "Name", "Status", "Position",
         "Immediate Supervisor"
@@ -35,9 +29,8 @@ public class EmployeePanel extends JPanel {
 
     private final EmployeeService employeeService = AppContext.getEmployeeService();
 
-    private CardLayout cardLayout;
-    private JPanel cardPanel;
     private EmployeeFormPanel formPanel;
+    private JDialog employeeDialog;
 
     private DefaultTableModel tableModel;
     private JTable employeeTable;
@@ -49,14 +42,14 @@ public class EmployeePanel extends JPanel {
 
     private final List<Employee> allEmployees = new ArrayList<>();
 
-    private boolean canModifyEmployees;
-    private boolean canViewAllEmployees;
-    private boolean canOpenAnyoneDetails;
     private String currentEmployeeId;
+    private Role currentRole;   // the real logged-in role
+    private Role viewAsRole;    // the role whose access is currently active
 
-    // scope toggle: true = all employees, false = only the logged-in user's record
-    private JComboBox<String> scopeFilter;
-    private boolean viewAllSelected = true;
+    private JComboBox<String> roleFilter;
+    private JButton addButton;
+    private JButton updateButton;
+    private JButton deleteButton;
 
     public EmployeePanel() {
         setLayout(new BorderLayout());
@@ -64,20 +57,14 @@ public class EmployeePanel extends JPanel {
 
         applyRBAC();
 
-        cardLayout = new CardLayout();
-        cardPanel = new JPanel(cardLayout);
-
         JPanel listPanel = buildEmployeeListPanel();
 
         formPanel = new EmployeeFormPanel(() -> {
-            cardLayout.show(cardPanel, EMPLOYEE_LIST);
+            closeEmployeeDialog();
             refreshTable();
         });
 
-        cardPanel.add(listPanel, EMPLOYEE_LIST);
-        cardPanel.add(formPanel, EMPLOYEE_FORM);
-
-        add(cardPanel, BorderLayout.CENTER);
+        add(listPanel, BorderLayout.CENTER);
 
         loadEmployees();
     }
@@ -85,20 +72,27 @@ public class EmployeePanel extends JPanel {
     private void applyRBAC() {
         UserAccount user = Session.getCurrentUser();
         Role role = user == null ? null : user.getRole();
+        currentRole = role == null ? Role.EMPLOYEE : role;
 
         currentEmployeeId = user == null ? "" : String.valueOf(user.getEmployeeId());
 
-        canModifyEmployees = role == Role.ADMIN || role == Role.HR;
-        canViewAllEmployees = role == Role.ADMIN
-                || role == Role.HR
-                || role == Role.IT
-                || role == Role.FINANCE;
+        // The dropdown lets a privileged user act as a lower role; access starts
+        // at their real role on first load, but a previously chosen view is
+        // preserved across refreshes (e.g. after a modal closes) so it doesn't
+        // snap back.
+        if (viewAsRole == null) {
+            viewAsRole = currentRole;
+        }
+    }
 
-        // Finance and IT can view all employees but cannot edit them.
-        canOpenAnyoneDetails = role == Role.ADMIN
-                || role == Role.HR
-                || role == Role.FINANCE
-                || role == Role.IT;
+    /** Admin/HR/Finance/IT all see the full directory; Employee sees only self. */
+    private boolean canViewAll() {
+        return viewAsRole != Role.EMPLOYEE;
+    }
+
+    /** Only Admin and HR may add/update/delete employees. */
+    private boolean canModify() {
+        return viewAsRole == Role.ADMIN || viewAsRole == Role.HR;
     }
 
     private JPanel buildEmployeeListPanel() {
@@ -176,45 +170,69 @@ public class EmployeePanel extends JPanel {
 
         JPanel leftControls = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         leftControls.setOpaque(false);
-        leftControls.add(buildScopeFilter());
+        JComboBox<String> filter = buildRoleFilter();
+        if (filter != null) {
+            leftControls.add(filter);
+        }
 
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         buttons.setOpaque(false);
 
-        if (canModifyEmployees) {
-            buttons.add(navyButton("+", "Add", 90, this::addEmployee));
-            buttons.add(navyButton("✎", "Update", 105, this::updateEmployee));
-            buttons.add(navyButton("🗑", "Delete", 105, this::deleteEmployee));
-        }
+        addButton = navyButton("+", "Add", 90, this::addEmployee);
+        updateButton = navyButton("✎", "Update", 105, this::updateEmployee);
+        deleteButton = navyButton("🗑", "Delete", 105, this::deleteEmployee);
+        buttons.add(addButton);
+        buttons.add(updateButton);
+        buttons.add(deleteButton);
 
         buttons.add(navyButton("⟳", "Refresh", 110, this::refreshTable));
+
+        applyViewCapabilities();
 
         row.add(leftControls, BorderLayout.WEST);
         row.add(buttons, BorderLayout.EAST);
         return row;
     }
 
-    // NEW: builds the View All / View Mine scope dropdown. Privileged roles can
-    // switch between all employees and just their own record; everyone else is
-    // locked to their own record.
-    private JComboBox<String> buildScopeFilter() {
-        scopeFilter = new JComboBox<>(new String[]{ VIEW_ALL, VIEW_MINE });
-        scopeFilter.setFont(new Font("SansSerif", Font.PLAIN, 13));
-        scopeFilter.setPreferredSize(new Dimension(140, 37));
-        scopeFilter.setBackground(Color.WHITE);
-
-        if (canViewAllEmployees) {
-            scopeFilter.setSelectedItem(viewAllSelected ? VIEW_ALL : VIEW_MINE);
-            scopeFilter.addActionListener(e -> {
-                viewAllSelected = VIEW_ALL.equals(scopeFilter.getSelectedItem());
-                loadEmployees();
-            });
-        } else {
-            scopeFilter.setSelectedItem(VIEW_MINE);
-            scopeFilter.setEnabled(false);
+    private JComboBox<String> buildRoleFilter() {
+        String[] views = getAllowedEmployeeRoles(currentRole);
+        if (views.length <= 1) {
+            return null; // pure Employee: nothing to switch, so no role changer
         }
+        roleFilter = new JComboBox<>(views);
+        // Reflect the currently active view so a rebuilt combo (after a modal
+        // closes) stays on the last-selected role instead of resetting.
+        roleFilter.setSelectedItem(viewAsRole.getRoleName());
+        roleFilter.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        roleFilter.setPreferredSize(new Dimension(140, 37));
+        roleFilter.setBackground(Color.WHITE);
+        roleFilter.setFocusable(false);
+        roleFilter.addActionListener(e -> {
+            viewAsRole = Role.fromName((String) roleFilter.getSelectedItem());
+            applyViewCapabilities();
+            loadEmployees();
+        });
+        return roleFilter;
+    }
 
-        return scopeFilter;
+    /** Shows the modify buttons only for views that may edit the directory. */
+    private void applyViewCapabilities() {
+        boolean modify = canModify();
+        if (addButton != null) addButton.setVisible(modify);
+        if (updateButton != null) updateButton.setVisible(modify);
+        if (deleteButton != null) deleteButton.setVisible(modify);
+    }
+
+    /** Returns the roles this login may view the panel as (own role + Employee; Admin sees all). */
+    private static String[] getAllowedEmployeeRoles(Role role) {
+        if (role == null) return new String[]{"Employee"};
+        return switch (role) {
+            case ADMIN -> new String[]{"Admin", "Finance", "HR", "IT", "Employee"};
+            case FINANCE -> new String[]{"Finance", "Employee"};
+            case HR -> new String[]{"HR", "Employee"};
+            case IT -> new String[]{"IT", "Employee"};
+            case EMPLOYEE -> new String[]{"Employee"};
+        };
     }
 
     private JPanel buildTablePanel() {
@@ -281,7 +299,7 @@ public class EmployeePanel extends JPanel {
 
         boolean isSelf = selectedEmployee.getEmployeeId().equals(currentEmployeeId);
 
-        if (!canOpenAnyoneDetails && !isSelf) {
+        if (!canViewAll() && !isSelf) {
             JOptionPane.showMessageDialog(
                     this,
                     "You can only view your own employee details.",
@@ -292,7 +310,7 @@ public class EmployeePanel extends JPanel {
         }
 
         formPanel.setViewMode(selectedEmployee);
-        cardLayout.show(cardPanel, EMPLOYEE_FORM);
+        showEmployeeDialog("Employee Details");
     }
 
     /** Opens the logged-in employee's own record without changing list scope. */
@@ -316,7 +334,7 @@ public class EmployeePanel extends JPanel {
         }
 
         formPanel.setViewMode(employee);
-        cardLayout.show(cardPanel, EMPLOYEE_FORM);
+        showEmployeeDialog("Employee Details");
     }
 
     private Employee getSelectedEmployee() {
@@ -440,14 +458,14 @@ public class EmployeePanel extends JPanel {
 
         List<Employee> employees = employeeService.getAllEmployees();
 
-        boolean showAll = canViewAllEmployees && viewAllSelected;
-
-        if (showAll) {
+        // The dropdown is a role changer, not a directory filter: an all-access
+        // view shows every employee, while the Employee view shows only self.
+        if (canViewAll()) {
             allEmployees.addAll(employees);
         } else {
-            for (Employee emp : employees) {
-                if (emp.getEmployeeId().equals(currentEmployeeId)) {
-                    allEmployees.add(emp);
+            for (Employee employee : employees) {
+                if (employee.getEmployeeId().equals(currentEmployeeId)) {
+                    allEmployees.add(employee);
                     break;
                 }
             }
@@ -507,14 +525,14 @@ public class EmployeePanel extends JPanel {
     }
 
     private void addEmployee() {
-        if (!canModifyEmployees) return;
+        if (!canModify()) return;
 
         formPanel.setAddMode();
-        cardLayout.show(cardPanel, EMPLOYEE_FORM);
+        showEmployeeDialog("Add Employee");
     }
 
     private void updateEmployee() {
-        if (!canModifyEmployees) return;
+        if (!canModify()) return;
 
         Employee selectedEmployee = getSelectedEmployee();
 
@@ -524,10 +542,30 @@ public class EmployeePanel extends JPanel {
         }
 
         formPanel.setUpdateMode(selectedEmployee);
-        cardLayout.show(cardPanel, EMPLOYEE_FORM);
+        showEmployeeDialog("Update Employee");
+    }
+
+    private void showEmployeeDialog(String title) {
+        closeEmployeeDialog();
+
+        Window owner = SwingUtilities.getWindowAncestor(this);
+        employeeDialog = new JDialog(owner, title, Dialog.ModalityType.APPLICATION_MODAL);
+        employeeDialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+        employeeDialog.setContentPane(formPanel);
+        employeeDialog.setSize(720, 760);
+        employeeDialog.setMinimumSize(new Dimension(640, 560));
+        employeeDialog.setLocationRelativeTo(this);
+        employeeDialog.setVisible(true);
+    }
+
+    private void closeEmployeeDialog() {
+        if (employeeDialog != null) {
+            employeeDialog.dispose();
+            employeeDialog = null;
+        }
     }
     private void deleteEmployee() {
-        if (!canModifyEmployees) return;
+        if (!canModify()) return;
 
         Employee selectedEmployee = getSelectedEmployee();
 

@@ -1,5 +1,6 @@
 package com.motorph.ui.employee;
 
+import com.motorph.exception.UnauthorizedException;
 import com.motorph.model.Employee;
 import com.motorph.service.EmployeeService;
 import com.motorph.util.AppContext;
@@ -33,14 +34,21 @@ public class EmployeeFormPanel extends JPanel {
     private final Map<String, Integer> supervisorIdsByName = new LinkedHashMap<>();
     private Map<String, Integer> positionIdsByName = new LinkedHashMap<>();
     private Map<String, Integer> statusIdsByName = new LinkedHashMap<>();
+    private Map<String, Integer> departmentIdsByName = new LinkedHashMap<>();
 
     private boolean updateMode = false;
     private Employee selectedEmployee;
+    // Guards the department combo's listener while we repopulate it programmatically.
+    private boolean loadingDepartments = false;
 
     private JTextField employeeIdField, firstNameField, lastNameField;
+    private JComboBox<String> departmentComboBox;
+    private JTextField departmentField;
+    private JComboBox<String> positionComboBox;
     private JTextField positionField;
     private JTextField statusField;
     private JComboBox<String> supervisorComboBox;
+    private JTextField supervisorField;
     private JComboBox<String> statusComboBox;
 
     private JTextField birthdateField, cellphoneField;
@@ -55,66 +63,69 @@ public class EmployeeFormPanel extends JPanel {
 
     private JButton submitButton;
 
+    private static final int FIELD_WIDTH = 360;
+    private static final int FIELD_HEIGHT = 30;
+    private static final int LABEL_WIDTH = 180;
+
     public EmployeeFormPanel(Runnable onBack) {
         this.onBack = onBack;
         setLayout(new BorderLayout());
         setBackground(Color.WHITE);
-        add(createMainContent(), BorderLayout.CENTER);
+        add(createScrollableContent(), BorderLayout.CENTER);
     }
 
-    private JPanel createMainContent() {
-        JPanel main = new JPanel(null);
-        main.setBackground(Color.WHITE);
-
-        main.addComponentListener(new ComponentAdapter() {
-            @Override
-            public void componentResized(ComponentEvent e) {
-                resizeForm(main);
-            }
-        });
+    private JComponent createScrollableContent() {
+        JPanel content = new JPanel();
+        content.setBackground(Color.WHITE);
+        content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
+        content.setBorder(new EmptyBorder(28, 40, 32, 40));
 
         JLabel back = new JLabel("<html><u>Back</u></html>");
         back.setFont(new Font(FONT, Font.PLAIN, 17));
         back.setForeground(new Color(80, 80, 80));
         back.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        back.setBounds(64, 55, 80, 24);
+        back.setAlignmentX(LEFT_ALIGNMENT);
         back.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
                 if (onBack != null) onBack.run();
             }
         });
-        main.add(back);
+        content.add(back);
+        content.add(Box.createVerticalStrut(26));
 
-        addSection(main, "Basic Information", 64, 111,
+        content.add(buildSection("Basic Information",
                 new String[]{
                     "Employee ID", "First Name", "Last Name",
-                    "Position", "Immediate Supervisor", "Status"
+                    "Department", "Position", "Immediate Supervisor", "Status"
                 },
                 new String[]{
                     "e.g., 10001", "e.g., Juan", "e.g., Dela Cruz",
-                    "e.g., Software Engineer", "e.g., Maria Santos", ""
-                });
+                    "", "", "", ""
+                }));
+        content.add(Box.createVerticalStrut(30));
 
-        addSection(main, "Personal Detail", 290, 111,
+        content.add(buildSection("Personal Detail",
                 new String[]{
                     "Birthdate", "Cellphone No.", "E-mail", "Address"
                 },
                 new String[]{
                     "MM-DD-YYYY", "e.g., 917123456",
                     "e.g., juan@email.com", "e.g., Quezon City"
-                });
+                }));
+        content.add(Box.createVerticalStrut(30));
 
-        addSection(main, "Government ID", 516, 111,
+        content.add(buildSection("Government ID",
                 new String[]{
                     "SSS No.", "PhilHealth No.", "PAG-IBIG No.", "TIN"
                 },
                 new String[]{
                     "44-4506057-3", "820126853951",
                     "691295330870", "442-605-657-000"
-                });
+                }));
+        content.add(Box.createVerticalStrut(30));
 
-        addSection(main, "Compensation", 742, 111,
+        content.add(buildSection("Compensation",
                 new String[]{
                     "Basic Salary", "Gross Semi-Monthly Rate", "Hourly Rate",
                     "Rice Subsidy", "Phone Allowance", "Clothing Allowance"
@@ -122,11 +133,13 @@ public class EmployeeFormPanel extends JPanel {
                 new String[]{
                     "e.g., 50000.00", "Auto-computed", "Auto-computed",
                     "e.g., 1500.00", "e.g., 1000.00", "e.g., 1000.00"
-                });
+                }));
+        content.add(Box.createVerticalStrut(30));
 
         submitButton = new JButton("Submit");
-        submitButton.setName("submit");
-        submitButton.setBounds(830, 577, 113, 39);
+        submitButton.setAlignmentX(LEFT_ALIGNMENT);
+        submitButton.setPreferredSize(new Dimension(FIELD_WIDTH, 42));
+        submitButton.setMaximumSize(new Dimension(FIELD_WIDTH, 42));
         submitButton.setBackground(NAVY);
         submitButton.setForeground(Color.WHITE);
         submitButton.setFocusPainted(false);
@@ -134,137 +147,296 @@ public class EmployeeFormPanel extends JPanel {
         submitButton.setFont(new Font(FONT, Font.PLAIN, 14));
         submitButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         submitButton.addActionListener(e -> saveEmployee());
-        main.add(submitButton);
 
-        return main;
+        JPanel submitRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+        submitRow.setOpaque(false);
+        submitRow.setAlignmentX(LEFT_ALIGNMENT);
+        submitRow.setPreferredSize(new Dimension(LABEL_WIDTH + FIELD_WIDTH + 16, 42));
+        submitRow.setMaximumSize(new Dimension(LABEL_WIDTH + FIELD_WIDTH + 16, 42));
+        submitRow.add(submitButton);
+        content.add(submitRow);
+
+        // Keep the stacked content pinned top-left at its natural size so it
+        // doesn't stretch to fill the viewport; the scroll pane handles overflow.
+        JPanel holder = new JPanel(new BorderLayout());
+        holder.setBackground(Color.WHITE);
+        holder.add(content, BorderLayout.NORTH);
+
+        JScrollPane scroll = new JScrollPane(holder);
+        scroll.setBorder(null);
+        scroll.getViewport().setBackground(Color.WHITE);
+        scroll.getVerticalScrollBar().setUnitIncrement(16);
+        return scroll;
     }
 
-    private void addSection(JPanel parent, String title, int x, int y,
-                            String[] labels, String[] placeholders) {
+    private JPanel buildSection(String title, String[] labels, String[] placeholders) {
         int sectionIndex = getSectionIndex(title);
 
-        JLabel sectionTitle = new JLabel(title);
-        sectionTitle.setName("sectionTitle" + sectionIndex);
-        sectionTitle.setFont(new Font(FONT, Font.BOLD, 20));
-        sectionTitle.setBounds(x, y, 210, 28);
-        parent.add(sectionTitle);
+        JPanel section = new JPanel();
+        section.setOpaque(false);
+        section.setLayout(new BoxLayout(section, BoxLayout.Y_AXIS));
+        section.setAlignmentX(LEFT_ALIGNMENT);
 
-        int currentY = y + 42;
+        JLabel sectionTitle = new JLabel(title);
+        sectionTitle.setFont(new Font(FONT, Font.BOLD, 20));
+        sectionTitle.setAlignmentX(LEFT_ALIGNMENT);
+        section.add(sectionTitle);
+        section.add(Box.createVerticalStrut(16));
 
         for (int i = 0; i < labels.length; i++) {
-            JLabel label = new JLabel(labels[i]);
-            label.setName("fieldLabel_" + sectionIndex + "_" + i);
-            label.setFont(new Font(FONT, Font.PLAIN, 13));
-            label.setBounds(x, currentY, 180, 17);
-            parent.add(label);
-
-            if (sectionIndex == 0 && i == 4) {
-                supervisorComboBox = new JComboBox<>();
-                supervisorComboBox.setName("combo_" + sectionIndex + "_" + i);
-                supervisorComboBox.setFont(new Font(FONT, Font.PLAIN, 13));
-                supervisorComboBox.setBackground(Color.WHITE);
-                supervisorComboBox.setOpaque(true);
-                supervisorComboBox.setBounds(x, currentY + 18, 174, 28);
-                parent.add(supervisorComboBox);
-                loadSupervisorOptions();
-
-                currentY += 57;
-
-            } else if (sectionIndex == 0 && i == 5) {
-                statusComboBox = new JComboBox<>(new String[]{"Regular", "Probationary"});
-                statusComboBox.setName("combo_" + sectionIndex + "_" + i);
-                statusComboBox.setFont(new Font(FONT, Font.PLAIN, 13));
-                statusComboBox.setBackground(Color.WHITE);
-                statusComboBox.setOpaque(true);
-                statusComboBox.setBounds(x, currentY + 18, 174, 28);
-                parent.add(statusComboBox);
-
-                statusField = new JTextField();
-                statusField.setName("field_" + sectionIndex + "_" + i);
-                statusField.setFont(new Font(FONT, Font.PLAIN, 13));
-                statusField.setBackground(Color.WHITE);
-                statusField.setOpaque(true);
-                statusField.setBounds(x, currentY + 18, 174, 28);
-                statusField.setBorder(new CompoundBorder(
-                        new RoundedBorder(6),
-                        new EmptyBorder(2, 8, 2, 8)
-                ));
-                statusField.setEditable(false);
-                statusField.setFocusable(false);
-                statusField.setVisible(false);
-                parent.add(statusField);
-
-                currentY += 57;
-
-            } else if (sectionIndex == 1 && i == 0) {
-                birthdateField = new JTextField();
-                birthdateField.setName("field_" + sectionIndex + "_" + i);
-                birthdateField.setFont(new Font(FONT, Font.PLAIN, 13));
-                birthdateField.setBackground(Color.WHITE);
-                birthdateField.setOpaque(true);
-                birthdateField.setBounds(x, currentY + 18, 136, 28);
-                birthdateField.setBorder(new CompoundBorder(
-                        new RoundedBorder(6),
-                        new EmptyBorder(2, 8, 2, 8)
-                ));
-                setPlaceholder(birthdateField, placeholders[i]);
-                parent.add(birthdateField);
-
-                datePickerButton = new JButton("📅");
-                datePickerButton.setName("dateButton_" + sectionIndex + "_" + i);
-                datePickerButton.setFont(new Font(FONT, Font.PLAIN, 11));
-                datePickerButton.setBounds(x + 140, currentY + 18, 34, 28);
-                datePickerButton.setBackground(Color.WHITE);
-                datePickerButton.setFocusPainted(false);
-                datePickerButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-                datePickerButton.addActionListener(e -> openDatePicker());
-                parent.add(datePickerButton);
-
-                currentY += 57;
-
-            } else if (sectionIndex == 1 && i == 3) {
-                JTextArea area = new JTextArea();
-                area.setName("field_" + sectionIndex + "_" + i);
-                area.setFont(new Font(FONT, Font.PLAIN, 13));
-                area.setLineWrap(true);
-                area.setWrapStyleWord(true);
-                area.setBackground(Color.WHITE);
-                area.setOpaque(true);
-                area.setBounds(x, currentY + 18, 174, 75);
-                area.setBorder(new CompoundBorder(
-                        new RoundedBorder(6),
-                        new EmptyBorder(6, 8, 6, 8)
-                ));
-
-                addressField = area;
-                setPlaceholder(area, placeholders[i]);
-
-                parent.add(area);
-                currentY += 104;
-
-            } else {
-                JTextField field = new JTextField();
-                field.setName("field_" + sectionIndex + "_" + i);
-                field.setFont(new Font(FONT, Font.PLAIN, 13));
-                field.setBackground(Color.WHITE);
-                field.setOpaque(true);
-                field.setBounds(x, currentY + 18, 174, 28);
-                field.setBorder(new CompoundBorder(
-                        new RoundedBorder(6),
-                        new EmptyBorder(2, 8, 2, 8)
-                ));
-
-                assignFieldReference(sectionIndex, i, field);
-                setPlaceholder(field, placeholders[i]);
-
-                if (sectionIndex == 3 && i == 0) {
-                    addSalaryAutoComputeListener(field);
-                }
-
-                parent.add(field);
-                currentY += 57;
-            }
+            section.add(buildRow(labels[i], buildInput(sectionIndex, i, placeholders)));
+            section.add(Box.createVerticalStrut(14));
         }
+
+        return section;
+    }
+
+    // One field per row: a consistent label column followed by its input.
+    private JComponent buildRow(String labelText, JComponent input) {
+        JPanel row = new JPanel(new BorderLayout(16, 0));
+        row.setOpaque(false);
+        row.setAlignmentX(LEFT_ALIGNMENT);
+        row.setPreferredSize(new Dimension(LABEL_WIDTH + FIELD_WIDTH + 16,
+                Math.max(FIELD_HEIGHT, input.getPreferredSize().height)));
+        row.setMaximumSize(new Dimension(LABEL_WIDTH + FIELD_WIDTH + 16,
+                Math.max(FIELD_HEIGHT, input.getPreferredSize().height)));
+
+        JLabel label = new JLabel(labelText);
+        label.setFont(new Font(FONT, Font.PLAIN, 13));
+        label.setPreferredSize(new Dimension(LABEL_WIDTH, FIELD_HEIGHT));
+        label.setVerticalAlignment(SwingConstants.CENTER);
+
+        row.add(label, BorderLayout.WEST);
+        row.add(input, BorderLayout.CENTER);
+        return row;
+    }
+
+    // Builds the input widget for a given section/field, keeping all the
+    // special cases (supervisor combo, status combo+field, birthdate picker,
+    // address text area) and wiring up the field references exactly as before.
+    private JComponent buildInput(int sectionIndex, int i, String[] placeholders) {
+        if (sectionIndex == 0 && i == 3) {
+            departmentComboBox = new JComboBox<>();
+            styleCombo(departmentComboBox);
+            loadDepartmentOptions();
+            // When the department changes, refresh the Position and Supervisor lists.
+            departmentComboBox.addActionListener(e -> onDepartmentChanged());
+
+            departmentField = createReadOnlyField();
+            return buildComboFieldStack(departmentComboBox, departmentField);
+        }
+
+        if (sectionIndex == 0 && i == 4) {
+            positionComboBox = new JComboBox<>();
+            styleCombo(positionComboBox);
+
+            positionField = createReadOnlyField();
+            return buildComboFieldStack(positionComboBox, positionField);
+        }
+
+        if (sectionIndex == 0 && i == 5) {
+            supervisorComboBox = new JComboBox<>();
+            styleCombo(supervisorComboBox);
+            loadSupervisorOptions();
+
+            supervisorField = createReadOnlyField();
+            return buildComboFieldStack(supervisorComboBox, supervisorField);
+        }
+
+        if (sectionIndex == 0 && i == 6) {
+            statusComboBox = new JComboBox<>(new String[]{"Regular", "Probationary"});
+            styleCombo(statusComboBox);
+
+            statusField = createReadOnlyField();
+            return buildComboFieldStack(statusComboBox, statusField);
+        }
+
+        if (sectionIndex == 1 && i == 0) {
+            birthdateField = new JTextField();
+            birthdateField.setFont(new Font(FONT, Font.PLAIN, 13));
+            birthdateField.setBackground(Color.WHITE);
+            birthdateField.setOpaque(true);
+            birthdateField.setBorder(new CompoundBorder(
+                    new RoundedBorder(6),
+                    new EmptyBorder(2, 8, 2, 8)
+            ));
+            setPlaceholder(birthdateField, placeholders[i]);
+
+            datePickerButton = new JButton("📅");
+            datePickerButton.setFont(new Font(FONT, Font.PLAIN, 11));
+            datePickerButton.setPreferredSize(new Dimension(34, FIELD_HEIGHT));
+            datePickerButton.setBackground(Color.WHITE);
+            datePickerButton.setFocusPainted(false);
+            datePickerButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            datePickerButton.addActionListener(e -> openDatePicker());
+
+            JPanel dateRow = new JPanel(new BorderLayout(6, 0));
+            dateRow.setOpaque(false);
+            sizeInput(dateRow);
+            dateRow.add(birthdateField, BorderLayout.CENTER);
+            dateRow.add(datePickerButton, BorderLayout.EAST);
+            return dateRow;
+        }
+
+        if (sectionIndex == 1 && i == 3) {
+            JTextArea area = new JTextArea();
+            area.setFont(new Font(FONT, Font.PLAIN, 13));
+            area.setLineWrap(true);
+            area.setWrapStyleWord(true);
+            area.setBackground(Color.WHITE);
+            area.setOpaque(true);
+            area.setBorder(new CompoundBorder(
+                    new RoundedBorder(6),
+                    new EmptyBorder(6, 8, 6, 8)
+            ));
+            area.setPreferredSize(new Dimension(FIELD_WIDTH, 84));
+            area.setMaximumSize(new Dimension(FIELD_WIDTH, 84));
+
+            addressField = area;
+            setPlaceholder(area, placeholders[i]);
+            return area;
+        }
+
+        JTextField field = new JTextField();
+        field.setFont(new Font(FONT, Font.PLAIN, 13));
+        field.setBackground(Color.WHITE);
+        field.setOpaque(true);
+        field.setBorder(new CompoundBorder(
+                new RoundedBorder(6),
+                new EmptyBorder(2, 8, 2, 8)
+        ));
+        sizeInput(field);
+
+        assignFieldReference(sectionIndex, i, field);
+        setPlaceholder(field, placeholders[i]);
+
+        if (sectionIndex == 3 && i == 0) {
+            addSalaryAutoComputeListener(field);
+        }
+
+        return field;
+    }
+
+    private void styleCombo(JComboBox<?> combo) {
+        combo.setFont(new Font(FONT, Font.PLAIN, 13));
+        combo.setOpaque(false);
+        sizeInput(combo);
+    }
+
+    // Locks an input to the standard field width/height so BoxLayout renders a
+    // consistent single column instead of stretching inputs across the page.
+    private void sizeInput(JComponent c) {
+        c.setPreferredSize(new Dimension(FIELD_WIDTH, FIELD_HEIGHT));
+        c.setMaximumSize(new Dimension(FIELD_WIDTH, FIELD_HEIGHT));
+        c.setMinimumSize(new Dimension(160, FIELD_HEIGHT));
+    }
+
+    // Read-only text field shown in place of a combo in view mode.
+    private JTextField createReadOnlyField() {
+        JTextField field = new JTextField();
+        field.setFont(new Font(FONT, Font.PLAIN, 13));
+        field.setBackground(Color.WHITE);
+        field.setOpaque(true);
+        field.setBorder(new CompoundBorder(
+                new RoundedBorder(6),
+                new EmptyBorder(2, 8, 2, 8)
+        ));
+        field.setEditable(false);
+        field.setFocusable(false);
+        field.setVisible(false);
+        return field;
+    }
+
+    // Overlaps a combo + read-only field in one cell; visibility decides which
+    // one shows (combo for add/update, field for view mode) so read-only mode
+    // shows plain black text instead of a low-contrast disabled combo.
+    private JPanel buildComboFieldStack(JComboBox<?> combo, JTextField field) {
+        JPanel stack = new JPanel(new GridBagLayout());
+        stack.setOpaque(false);
+        sizeInput(stack);
+        GridBagConstraints gc = new GridBagConstraints();
+        gc.gridx = 0;
+        gc.gridy = 0;
+        gc.fill = GridBagConstraints.BOTH;
+        gc.weightx = 1;
+        gc.weighty = 1;
+        stack.add(combo, gc);
+        stack.add(field, gc);
+        return stack;
+    }
+
+    // ---------------------------------------------------------------
+    // Department -> Position / Supervisor cascade
+    // ---------------------------------------------------------------
+
+    private void loadDepartmentOptions() {
+        if (departmentComboBox == null) {
+            return;
+        }
+        loadingDepartments = true;
+        departmentIdsByName = employeeService.getDepartments();
+        departmentComboBox.removeAllItems();
+        for (String name : departmentIdsByName.keySet()) {
+            departmentComboBox.addItem(name);
+        }
+        loadingDepartments = false;
+    }
+
+    private void onDepartmentChanged() {
+        if (loadingDepartments) {
+            return;
+        }
+        reloadPositionsForSelectedDepartment(null);
+        loadSupervisorOptions();
+    }
+
+    private Integer getSelectedDepartmentId() {
+        Object selected = departmentComboBox == null ? null : departmentComboBox.getSelectedItem();
+        return selected == null ? null : departmentIdsByName.get(selected.toString());
+    }
+
+    private String getSelectedDepartmentName() {
+        Object selected = departmentComboBox == null ? null : departmentComboBox.getSelectedItem();
+        return selected == null ? "" : selected.toString();
+    }
+
+    // Selects a department without triggering the cascade listener; callers
+    // repopulate the dependent lists explicitly afterwards.
+    private void selectDepartment(String departmentName) {
+        if (departmentComboBox == null) {
+            return;
+        }
+        loadingDepartments = true;
+        if (departmentName != null && departmentIdsByName.containsKey(departmentName)) {
+            departmentComboBox.setSelectedItem(departmentName);
+        } else if (departmentComboBox.getItemCount() > 0) {
+            departmentComboBox.setSelectedIndex(0);
+        }
+        loadingDepartments = false;
+    }
+
+    private void reloadPositionsForSelectedDepartment(String positionToSelect) {
+        if (positionComboBox == null) {
+            return;
+        }
+        Integer deptId = getSelectedDepartmentId();
+        positionIdsByName = deptId == null
+                ? new LinkedHashMap<>()
+                : employeeService.getPositionsByDepartment(deptId);
+
+        positionComboBox.removeAllItems();
+        for (String name : positionIdsByName.keySet()) {
+            positionComboBox.addItem(name);
+        }
+
+        if (positionToSelect != null && positionIdsByName.containsKey(positionToSelect)) {
+            positionComboBox.setSelectedItem(positionToSelect);
+        }
+    }
+
+    private String getSelectedPosition() {
+        Object selected = positionComboBox == null ? null : positionComboBox.getSelectedItem();
+        return selected == null ? "" : selected.toString();
     }
 
     private void assignFieldReference(int sectionIndex, int fieldIndex, JTextField field) {
@@ -273,7 +445,8 @@ public class EmployeeFormPanel extends JPanel {
                 case 0 -> employeeIdField = field;
                 case 1 -> firstNameField = field;
                 case 2 -> lastNameField = field;
-                case 3 -> positionField = field;
+                // 3 = Department, 4 = Position, 5 = Supervisor, 6 = Status are
+                // combo-backed and handled directly in buildInput.
             }
         } else if (sectionIndex == 1) {
             switch (fieldIndex) {
@@ -489,7 +662,7 @@ public class EmployeeFormPanel extends JPanel {
             if (!validationError.isBlank()) {
                 JOptionPane.showMessageDialog(
                         this,
-                        validationError,
+                        buildValidationMessage(validationError),
                         "Validation Error",
                         JOptionPane.WARNING_MESSAGE
                 );
@@ -508,15 +681,73 @@ public class EmployeeFormPanel extends JPanel {
 
             if (onBack != null) onBack.run();
 
-        } catch (Exception ex) {
-            ex.printStackTrace();
+        } catch (IllegalArgumentException ex) {
+            // The service validates every field and throws a precise, field-specific
+            // message (e.g. "Address is required."). Show that verbatim so the user
+            // knows exactly which field to fix instead of a vague "failed to save".
             JOptionPane.showMessageDialog(
                     this,
-                    "Failed to save employee. Please check that all required fields are complete and valid.",
+                    buildValidationMessage(ex.getMessage()),
+                    "Validation Error",
+                    JOptionPane.WARNING_MESSAGE
+            );
+        } catch (UnauthorizedException ex) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    ex.getMessage(),
+                    "Not Allowed",
+                    JOptionPane.WARNING_MESSAGE
+            );
+        } catch (Exception ex) {
+            ex.printStackTrace();
+
+            // Only genuinely unexpected failures (e.g. database errors) reach here.
+            // Surface the underlying cause so it isn't a dead-end "failed to save".
+            Throwable root = ex;
+            while (root.getCause() != null) {
+                root = root.getCause();
+            }
+
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Failed to save employee.\n\n" + root.getMessage(),
                     "Save Error",
                     JOptionPane.ERROR_MESSAGE
             );
         }
+    }
+
+    // Turns the raw newline-separated errors into a clear, scannable list so
+    // the user can see exactly which fields need fixing (as an HTML bullet list
+    // whose count is shown in the header).
+    private String buildValidationMessage(String rawErrors) {
+        String[] lines = rawErrors.split("\n");
+
+        int count = 0;
+        StringBuilder items = new StringBuilder();
+        for (String line : lines) {
+            if (!line.isBlank()) {
+                count++;
+                items.append("<li>")
+                     .append(escapeHtml(line.trim()))
+                     .append("</li>");
+            }
+        }
+
+        String header = count == 1
+                ? "Please fix the following issue before saving:"
+                : "Please fix the following " + count + " issues before saving:";
+
+        return "<html><body style='width:320px; font-family:Segoe UI; font-size:11px;'>"
+                + "<p style='margin:0 0 6px 0;'><b>" + header + "</b></p>"
+                + "<ul style='margin:0; padding-left:18px;'>" + items + "</ul>"
+                + "</body></html>";
+    }
+
+    private String escapeHtml(String value) {
+        return value.replace("&", "&amp;")
+                    .replace("<", "&lt;")
+                    .replace(">", "&gt;");
     }
 
     private String validateForm() {
@@ -525,7 +756,7 @@ public class EmployeeFormPanel extends JPanel {
         String employeeId = getValue(employeeIdField);
         String firstName = getValue(firstNameField);
         String lastName = getValue(lastNameField);
-        String position = getValue(positionField);
+        String position = getSelectedPosition();
         String status = getSelectedStatus();
         String birthdate = getValue(birthdateField);
         String cellphone = cleanDigits(getValue(cellphoneField));
@@ -555,10 +786,17 @@ public class EmployeeFormPanel extends JPanel {
             errors.append("Birthdate is required.\n");
         } else {
             try {
-                LocalDate.parse(birthdate, DATE_FORMATTER);
-            } catch (Exception ex) {
+                LocalDate parsedBirthdate = LocalDate.parse(birthdate, DATE_FORMATTER);
+                if (java.time.Period.between(parsedBirthdate, LocalDate.now()).getYears() < 18) {
+                    errors.append("Employee must be at least 18 years old.\n");
+                }
+            } catch (java.time.format.DateTimeParseException ex) {
                 errors.append("Birthdate must be in MM-DD-YYYY format.\n");
             }
+        }
+
+        if (getValue(addressField).isBlank()) {
+            errors.append("Address is required.\n");
         }
 
         String sssDigits = sss.replaceAll("\\D", "");
@@ -656,7 +894,8 @@ public class EmployeeFormPanel extends JPanel {
         employee.setEmployeeId(getValue(employeeIdField));
         employee.setFirstName(getValue(firstNameField));
         employee.setLastName(getValue(lastNameField));
-        employee.setPosition(getValue(positionField));
+        employee.setDepartment(getSelectedDepartmentName());
+        employee.setPosition(getSelectedPosition());
         employee.setPositionId(findIdIgnoreCase(positionIdsByName, employee.getPosition()));
         String supervisorName = getSelectedSupervisorName();
         employee.setImmediateSupervisor(supervisorName);
@@ -669,10 +908,12 @@ public class EmployeeFormPanel extends JPanel {
         employee.setEmail(getValue(emailField));
         employee.setAddress(getValue(addressField));
 
-        employee.setSSSNumber(getValue(sssField));
-        employee.setPhilhealthNumber(getValue(philhealthField));
-        employee.setPagIbigNumber(getValue(pagibigField));
-        employee.setTIN(getValue(tinField));
+        // Government IDs are entered/displayed with hyphens, but stored as digits
+        // only — strip separators here so persistence is consistent.
+        employee.setSSSNumber(cleanDigits(getValue(sssField)));
+        employee.setPhilhealthNumber(cleanDigits(getValue(philhealthField)));
+        employee.setPagIbigNumber(cleanDigits(getValue(pagibigField)));
+        employee.setTIN(cleanDigits(getValue(tinField)));
 
         employee.setBasicSalary(parseDouble(getValue(basicSalaryField)));
         employee.setRiceSubsidy(parseDouble(getValue(riceSubsidyField)));
@@ -684,7 +925,8 @@ public class EmployeeFormPanel extends JPanel {
     }
 
     private void loadEmployeeLookupValues() {
-        positionIdsByName = employeeService.getAvailablePositions();
+        // positionIdsByName is maintained per-selected-department by the
+        // department -> position cascade, so we only refresh statuses here.
         statusIdsByName = employeeService.getEmploymentStatuses();
     }
 
@@ -702,17 +944,34 @@ public class EmployeeFormPanel extends JPanel {
         selectedEmployee = null;
 
         clearFields();
+        // Default to the first department, then load its positions/supervisors.
+        selectDepartment(null);
+        reloadPositionsForSelectedDepartment(null);
         loadSupervisorOptions();
         restorePlaceholders();
         setFieldsEditable(true);
 
-        employeeIdField.setEditable(true);
-        employeeIdField.setFocusable(true);
+        // Employee ID is system-generated (next sequential id), never typed in.
+        employeeIdField.setText(employeeService.getNextEmployeeId());
+        employeeIdField.setForeground(Color.BLACK);
+        employeeIdField.setEditable(false);
+        employeeIdField.setFocusable(false);
+        employeeIdField.setBackground(new Color(245, 245, 245));
+
+        departmentComboBox.setVisible(true);
+        departmentField.setVisible(false);
+
+        positionComboBox.setVisible(true);
+        positionField.setVisible(false);
 
         statusComboBox.setVisible(true);
         statusComboBox.setSelectedItem("Regular");
 
         statusField.setVisible(false);
+
+        supervisorComboBox.setVisible(true);
+        supervisorField.setVisible(false);
+
         datePickerButton.setVisible(true);
 
         birthdateField.setEditable(true);
@@ -739,8 +998,18 @@ public class EmployeeFormPanel extends JPanel {
         employeeIdField.setEditable(false);
         employeeIdField.setFocusable(false);
 
+        departmentComboBox.setVisible(true);
+        departmentField.setVisible(false);
+
+        positionComboBox.setVisible(true);
+        positionField.setVisible(false);
+
         statusComboBox.setVisible(true);
         statusField.setVisible(false);
+
+        supervisorComboBox.setVisible(true);
+        supervisorField.setVisible(false);
+
         datePickerButton.setVisible(true);
 
         birthdateField.setEditable(true);
@@ -765,8 +1034,20 @@ public class EmployeeFormPanel extends JPanel {
         populateFields(employee);
         setFieldsEditable(false);
 
+        departmentComboBox.setVisible(false);
+        departmentField.setText(getSelectedDepartmentName());
+        departmentField.setVisible(true);
+
+        positionComboBox.setVisible(false);
+        positionField.setText(getSelectedPosition());
+        positionField.setVisible(true);
+
         statusComboBox.setVisible(false);
         statusField.setVisible(true);
+
+        supervisorComboBox.setVisible(false);
+        supervisorField.setText(getSelectedSupervisorName());
+        supervisorField.setVisible(true);
 
         datePickerButton.setVisible(false);
 
@@ -793,11 +1074,10 @@ public class EmployeeFormPanel extends JPanel {
     }
 
     private void refreshFormLayout() {
-        Container parent = birthdateField == null ? null : birthdateField.getParent();
-
-        if (parent instanceof JPanel panel) {
-            resizeForm(panel);
-        }
+        // Visibility of the status combo/field, date-picker button and submit
+        // button changes between modes; a revalidate re-flows the vertical stack.
+        revalidate();
+        repaint();
     }
 
     private void setFieldsEditable(boolean editable) {
@@ -831,7 +1111,14 @@ public class EmployeeFormPanel extends JPanel {
         employeeIdField.setText(safe(emp.getEmployeeId()));
         firstNameField.setText(safe(emp.getFirstName()));
         lastNameField.setText(safe(emp.getLastName()));
+
+        // Department drives the Position + Supervisor lists, so set it first,
+        // then repopulate and select the employee's actual position/supervisor.
+        selectDepartment(safe(emp.getDepartment()));
+        departmentField.setText(safe(emp.getDepartment()));
+        reloadPositionsForSelectedDepartment(safe(emp.getPosition()));
         positionField.setText(safe(emp.getPosition()));
+        loadSupervisorOptions();
         selectSupervisor(emp.getImmediateSupervisor());
 
         String status = safe(emp.getStatus());
@@ -887,7 +1174,16 @@ public class EmployeeFormPanel extends JPanel {
         supervisorComboBox.removeAllItems();
         supervisorComboBox.addItem(NO_SUPERVISOR);
 
+        // Only offer supervisors from the currently selected department, so the
+        // available supervisors track the chosen department.
+        String selectedDepartment = getSelectedDepartmentName();
+
         for (Employee employee : employeeService.getAllEmployees()) {
+            if (!selectedDepartment.isBlank()
+                    && !selectedDepartment.equalsIgnoreCase(safe(employee.getDepartment()))) {
+                continue;
+            }
+
             String name = employee.getFullName().trim();
             String employeeId = employee.getEmployeeId();
 
@@ -1097,84 +1393,6 @@ public class EmployeeFormPanel extends JPanel {
 
     private String safe(Object value) {
         return value == null ? "" : value.toString();
-    }
-
-    private void resizeForm(JPanel main) {
-        int leftMargin = 64;
-        int rightMargin = 80;
-        int gap = 60;
-        int columnCount = 4;
-
-        int availableWidth = main.getWidth() - leftMargin - rightMargin;
-        int fieldWidth = (availableWidth - (gap * (columnCount - 1))) / columnCount;
-
-        int[] xPositions = new int[columnCount];
-
-        for (int i = 0; i < columnCount; i++) {
-            xPositions[i] = leftMargin + i * (fieldWidth + gap);
-        }
-
-        for (Component c : main.getComponents()) {
-            if (c instanceof JLabel label
-                    && label.getName() != null
-                    && label.getName().startsWith("sectionTitle")) {
-
-                int index = Integer.parseInt(label.getName().replace("sectionTitle", ""));
-                label.setBounds(xPositions[index], label.getY(), fieldWidth, label.getHeight());
-            }
-
-            if (c instanceof JLabel label
-                    && label.getName() != null
-                    && label.getName().startsWith("fieldLabel")) {
-
-                int index = Integer.parseInt(label.getName().split("_")[1]);
-                label.setBounds(xPositions[index], label.getY(), fieldWidth, label.getHeight());
-            }
-
-            if (c instanceof JTextField field
-                    && field.getName() != null
-                    && field.getName().startsWith("field")) {
-
-                int index = Integer.parseInt(field.getName().split("_")[1]);
-
-                if (field == birthdateField && datePickerButton != null && datePickerButton.isVisible()) {
-                    field.setBounds(xPositions[index], field.getY(), fieldWidth - 38, field.getHeight());
-                } else {
-                    field.setBounds(xPositions[index], field.getY(), fieldWidth, field.getHeight());
-                }
-            }
-
-            if (c instanceof JTextArea area
-                    && area.getName() != null
-                    && area.getName().startsWith("field")) {
-
-                int index = Integer.parseInt(area.getName().split("_")[1]);
-                area.setBounds(xPositions[index], area.getY(), fieldWidth, area.getHeight());
-            }
-
-            if (c instanceof JComboBox<?> comboBox
-                    && comboBox.getName() != null
-                    && comboBox.getName().startsWith("combo")) {
-
-                int index = Integer.parseInt(comboBox.getName().split("_")[1]);
-                comboBox.setBounds(xPositions[index], comboBox.getY(), fieldWidth, comboBox.getHeight());
-            }
-
-            if (c instanceof JButton button
-                    && button.getName() != null
-                    && button.getName().startsWith("dateButton")) {
-
-                int index = Integer.parseInt(button.getName().split("_")[1]);
-                button.setBounds(xPositions[index] + fieldWidth - 34, button.getY(), 34, button.getHeight());
-            }
-
-            if (c instanceof JButton button && "submit".equals(button.getName())) {
-                button.setBounds(main.getWidth() - rightMargin - 113, 577, 113, 39);
-            }
-        }
-
-        main.revalidate();
-        main.repaint();
     }
 
     private int getSectionIndex(String title) {

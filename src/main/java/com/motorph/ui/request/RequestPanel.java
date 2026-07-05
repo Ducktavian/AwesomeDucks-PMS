@@ -3,15 +3,15 @@ package com.motorph.ui.request;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
-import java.awt.Container;
 import java.awt.Cursor;
+import java.awt.Dialog;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.Window;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.Image;
 import java.awt.Insets;
 import java.awt.RenderingHints;
 import java.awt.event.FocusAdapter;
@@ -32,14 +32,12 @@ import java.util.Map;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
-import javax.swing.ImageIcon;
 import javax.swing.JButton;
-import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
+import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JRadioButton;
 import javax.swing.JScrollBar;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
@@ -50,6 +48,8 @@ import javax.swing.RowFilter;
 import javax.swing.RowSorter;
 import javax.swing.SortOrder;
 import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
+import javax.swing.WindowConstants;
 import javax.swing.border.AbstractBorder;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
@@ -87,9 +87,6 @@ public class RequestPanel extends JPanel {
     private static final int STATUS_COL = 9;
     private static final int EMPLOYEE_ID_COL = 10;
 
-    private static final String VIEW_ALL = "View All";
-    private static final String VIEW_MINE = "View Mine";
-
     private static final String[] COLUMNS = {
         "Name", "Position", "Request Type", "Start Date", "End Date",
         "Start Time", "End Time", "Reason", "Notes", "Status", "Employee ID"
@@ -106,13 +103,15 @@ public class RequestPanel extends JPanel {
     private JTextField searchField;
     private TableRowSorter<DefaultTableModel> sorter;
 
-    private boolean canViewAllRequests;
-    private boolean canModifyAllRequests;
     private String currentEmployeeId;
+    private Role currentRole;   // the real logged-in role
+    private Role viewAsRole;    // the role whose access is currently active
 
-    // scope toggle: true = everyone's requests, false = only the logged-in user's
-    private JComboBox<String> scopeFilter;
-    private boolean viewAllSelected = true;
+    private JComboBox<String> roleFilter;
+    private JButton addButton;
+    private JButton updateButton;
+    private JButton deleteButton;
+    private JDialog requestDialog;
 
     private int sortedColumn = -1;
     private SortOrder currentSortOrder = SortOrder.UNSORTED;
@@ -135,14 +134,26 @@ public class RequestPanel extends JPanel {
     private void applyRBAC() {
         UserAccount user = Session.getCurrentUser();
         Role role = user == null ? null : user.getRole();
+        currentRole = role == null ? Role.EMPLOYEE : role;
 
         currentEmployeeId = user == null ? "" : String.valueOf(user.getEmployeeId());
-        canViewAllRequests = role == Role.ADMIN || role == Role.HR;
-        canModifyAllRequests = role == Role.ADMIN || role == Role.HR;
+
+        // The dropdown acts as a role changer; access starts at the real role
+        // on first load, but a previously chosen view is preserved across
+        // refreshes (e.g. after a modal closes) so it doesn't snap back.
+        if (viewAsRole == null) {
+            viewAsRole = currentRole;
+        }
     }
 
-    private boolean canSeeRow(String employeeId) {
-        return canViewAllRequests || employeeId.equals(currentEmployeeId);
+    /** Only Admin and HR see every request; other views see their own only. */
+    private boolean canViewAll() {
+        return viewAsRole == Role.ADMIN || viewAsRole == Role.HR;
+    }
+
+    /** Update/Delete of any request are limited to Admin and HR. */
+    private boolean canModify() {
+        return viewAsRole == Role.ADMIN || viewAsRole == Role.HR;
     }
 
     private boolean isPending(Object[] row) {
@@ -152,7 +163,7 @@ public class RequestPanel extends JPanel {
     }
 
     private boolean canModifyRequest(Object[] row) {
-        if (canViewAllRequests) {
+        if (canViewAll()) {
             return true;
         }
 
@@ -175,11 +186,10 @@ public class RequestPanel extends JPanel {
         requests.clear();
 
         try {
+            // Role changer, not a filter: all-access views pull every request,
+            // self-scoped views pull only the logged-in user's own requests.
             List<Request> loaded;
-
-            boolean showAll = canViewAllRequests && viewAllSelected;
-
-            if (showAll) {
+            if (canViewAll()) {
                 loaded = requestService.findAll();
             } else if (!currentEmployeeId.isBlank()) {
                 loaded = requestService.findByEmployee(Integer.parseInt(currentEmployeeId));
@@ -330,56 +340,81 @@ public class RequestPanel extends JPanel {
 
         JPanel leftControls = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         leftControls.setOpaque(false);
-        leftControls.add(buildScopeFilter());
+        JComboBox<String> filter = buildRoleFilter();
+        if (filter != null) {
+            leftControls.add(filter);
+        }
 
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         buttons.setOpaque(false);
 
-        JButton addButton = navyButton("Add-Icon.png", "Add", 90);
+        // Add is always present; in a self-scoped view it becomes "File Request"
+        // (you file your own), while Admin/HR use it to add for anyone.
+        addButton = button("+  Add", 120);
         addButton.addActionListener(e -> openAddForm());
         buttons.add(addButton);
 
-        JButton updateButton = navyButton("Update-Icon.png", "Update", 105);
-        updateButton.setVisible(canModifyAllRequests);
+        updateButton = button("✎  Update", 105);
         updateButton.addActionListener(e -> openUpdateForm());
         buttons.add(updateButton);
 
-        JButton deleteButton = navyButton("Delete-Icon.png", "Delete", 105);
-        deleteButton.setVisible(canModifyAllRequests);
+        deleteButton = button("🗑  Delete", 105);
         deleteButton.addActionListener(e -> deleteSelectedRequest());
         buttons.add(deleteButton);
 
-        JButton refreshButton = navyButton("Refresh-Icon.png", "Refresh", 110);
+        JButton refreshButton = button("⟳  Refresh", 110);
         refreshButton.addActionListener(e -> showRequestList()); // reloads from DB
         buttons.add(refreshButton);
+
+        applyViewCapabilities();
 
         row.add(leftControls, BorderLayout.WEST);
         row.add(buttons, BorderLayout.EAST);
         return row;
     }
 
-    // NEW: builds the View All / View Mine scope dropdown. Privileged roles can
-    // switch between everyone's requests and their own; everyone else is locked
-    // to their own records.
-    private JComboBox<String> buildScopeFilter() {
-        scopeFilter = new JComboBox<>(new String[]{ VIEW_ALL, VIEW_MINE });
-        scopeFilter.setFont(new Font(FONT, Font.PLAIN, 13));
-        scopeFilter.setPreferredSize(new Dimension(140, 37));
-        scopeFilter.setBackground(Color.WHITE);
-
-        if (canViewAllRequests) {
-            scopeFilter.setSelectedItem(viewAllSelected ? VIEW_ALL : VIEW_MINE);
-            scopeFilter.addActionListener(e -> {
-                viewAllSelected = VIEW_ALL.equals(scopeFilter.getSelectedItem());
-                loadRequestRows();
-                refreshTableRows();
-            });
-        } else {
-            scopeFilter.setSelectedItem(VIEW_MINE);
-            scopeFilter.setEnabled(false);
+    private JComboBox<String> buildRoleFilter() {
+        String[] views = getAllowedRequestRoles(currentRole);
+        if (views.length <= 1) {
+            return null; // pure Employee: nothing to switch, so no role changer
         }
+        roleFilter = new JComboBox<>(views);
+        // Reflect the currently active view so a rebuilt combo (after a modal
+        // closes) stays on the last-selected role instead of resetting.
+        roleFilter.setSelectedItem(viewAsRole.getRoleName());
+        roleFilter.setFont(new Font(FONT, Font.PLAIN, 13));
+        roleFilter.setPreferredSize(new Dimension(140, 37));
+        roleFilter.setBackground(Color.WHITE);
+        roleFilter.setFocusable(false);
+        roleFilter.addActionListener(e -> {
+            viewAsRole = Role.fromName((String) roleFilter.getSelectedItem());
+            applyViewCapabilities();
+            loadRequestRows();
+            refreshTableRows();
+        });
+        return roleFilter;
+    }
 
-        return scopeFilter;
+    /** Relabels Add and toggles Update/Delete to match the active view. */
+    private void applyViewCapabilities() {
+        if (addButton != null) {
+            addButton.setText(canViewAll() ? "+  Add" : "+  File Request");
+        }
+        boolean modify = canModify();
+        if (updateButton != null) updateButton.setVisible(modify);
+        if (deleteButton != null) deleteButton.setVisible(modify);
+    }
+
+    /** Returns the roles this login may view the panel as (own role + Employee; Admin sees all). */
+    private static String[] getAllowedRequestRoles(Role role) {
+        if (role == null) return new String[]{"Employee"};
+        return switch (role) {
+            case ADMIN -> new String[]{"Admin", "Finance", "HR", "IT", "Employee"};
+            case FINANCE -> new String[]{"Finance", "Employee"};
+            case HR -> new String[]{"HR", "Employee"};
+            case IT -> new String[]{"IT", "Employee"};
+            case EMPLOYEE -> new String[]{"Employee"};
+        };
     }
 
     // NEW: repopulate the table from the currently loaded rows. Used when the
@@ -392,21 +427,21 @@ public class RequestPanel extends JPanel {
         tableModel.setRowCount(0);
 
         for (Object[] row : requestRows) {
-            if (canSeeRow(String.valueOf(row[EMPLOYEE_ID_COL]))) {
-                tableModel.addRow(row);
-            }
+            tableModel.addRow(row);
         }
     }
 
     private void openAddForm() {
-        removeAll();
-        setLayout(new BorderLayout());
+        // Employee view files their own (name/position auto-filled); privileged
+        // views file for anyone through an employee picker.
+        RequestFormPanel.Mode mode = canViewAll()
+                ? RequestFormPanel.Mode.ADD_OTHER
+                : RequestFormPanel.Mode.ADD_SELF;
 
-        // the form submits the new request to the DB itself; just reload on back
-        add(new RequestFormPanel(this::showRequestList), BorderLayout.CENTER);
+        RequestFormPanel form = new RequestFormPanel(
+                this::onRequestFormClosed, mode, null, null);
 
-        revalidate();
-        repaint();
+        showRequestDialog(form, canViewAll() ? "Add Request" : "File Request");
     }
 
     private void openUpdateForm() {
@@ -432,21 +467,14 @@ public class RequestPanel extends JPanel {
         Object[] existingData = toFormData(selectedRow);
         Request original = requests.get(selectedIndex); // real request behind the row
 
-        removeAll();
-        setLayout(new BorderLayout());
-
         // persist the edit to the DB, keeping the original request's identity/type
-        add(new RequestFormPanel(
-                this::showRequestList,
+        RequestFormPanel form = new RequestFormPanel(
+                this::onRequestFormClosed,
+                RequestFormPanel.Mode.EDIT,
                 existingData,
-                updatedData -> {
-                    persistUpdate(original, updatedData);
-                    showRequestList();
-                }
-        ), BorderLayout.CENTER);
+                updatedData -> persistUpdate(original, updatedData));
 
-        revalidate();
-        repaint();
+        showRequestDialog(form, "Update Request");
     }
 
     private void openViewOnlyForm() {
@@ -456,20 +484,38 @@ public class RequestPanel extends JPanel {
             return;
         }
 
-        RequestFormPanel formPanel = new RequestFormPanel(
-                this::showRequestList,
+        RequestFormPanel form = new RequestFormPanel(
+                this::onRequestFormClosed,
+                RequestFormPanel.Mode.VIEW,
                 toFormData(requestRows.get(selectedIndex)),
-                updatedData -> {
-                }
-        );
+                null);
 
-        setViewOnly(formPanel);
+        showRequestDialog(form, "Request Details");
+    }
 
-        removeAll();
-        setLayout(new BorderLayout());
-        add(formPanel, BorderLayout.CENTER);
-        revalidate();
-        repaint();
+    private void showRequestDialog(RequestFormPanel form, String title) {
+        closeRequestDialog();
+
+        Window owner = SwingUtilities.getWindowAncestor(this);
+        requestDialog = new JDialog(owner, title, Dialog.ModalityType.APPLICATION_MODAL);
+        requestDialog.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+        requestDialog.setContentPane(form);
+        requestDialog.setSize(560, 720);
+        requestDialog.setMinimumSize(new Dimension(520, 560));
+        requestDialog.setLocationRelativeTo(this);
+        requestDialog.setVisible(true);
+    }
+
+    private void onRequestFormClosed() {
+        closeRequestDialog();
+        showRequestList();
+    }
+
+    private void closeRequestDialog() {
+        if (requestDialog != null) {
+            requestDialog.dispose();
+            requestDialog = null;
+        }
     }
 
     private void deleteSelectedRequest() {
@@ -597,9 +643,7 @@ public class RequestPanel extends JPanel {
         };
 
         for (Object[] row : requestRows) {
-            if (canSeeRow(String.valueOf(row[EMPLOYEE_ID_COL]))) {
-                tableModel.addRow(row);
-            }
+            tableModel.addRow(row);
         }
 
         requestTable = new JTable(tableModel);
@@ -753,70 +797,17 @@ public class RequestPanel extends JPanel {
         sorter.setRowFilter(RowFilter.regexFilter("(?i)" + java.util.regex.Pattern.quote(query)));
     }
 
-    private void setViewOnly(Container container) {
-        for (Component component : container.getComponents()) {
-            if (component instanceof JTextField textField) {
-                textField.setEditable(false);
-            } else if (component instanceof JTextArea textArea) {
-                textArea.setEditable(false);
-            } else if (component instanceof JComboBox<?>) {
-                component.setEnabled(false);
-            } else if (component instanceof JCheckBox) {
-                component.setEnabled(false);
-            } else if (component instanceof JRadioButton) {
-                component.setEnabled(false);
-            } else if (component instanceof JButton button) {
-                String text = button.getText() == null ? "" : button.getText().trim();
-
-                if (text.equalsIgnoreCase("Submit")
-                        || text.equalsIgnoreCase("Save")
-                        || text.equalsIgnoreCase("Confirm")
-                        || text.equalsIgnoreCase("Add")
-                        || text.equalsIgnoreCase("Update")) {
-                    button.setVisible(false);
-                }
-            }
-
-            if (component instanceof Container child) {
-                setViewOnly(child);
-            }
-        }
-    }
-
-    private JButton navyButton(String iconFileName, String text, int width) {
-        JButton button = new JButton(text);
-        button.setPreferredSize(new Dimension(width, 37));
-        button.setBackground(NAVY);
-        button.setForeground(Color.WHITE);
-        button.setFont(new Font(FONT, Font.PLAIN, 13));
-        button.setFocusPainted(false);
-        button.setBorderPainted(false);
-        button.setMargin(new Insets(0, 10, 0, 10));
-        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-
-        ImageIcon icon = loadIcon(iconFileName, 16, 16);
-        if (icon != null) {
-            button.setIcon(icon);
-            button.setIconTextGap(8);
-        }
-
-        return button;
-    }
-
-    // Loads an icon from the classpath (src/main/java/com/motorph/img/) and
-    // scales it. Returns null (button falls back to text-only) if the file
-    // isn't found, so a bad path never crashes the UI.
-    private ImageIcon loadIcon(String fileName, int width, int height) {
-        java.net.URL url = getClass().getResource("/com/motorph/img/" + fileName);
-
-        if (url == null) {
-            System.err.println("Icon not found: /com/motorph/img/" + fileName);
-            return null;
-        }
-
-        ImageIcon rawIcon = new ImageIcon(url);
-        Image scaled = rawIcon.getImage().getScaledInstance(width, height, Image.SCALE_SMOOTH);
-        return new ImageIcon(scaled);
+    private JButton button(String text, int width) {
+        JButton btn = new JButton(text);
+        btn.setPreferredSize(new Dimension(width, 37));
+        btn.setBackground(NAVY);
+        btn.setForeground(Color.WHITE);
+        btn.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        btn.setFocusPainted(false);
+        btn.setBorderPainted(false);
+        btn.setMargin(new Insets(0, 8, 0, 8));
+        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        return btn;
     }
 
     private class HeaderFilterRenderer extends JPanel implements TableCellRenderer {

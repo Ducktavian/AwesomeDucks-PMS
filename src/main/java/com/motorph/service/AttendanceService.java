@@ -13,7 +13,12 @@ import java.util.List;
 
 public class AttendanceService {
 
-    private static final int STATUS_PRESENT = 1;
+    // attendance_status seed ids — see `attendance_status` seed data.
+    private static final int STATUS_PRESENT  = 1;
+    private static final int STATUS_ABSENT   = 2;
+    private static final int STATUS_LATE     = 3;
+    private static final int STATUS_HALF_DAY = 4;
+    private static final int STATUS_ON_LEAVE = 5;
 
     private final AttendanceDAO attendanceDAO;
 
@@ -52,6 +57,19 @@ public class AttendanceService {
         attendanceDAO.update(open);
 
         return open;
+    }
+
+    // NEW
+    public Attendance getTodaysAttendance(String employeeId) {
+        validateEmployeeId(employeeId);
+
+        LocalDate today = LocalDate.now();
+        for (Attendance record : attendanceDAO.findByEmployeeId(employeeId)) {
+            if (today.equals(record.getDate())) {
+                return record;
+            }
+        }
+        return null;
     }
 
     public void submitAttendance(Attendance attendance) {
@@ -119,11 +137,39 @@ public class AttendanceService {
     }
 
     public double computeDailyHours(Attendance record) {
-        if (record == null) {
+        // Invalid records contribute zero hours to payroll (see isValidForPayroll).
+        if (!isValidForPayroll(record)) {
             return 0.0;
         }
 
         return computeDailyHours(record.getLogIn(), record.getLogOut());
+    }
+
+    /**
+     * Single source of truth for whether an attendance record is "Valid" and
+     * therefore counts as worked hours in payroll. A record is valid when:
+     *   1. it is complete (both time-in and time-out are present), and
+     *   2. its attendance_status is not one that means no work was done
+     *      (Absent / On Leave).
+     *
+     * A null status is treated as payable — legacy imported records carry no
+     * status, and they must still count.
+     */
+    public boolean isValidForPayroll(Attendance record) {
+        if (record == null) {
+            return false;
+        }
+
+        if (record.getLogIn() == null || record.getLogOut() == null) {
+            return false;
+        }
+
+        return isPayableStatus(record.getAttendanceStatusId());
+    }
+
+    private boolean isPayableStatus(Integer statusId) {
+        return statusId == null
+                || (statusId != STATUS_ABSENT && statusId != STATUS_ON_LEAVE);
     }
 
     public double computeDailyHours(LocalTime timeIn, LocalTime timeOut) {
@@ -207,7 +253,7 @@ public class AttendanceService {
         UserAccount currentUser = requireCurrentUser();
         Role role = currentUser.getRole();
 
-        if (isAdminOrHr(role) || role == Role.FINANCE) {
+        if (canViewRoleAttendance(role)) {
             return attendanceDAO.findAll();
         }
 
@@ -220,7 +266,7 @@ public class AttendanceService {
         UserAccount currentUser = requireCurrentUser();
         Role role = currentUser.getRole();
 
-        if (isAdminOrHr(role) || role == Role.FINANCE) {
+        if (canViewRoleAttendance(role)) {
             return attendanceDAO.findByEmployeeId(employeeId);
         }
 
@@ -245,7 +291,7 @@ public class AttendanceService {
         UserAccount currentUser = requireCurrentUser();
         Role role = currentUser.getRole();
 
-        if (isAdminOrHr(role) || role == Role.FINANCE) {
+        if (canViewRoleAttendance(role)) {
             return attendance;
         }
 
@@ -300,6 +346,10 @@ public class AttendanceService {
 
     private boolean isAdminOrHr(Role role) {
         return role == Role.ADMIN || role == Role.HR;
+    }
+
+    private boolean canViewRoleAttendance(Role role) {
+        return isAdminOrHr(role) || role == Role.FINANCE || role == Role.IT;
     }
 
     private double round(double value) {

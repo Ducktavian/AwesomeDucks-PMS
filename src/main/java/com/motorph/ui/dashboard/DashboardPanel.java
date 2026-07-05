@@ -3,13 +3,31 @@ package com.motorph.ui.dashboard;
 import java.awt.*;
 import java.text.NumberFormat;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 
-import com.motorph.dao.JdbcDashboardDAO;
+import com.motorph.model.Dispute;
+import com.motorph.model.DisputeStatus;
+import com.motorph.model.Employee;
+import com.motorph.model.FinancialSummary;
+import com.motorph.model.LeaveRequest;
+import com.motorph.model.OvertimeRequest;
+import com.motorph.model.PayPeriod;
+import com.motorph.model.Request;
+import com.motorph.model.RequestStatus;
 import com.motorph.model.Role;
+import com.motorph.model.UndertimeRequest;
+import com.motorph.service.EmployeeService;
+import com.motorph.service.InformationDisputeService;
+import com.motorph.service.PayrollDisputeService;
+import com.motorph.service.PayrollService;
+import com.motorph.service.RequestService;
+import com.motorph.util.AppContext;
 import com.motorph.util.Session;
 
 public class DashboardPanel extends JPanel {
@@ -19,7 +37,11 @@ public class DashboardPanel extends JPanel {
     private static final Color EXPENSE_GRAY = new Color(150, 150, 150);
     private static final String FONT = "Segoe UI";
 
-    private final JdbcDashboardDAO dashboardDAO = new JdbcDashboardDAO();
+    private final EmployeeService employeeService = AppContext.getEmployeeService();
+    private final PayrollService payrollService = AppContext.getPayrollService();
+    private final RequestService requestService = AppContext.getRequestService();
+    private final InformationDisputeService informationDisputeService = AppContext.getInformationDisputeService();
+    private final PayrollDisputeService payrollDisputeService = AppContext.getPayrollDisputeService();
 
     private JPanel contentSwitcher;
     private CardLayout cardLayout;
@@ -113,7 +135,7 @@ public class DashboardPanel extends JPanel {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setOpaque(false);
 
-        int totalEmployees = dashboardDAO.getTotalEmployees();
+        int totalEmployees = employeeService.getAllEmployees().size();
 
         QuarterInfo currentQuarter = getCurrentQuarter();
         QuarterInfo upcomingQuarter = getUpcomingQuarter(currentQuarter);
@@ -141,7 +163,7 @@ public class DashboardPanel extends JPanel {
         JPanel chartArea = new JPanel(new BorderLayout());
         chartArea.setOpaque(false);
         chartArea.add(createSectionTitle("Financial Overview"), BorderLayout.NORTH);
-        chartArea.add(new FinancialChartPanel(dashboardDAO.getFinancialData()), BorderLayout.CENTER);
+        chartArea.add(new FinancialChartPanel(payrollService.getFinancialSummary()), BorderLayout.CENTER);
 
         panel.add(cardsPanel, BorderLayout.NORTH);
         panel.add(chartArea, BorderLayout.CENTER);
@@ -153,15 +175,21 @@ public class DashboardPanel extends JPanel {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setOpaque(false);
 
+        int pendingPayroll = payrollService.getPendingPayrollCount();
+        PayPeriod currentPeriod = payrollService.getCurrentPayPeriod();
+        PayPeriod upcomingPeriod = payrollService.getUpcomingPayPeriod();
+
         JPanel cardsPanel = createCardsPanel();
-        cardsPanel.add(createCard("Pending Payroll", "100", null));
-        cardsPanel.add(createCard("On-Going Period", "June", "16-30, 2026"));
-        cardsPanel.add(createCard("Upcoming Period", "July", "1-15, 2026"));
+        cardsPanel.add(createCard("Pending Payroll", String.valueOf(pendingPayroll), null));
+        cardsPanel.add(createCard("On-Going Period",
+                payPeriodMonthLabel(currentPeriod), payPeriodDateRange(currentPeriod)));
+        cardsPanel.add(createCard("Upcoming Period",
+                payPeriodMonthLabel(upcomingPeriod), payPeriodDateRange(upcomingPeriod)));
 
         JPanel chartArea = new JPanel(new BorderLayout());
         chartArea.setOpaque(false);
         chartArea.add(createSectionTitle("Financial Overview"), BorderLayout.NORTH);
-        chartArea.add(new FinancialChartPanel(dashboardDAO.getFinancialData()), BorderLayout.CENTER);
+        chartArea.add(new FinancialChartPanel(payrollService.getFinancialSummary()), BorderLayout.CENTER);
 
         panel.add(cardsPanel, BorderLayout.NORTH);
         panel.add(chartArea, BorderLayout.CENTER);
@@ -173,8 +201,11 @@ public class DashboardPanel extends JPanel {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setOpaque(false);
 
+        PayPeriod currentPeriod = payrollService.getCurrentPayPeriod();
+
         JPanel cardsPanel = createCardsPanel();
-        cardsPanel.add(createCard("On-Going Payroll Period", "June", "1-15, 2026"));
+        cardsPanel.add(createCard("On-Going Payroll Period",
+                payPeriodMonthLabel(currentPeriod), payPeriodDateRange(currentPeriod)));
         cardsPanel.add(createMultiValueCard(
                 "Total Hours Worked",
                 new String[]{"80", "10", "0"},
@@ -203,10 +234,26 @@ public class DashboardPanel extends JPanel {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setOpaque(false);
 
+        int totalEmployees = employeeService.getAllEmployees().size();
+
+        // Help center tickets are stored as disputes (information + payroll) in the
+        // `dispute` table - count them by resolution status for the IT cards.
+        List<Dispute> allDisputes = new ArrayList<>();
+        allDisputes.addAll(informationDisputeService.findAll());
+        allDisputes.addAll(payrollDisputeService.findAll());
+
+        long pendingTickets = allDisputes.stream()
+                .filter(d -> d.getStatus() == DisputeStatus.UNRESOLVED)
+                .count();
+        long resolvedTickets = allDisputes.stream()
+                .filter(d -> d.getStatus() == DisputeStatus.RESOLVED)
+                .count();
+
         JPanel cardsPanel = createCardsPanel();
-        cardsPanel.add(createCard("Total Number of Employees", "100", null));
-        cardsPanel.add(createCard("Pending Tickets", "101", null));
-        cardsPanel.add(createCard("Resolved Tickets", "101", null));
+        cardsPanel.add(createCard("Total Number of Employees",
+                NumberFormat.getNumberInstance(Locale.US).format(totalEmployees), null));
+        cardsPanel.add(createCard("Pending Tickets", String.valueOf(pendingTickets), null));
+        cardsPanel.add(createCard("Resolved Tickets", String.valueOf(resolvedTickets), null));
 
         JPanel chartArea = new JPanel(new BorderLayout());
         chartArea.setOpaque(false);
@@ -223,17 +270,21 @@ public class DashboardPanel extends JPanel {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setOpaque(false);
 
+        int totalEmployees = employeeService.getAllEmployees().size();
+        List<Request> allRequests = requestService.findAll();
+
         JPanel cardsPanel = createCardsPanel();
-        cardsPanel.add(createCard("Total Number of Employees", "1,001", null));
+        cardsPanel.add(createCard("Total Number of Employees",
+                NumberFormat.getNumberInstance(Locale.US).format(totalEmployees), null));
         cardsPanel.add(createMultiValueCard(
                 "Leave Request",
-                new String[]{"10", "10", "0"},
+                countLeaveRequestsByStatus(allRequests),
                 new String[]{"Pending", "Approved", "Rejected"},
                 3
         ));
         cardsPanel.add(createMultiValueCard(
                 "Other Requests",
-                new String[]{"15", "15"},
+                countPendingWorkTimeRequests(allRequests),
                 new String[]{"Pending OT", "Pending UT"},
                 2
         ));
@@ -241,13 +292,126 @@ public class DashboardPanel extends JPanel {
         JPanel tablesPanel = new JPanel(new GridLayout(1, 2, 40, 0));
         tablesPanel.setOpaque(false);
         tablesPanel.setBorder(BorderFactory.createEmptyBorder(30, 0, 0, 0));
-        tablesPanel.add(createHRTablePanel("On Leave Today"));
-        tablesPanel.add(createHRTablePanel("On Overtime Today"));
+        tablesPanel.add(createHRTablePanel("On Leave Today", "Reason", employeesOnLeaveToday(allRequests)));
+        tablesPanel.add(createHRTablePanel("On Overtime Today", "Reason", employeesOnOvertimeToday(allRequests)));
 
         panel.add(cardsPanel, BorderLayout.NORTH);
         panel.add(tablesPanel, BorderLayout.CENTER);
 
         return panel;
+    }
+
+    private String payPeriodMonthLabel(PayPeriod period) {
+        return period != null ? period.getPeriodStartDate().format(DateTimeFormatter.ofPattern("MMMM")) : "N/A";
+    }
+
+    private String payPeriodDateRange(PayPeriod period) {
+        if (period == null) {
+            return null;
+        }
+
+        LocalDate start = period.getPeriodStartDate();
+        LocalDate end = period.getPeriodEndDate();
+
+        if (start.getMonth() == end.getMonth() && start.getYear() == end.getYear()) {
+            return start.getDayOfMonth() + "-" + end.getDayOfMonth() + ", " + end.getYear();
+        }
+
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("MMM d");
+        return start.format(fmt) + " - " + end.format(fmt) + ", " + end.getYear();
+    }
+
+    private String[] countLeaveRequestsByStatus(List<Request> allRequests) {
+        int pending = 0, approved = 0, rejected = 0;
+
+        for (Request request : allRequests) {
+            if (!(request instanceof LeaveRequest)) {
+                continue;
+            }
+
+            switch (request.getStatus()) {
+                case PENDING -> pending++;
+                case APPROVED -> approved++;
+                case REJECTED -> rejected++;
+                default -> { }
+            }
+        }
+
+        return new String[]{String.valueOf(pending), String.valueOf(approved), String.valueOf(rejected)};
+    }
+
+    private String[] countPendingWorkTimeRequests(List<Request> allRequests) {
+        int pendingOvertime = 0, pendingUndertime = 0;
+
+        for (Request request : allRequests) {
+            if (request.getStatus() != RequestStatus.PENDING) {
+                continue;
+            }
+
+            if (request instanceof OvertimeRequest) {
+                pendingOvertime++;
+            } else if (request instanceof UndertimeRequest) {
+                pendingUndertime++;
+            }
+        }
+
+        return new String[]{String.valueOf(pendingOvertime), String.valueOf(pendingUndertime)};
+    }
+
+    private List<String[]> employeesOnLeaveToday(List<Request> allRequests) {
+        LocalDate today = LocalDate.now();
+        List<String[]> rows = new ArrayList<>();
+
+        for (Request request : allRequests) {
+            if (!(request instanceof LeaveRequest leaveRequest)) {
+                continue;
+            }
+
+            if (leaveRequest.getStatus() != RequestStatus.APPROVED) {
+                continue;
+            }
+
+            if (today.isBefore(leaveRequest.getStartDate()) || today.isAfter(leaveRequest.getEndDate())) {
+                continue;
+            }
+
+            Employee employee = employeeService.findEmployee(String.valueOf(leaveRequest.getEmployeeId()));
+            if (employee == null) {
+                continue;
+            }
+
+            rows.add(new String[]{employee.getFullName(), employee.getDepartment(), leaveRequest.getLeaveType().getLeaveTypeName()});
+        }
+
+        return rows;
+    }
+
+    private List<String[]> employeesOnOvertimeToday(List<Request> allRequests) {
+        LocalDate today = LocalDate.now();
+        List<String[]> rows = new ArrayList<>();
+
+        for (Request request : allRequests) {
+            if (!(request instanceof OvertimeRequest overtimeRequest)) {
+                continue;
+            }
+
+            if (overtimeRequest.getStatus() != RequestStatus.APPROVED) {
+                continue;
+            }
+
+            if (!overtimeRequest.getOvertimeDate().equals(today)) {
+                continue;
+            }
+
+            Employee employee = employeeService.findEmployee(String.valueOf(overtimeRequest.getEmployeeId()));
+            if (employee == null) {
+                continue;
+            }
+
+            rows.add(new String[]{employee.getFullName(), employee.getDepartment(), overtimeRequest.getReason()});
+        }
+
+        return rows;
     }
 
     private QuarterInfo getCurrentQuarter() {
@@ -383,7 +547,7 @@ public class DashboardPanel extends JPanel {
         return card;
     }
 
-    private JPanel createHRTablePanel(String titleText) {
+    private JPanel createHRTablePanel(String titleText, String thirdColumnName, List<String[]> rows) {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setOpaque(false);
 
@@ -391,15 +555,11 @@ public class DashboardPanel extends JPanel {
         title.setFont(new Font(FONT, Font.BOLD, 16));
         title.setBorder(BorderFactory.createEmptyBorder(0, 0, 20, 0));
 
-        String[] columns = {"Name", "Department", "Reason"};
+        String[] columns = {"Name", "Department", thirdColumnName};
 
-        Object[][] data = {
-                {"Juan Cruz", "IT", "Vacation"},
-                {"Super Man", "HR", "Vacation"},
-                {"Juan Cruz", "IT", "Vacation"},
-                {"Super Man", "HR", "Vacation"},
-                {"Juan Cruz", "IT", "Vacation"}
-        };
+        Object[][] data = rows.stream()
+                .map(row -> (Object[]) row)
+                .toArray(Object[][]::new);
 
         DefaultTableModel tableModel = new DefaultTableModel(data, columns) {
             @Override
@@ -459,9 +619,9 @@ public class DashboardPanel extends JPanel {
 
     private class FinancialChartPanel extends JPanel {
 
-        private final JdbcDashboardDAO.FinancialData data;
+        private final FinancialSummary data;
 
-        public FinancialChartPanel(JdbcDashboardDAO.FinancialData data) {
+        public FinancialChartPanel(FinancialSummary data) {
             this.data = data;
             setBackground(Color.WHITE);
             setMinimumSize(new Dimension(650, 320));
@@ -482,15 +642,15 @@ public class DashboardPanel extends JPanel {
 
             drawFinancialLegend(g2, getWidth() / 2 - 115, 25);
 
-            if (data == null || data.labels.isEmpty()) {
+            if (data == null || data.getPeriodLabels().isEmpty()) {
                 g2.setColor(Color.BLACK);
                 g2.drawString("No financial data available.", left, top + 40);
                 return;
             }
 
-            int[] revenueValues = data.revenue.stream().mapToInt(Integer::intValue).toArray();
-            int[] expenseValues = data.expenses.stream().mapToInt(Integer::intValue).toArray();
-            String[] xLabels = data.labels.toArray(new String[0]);
+            int[] revenueValues = data.getRevenue().stream().mapToInt(Integer::intValue).toArray();
+            int[] expenseValues = data.getExpenses().stream().mapToInt(Integer::intValue).toArray();
+            String[] xLabels = data.getPeriodLabels().toArray(new String[0]);
 
             int maxValue = 1;
 

@@ -52,8 +52,9 @@ import com.motorph.model.Payslip;
 import com.motorph.model.Role;
 import com.motorph.model.UserAccount;
 import com.motorph.service.PayrollService;
-import com.motorph.util.AppContext;            
+import com.motorph.util.AppContext;
 import com.motorph.util.Session;
+import com.motorph.reporting.PayrollMonthlySummaryReportGenerator;
 
 public class PayrollPanel extends JPanel {
 
@@ -65,21 +66,17 @@ public class PayrollPanel extends JPanel {
     private DefaultTableModel tableModel;
     private TableRowSorter<DefaultTableModel> sorter;
 
+    private JButton savePdfButton;
     private JButton addButton;
     private JButton updateButton;
     private JButton deleteButton;
     private JButton refreshButton;
 
-    private boolean canModifyPayroll;
-    private boolean canViewAllPayroll;
     private String currentEmployeeId;
+    private Role currentRole;   // the real logged-in role
+    private Role viewAsRole;    // the role whose access is currently active
 
-    // scope toggle: true = everyone's payslips, false = only the logged-in user's
-    private JComboBox<String> scopeFilter;
-    private boolean viewAllSelected = true;
-
-    private static final String VIEW_ALL = "View All";
-    private static final String VIEW_MINE = "View Mine";
+    private JComboBox<String> roleFilter;
 
     private int sortedColumn = -1;
     private SortOrder currentSortOrder = SortOrder.UNSORTED;
@@ -99,16 +96,31 @@ public class PayrollPanel extends JPanel {
     private void applyRBAC() {
         UserAccount user = Session.getCurrentUser();
         Role role = user == null ? null : user.getRole();
+        currentRole = role == null ? Role.EMPLOYEE : role;
 
         currentEmployeeId = user == null ? "" : String.valueOf(user.getEmployeeId());
 
-        canModifyPayroll = role == Role.ADMIN || role == Role.FINANCE;
-        canViewAllPayroll = role == Role.ADMIN || role == Role.FINANCE;
+        // The dropdown acts as a role changer; access starts at the real role
+        // on first load, but a previously chosen view is preserved across
+        // refreshes (e.g. after a modal closes) so it doesn't snap back.
+        if (viewAsRole == null) {
+            viewAsRole = currentRole;
+        }
     }
 
+    /** Only Admin and Finance see all payroll; other views see their own only. */
+    private boolean canViewAll() {
+        return viewAsRole == Role.ADMIN || viewAsRole == Role.FINANCE;
+    }
+
+    /** Add/Update/Delete are limited to Admin and Finance. */
+    private boolean canModify() {
+        return viewAsRole == Role.ADMIN || viewAsRole == Role.FINANCE;
+    }
+
+    /** Role changer, not a filter: all-access views see everyone, else own only. */
     private boolean canSeeRow(String employeeId) {
-        boolean showAll = canViewAllPayroll && viewAllSelected;
-        return showAll || employeeId.equals(currentEmployeeId);
+        return canViewAll() || employeeId.equals(currentEmployeeId);
     }
 
     private JPanel createContentPanel() {
@@ -166,7 +178,10 @@ public class PayrollPanel extends JPanel {
 
         JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         filterPanel.setOpaque(false);
-        filterPanel.add(buildScopeFilter());
+        JComboBox<String> filter = buildRoleFilter();
+        if (filter != null) {
+            filterPanel.add(filter);
+        }
 
         JPanel leftColumn = new JPanel();
         leftColumn.setOpaque(false);
@@ -178,21 +193,25 @@ public class PayrollPanel extends JPanel {
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 62));
         buttonPanel.setOpaque(false);
 
+        savePdfButton = button("  Save PDF");
+        savePdfButton.setIcon(new DownloadIcon(Color.WHITE, 14));
+        savePdfButton.setIconTextGap(6);
         addButton = button("+  Add");
-        updateButton = button("✎  Update");
-        deleteButton = button("🗑  Delete");
-        refreshButton = button("⟳  Refresh");
+        updateButton = button("\u270E  Update");
+        deleteButton = button("\uD83D\uDDD1  Delete");
+        refreshButton = button("\u27F3  Refresh");
 
-        addButton.setVisible(canModifyPayroll);
-        updateButton.setVisible(canModifyPayroll);
-        deleteButton.setVisible(canModifyPayroll);
+        applyViewCapabilities();
 
+        buttonPanel.add(savePdfButton);
         buttonPanel.add(addButton);
         buttonPanel.add(updateButton);
         buttonPanel.add(deleteButton);
         buttonPanel.add(refreshButton);
 
-        addButton.addActionListener(e -> openPayrollForm(false));
+        savePdfButton.addActionListener(e -> savePayrollAsPdf());
+
+        addButton.addActionListener(e -> openPayrollForm(false, null));
 
         updateButton.addActionListener(e -> {
             if (payrollTable.getSelectedRow() == -1) {
@@ -200,7 +219,7 @@ public class PayrollPanel extends JPanel {
                 return;
             }
 
-            openPayrollForm(false);
+            openPayrollForm(false, getSelectedPayslip());
         });
 
         deleteButton.addActionListener(e -> {
@@ -263,27 +282,57 @@ public class PayrollPanel extends JPanel {
         return content;
     }
 
-    // NEW: builds the View All / View Mine scope dropdown. Privileged roles can
-    // switch between everyone's payslips and their own; everyone else is locked
-    // to their own payslips.
-    private JComboBox<String> buildScopeFilter() {
-        scopeFilter = new JComboBox<>(new String[]{ VIEW_ALL, VIEW_MINE });
-        scopeFilter.setFont(new Font("SansSerif", Font.PLAIN, 13));
-        scopeFilter.setPreferredSize(new Dimension(140, 37));
-        scopeFilter.setBackground(Color.WHITE);
-
-        if (canViewAllPayroll) {
-            scopeFilter.setSelectedItem(viewAllSelected ? VIEW_ALL : VIEW_MINE);
-            scopeFilter.addActionListener(e -> {
-                viewAllSelected = VIEW_ALL.equals(scopeFilter.getSelectedItem());
-                addSampleRows();
-            });
-        } else {
-            scopeFilter.setSelectedItem(VIEW_MINE);
-            scopeFilter.setEnabled(false);
+    // Opens the payroll summary report in JasperViewer, where the user can save it as a PDF.
+    private void savePayrollAsPdf() {
+        try {
+            PayrollMonthlySummaryReportGenerator.view();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this,
+                    "Failed to generate PDF:\n" + ex.getMessage(),
+                    "Save PDF Error", JOptionPane.ERROR_MESSAGE);
         }
+    }
 
-        return scopeFilter;
+    private JComboBox<String> buildRoleFilter() {
+        String[] views = getAllowedPayrollRoles(currentRole);
+        if (views.length <= 1) {
+            return null; // pure Employee: nothing to switch, so no role changer
+        }
+        roleFilter = new JComboBox<>(views);
+        // Reflect the currently active view so a rebuilt combo (after a modal
+        // closes) stays on the last-selected role instead of resetting.
+        roleFilter.setSelectedItem(viewAsRole.getRoleName());
+        roleFilter.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        roleFilter.setPreferredSize(new Dimension(140, 37));
+        roleFilter.setBackground(Color.WHITE);
+        roleFilter.setFocusable(false);
+        roleFilter.addActionListener(e -> {
+            viewAsRole = Role.fromName((String) roleFilter.getSelectedItem());
+            applyViewCapabilities();
+            addSampleRows();
+        });
+        return roleFilter;
+    }
+
+    /** Shows the modify buttons only for views that may edit payroll. */
+    private void applyViewCapabilities() {
+        boolean modify = canModify();
+        if (addButton != null) addButton.setVisible(modify);
+        if (updateButton != null) updateButton.setVisible(modify);
+        if (deleteButton != null) deleteButton.setVisible(modify);
+    }
+
+    /** Returns the roles this login may view the panel as (own role + Employee; Admin sees all). */
+    private static String[] getAllowedPayrollRoles(Role role) {
+        if (role == null) return new String[]{"Employee"};
+        return switch (role) {
+            case ADMIN -> new String[]{"Admin", "Finance", "HR", "IT", "Employee"};
+            case FINANCE -> new String[]{"Finance", "Employee"};
+            case HR -> new String[]{"HR", "Employee"};
+            case IT -> new String[]{"IT", "Employee"};
+            case EMPLOYEE -> new String[]{"Employee"};
+        };
     }
 
     private JButton button(String text) {
@@ -331,7 +380,7 @@ public class PayrollPanel extends JPanel {
             @Override
             public void mouseClicked(MouseEvent e) {
                 if (e.getClickCount() == 2 && payrollTable.getSelectedRow() != -1) {
-                    openPayrollForm(true);
+                    openPayrollForm(true, getSelectedPayslip());
                 }
             }
         });
@@ -341,7 +390,33 @@ public class PayrollPanel extends JPanel {
         addSampleRows();
     }
 
-    private void openPayrollForm(boolean viewOnly) {
+    // NEW: looks up the full Payslip (with allowance/deduction breakdown) for
+    // the currently selected row, since the table only holds summary totals.
+    private Payslip getSelectedPayslip() {
+        int selectedRow = payrollTable.getSelectedRow();
+
+        if (selectedRow == -1) {
+            return null;
+        }
+
+        int modelRow = payrollTable.convertRowIndexToModel(selectedRow);
+        String payslipId = String.valueOf(tableModel.getValueAt(modelRow, 0));
+
+        try {
+            return payrollService.findPayslipById(payslipId);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Failed to load payslip details:\n" + ex.getMessage(),
+                    "Load Error",
+                    JOptionPane.ERROR_MESSAGE
+            );
+            return null;
+        }
+    }
+
+    private void openPayrollForm(boolean viewOnly, Payslip payslip) {
         removeAll();
         setLayout(new BorderLayout());
 
@@ -352,7 +427,7 @@ public class PayrollPanel extends JPanel {
             add(createContentPanel(), BorderLayout.CENTER);
             revalidate();
             repaint();
-        }, viewOnly), BorderLayout.CENTER);
+        }, viewOnly, payslip), BorderLayout.CENTER);
 
         revalidate();
         repaint();
@@ -526,6 +601,62 @@ public class PayrollPanel extends JPanel {
             }
 
             return this;
+        }
+    }
+
+    private static class DownloadIcon implements Icon {
+
+        private final Color color;
+        private final int size;
+
+        public DownloadIcon(Color color, int size) {
+            this.color = color;
+            this.size = size;
+        }
+
+        @Override
+        public void paintIcon(Component c, Graphics g, int x, int y) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setColor(color);
+            g2.setStroke(new java.awt.BasicStroke(
+                    Math.max(1.5f, size / 8f),
+                    java.awt.BasicStroke.CAP_ROUND,
+                    java.awt.BasicStroke.JOIN_ROUND));
+
+            int stemX = x + size / 2;
+            int stemTop = y + (int) (size * 0.05);
+            int stemBottom = y + (int) (size * 0.55);
+
+            // vertical stem
+            g2.drawLine(stemX, stemTop, stemX, stemBottom);
+
+            // arrow head
+            int armLen = (int) (size * 0.32);
+            g2.drawLine(stemX - armLen, stemBottom - armLen, stemX, stemBottom);
+            g2.drawLine(stemX + armLen, stemBottom - armLen, stemX, stemBottom);
+
+            // tray
+            int trayY1 = y + (int) (size * 0.62);
+            int trayY2 = y + (int) (size * 0.82);
+            int trayLeft = x + (int) (size * 0.08);
+            int trayRight = x + (int) (size * 0.92);
+
+            g2.drawLine(trayLeft, trayY1, trayLeft, trayY2);
+            g2.drawLine(trayRight, trayY1, trayRight, trayY2);
+            g2.drawLine(trayLeft, trayY2, trayRight, trayY2);
+
+            g2.dispose();
+        }
+
+        @Override
+        public int getIconWidth() {
+            return size;
+        }
+
+        @Override
+        public int getIconHeight() {
+            return size;
         }
     }
 

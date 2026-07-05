@@ -1,23 +1,28 @@
 package com.motorph.ui.request;
 
 import com.motorph.model.*;
+import com.motorph.service.EmployeeService;
 import com.motorph.service.RequestService;
 import com.motorph.util.AppContext;
 import com.motorph.util.Session;
 
 import java.awt.*;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import javax.swing.*;
 import javax.swing.border.*;
 
+
 public class RequestFormPanel extends JPanel {
+
+    public enum Mode { ADD_SELF, ADD_OTHER, EDIT, VIEW }
 
     public interface SubmitHandler {
         void onSubmit(Object[] rowData);
@@ -29,19 +34,18 @@ public class RequestFormPanel extends JPanel {
     private static final Color TEXT_DARK = new Color(25, 25, 25);
     private static final String FONT = "Segoe UI";
 
-    private static final String VACATION_LEAVE = "Vacation Leave";
-    private static final String SICK_LEAVE = "Sick Leave";
-    private static final String UNDERTIME = "Undertime";
+    private static final String LEAVE_CATEGORY = "Leave Request";
+    private static final String WORK_TIME_CATEGORY = "Work Time Request";
     private static final String OVERTIME = "Overtime";
+    private static final String UNDERTIME = "Undertime";
 
-    private static final int VACATION_LEAVE_TYPE_ID = 1;
-    private static final int SICK_LEAVE_TYPE_ID = 2;
+    private static final String[] CATEGORIES = { LEAVE_CATEGORY, WORK_TIME_CATEGORY };
+    private static final String[] WORK_TYPES = { OVERTIME, UNDERTIME };
 
-    private static final String[] REQUEST_TYPES = {
-        VACATION_LEAVE,
-        SICK_LEAVE,
-        UNDERTIME,
-        OVERTIME
+    // Leave types mirror the leave_type seed rows (id order 1..7).
+    private static final String[] LEAVE_TYPES = {
+        "Vacation Leave", "Sick Leave", "Emergency Leave", "Maternity Leave",
+        "Paternity Leave", "Solo Parent Leave", "Unpaid Leave"
     };
 
     private static final String[] WORK_TIMES = {
@@ -49,387 +53,396 @@ public class RequestFormPanel extends JPanel {
         "1:00 PM", "2:00 PM", "3:00 PM", "4:00 PM", "5:00 PM"
     };
 
-    private final Runnable onBack;
+    private final Runnable onClose;
+    private final Mode mode;
     private final Object[] existingData;
     private final SubmitHandler onSubmit;
-    private final RequestService requestService = AppContext.getRequestService();
 
-    private JTextField nameField;
-    private JTextField positionField;
-    private JComboBox<String> requestTypeCombo;
+    private final RequestService requestService = AppContext.getRequestService();
+    private final EmployeeService employeeService = AppContext.getEmployeeService();
+
+    // Interactive fields (ADD/EDIT).
+    private JComboBox<String> employeeCombo;   // ADD_OTHER only
+    private JTextField nameField;              // ADD_SELF / EDIT (read-only)
+    private JTextField positionField;          // read-only, auto-filled
+    private JComboBox<String> categoryCombo;
+    private JComboBox<String> leaveTypeCombo;
+    private JComboBox<String> workTypeCombo;
     private JSpinner startDateSpinner;
     private JSpinner endDateSpinner;
     private JComboBox<String> startTimeCombo;
     private JComboBox<String> endTimeCombo;
     private JTextArea reasonArea;
-    private JTextArea notesArea;
     private JComboBox<String> statusCombo;
+
+    private JPanel leaveTypeRow;
+    private JPanel workTypeRow;
+    private JPanel timeRow;
+
+    private final Map<String, Employee> employeesByLabel = new LinkedHashMap<>();
 
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy");
 
-    public RequestFormPanel(Runnable onBack) {
-        this(onBack, null, null);
-    }
-
-    public RequestFormPanel(Runnable onBack, Object[] existingData, SubmitHandler onSubmit) {
-        this.onBack = onBack;
+    public RequestFormPanel(Runnable onClose, Mode mode, Object[] existingData, SubmitHandler onSubmit) {
+        this.onClose = onClose;
+        this.mode = mode;
         this.existingData = existingData;
         this.onSubmit = onSubmit;
 
         setLayout(new BorderLayout());
         setBackground(BG);
-        add(createMainPanel(), BorderLayout.CENTER);
+
+        add(buildScroll(mode == Mode.VIEW ? buildViewContent() : buildFormContent()), BorderLayout.CENTER);
+        add(buildButtonRow(), BorderLayout.SOUTH);
+    }
+
+    private JScrollPane buildScroll(JComponent content) {
+        // Pin the stacked content to the top so it keeps its natural height and
+        // the scroll pane handles any overflow instead of stretching the rows.
+        JPanel holder = new JPanel(new BorderLayout());
+        holder.setBackground(BG);
+        holder.add(content, BorderLayout.NORTH);
+
+        JScrollPane scroll = new JScrollPane(holder);
+        scroll.setBorder(null);
+        scroll.getViewport().setBackground(BG);
+        scroll.getVerticalScrollBar().setUnitIncrement(16);
+        return scroll;
+    }
+
+    // ── interactive form (ADD / EDIT) ───────────────────────────────────────
+    private JComponent buildFormContent() {
+        JPanel content = new JPanel();
+        content.setBackground(BG);
+        content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
+        content.setBorder(new EmptyBorder(28, 40, 20, 40));
+
+        buildFields();
+
+        // Name / Employee picker
+        if (mode == Mode.ADD_OTHER) {
+            addRow(content, stacked("Employee", employeeCombo));
+        } else {
+            addRow(content, stacked("Name", nameField));
+        }
+        addRow(content, stacked("Position", positionField));
+        addRow(content, stacked("Request Type", categoryCombo));
+
+        leaveTypeRow = stacked("Leave Type", leaveTypeCombo);
+        addRow(content, leaveTypeRow);
+
+        workTypeRow = stacked("Work Time Type", workTypeCombo);
+        addRow(content, workTypeRow);
+
+        addRow(content, twoLine("Start Date", startDateSpinner, "End Date", endDateSpinner));
+
+        timeRow = twoLine("Start Time", startTimeCombo, "End Time", endTimeCombo);
+        addRow(content, timeRow);
+
+        addRow(content, stacked("Reason", reasonScroll()));
+        addRow(content, stacked("Status", statusCombo));
 
         if (existingData != null) {
             populateFields(existingData);
         }
-
-        updateTimeFieldsState();
+        updateFieldVisibility();
+        return content;
     }
 
-    private JPanel createMainPanel() {
-        JPanel outer = new JPanel(new BorderLayout());
-        outer.setBackground(BG);
-        outer.setBorder(new EmptyBorder(52, 64, 40, 78));
+    private void buildFields() {
+        nameField = readOnlyField();
+        positionField = readOnlyField();
 
-        JLabel back = new JLabel("<html><u>Back</u></html>");
-        back.setFont(new Font(FONT, Font.PLAIN, 16));
-        back.setForeground(new Color(80, 80, 80));
-        back.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        back.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                if (onBack != null) onBack.run();
-            }
-        });
+        categoryCombo = comboBox(CATEGORIES);
+        leaveTypeCombo = comboBox(LEAVE_TYPES);
+        workTypeCombo = comboBox(WORK_TYPES);
 
-        JPanel backRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        backRow.setOpaque(false);
-        backRow.add(back);
+        startDateSpinner = dateSpinner();
+        endDateSpinner = dateSpinner();
+        startTimeCombo = comboBox(WORK_TIMES);
+        endTimeCombo = comboBox(WORK_TIMES);
 
-        outer.add(backRow, BorderLayout.NORTH);
-        outer.add(createFormWrapper(), BorderLayout.CENTER);
+        reasonArea = new JTextArea();
+        reasonArea.setFont(new Font(FONT, Font.PLAIN, 13));
+        reasonArea.setLineWrap(true);
+        reasonArea.setWrapStyleWord(true);
+        reasonArea.setForeground(TEXT_DARK);
+        reasonArea.setCaretColor(NAVY);
+        reasonArea.setBorder(new EmptyBorder(6, 10, 6, 10));
 
-        return outer;
-    }
+        statusCombo = comboBox(new String[]{ "Pending", "Approved", "Rejected" });
 
-    private JPanel createFormWrapper() {
+        categoryCombo.addActionListener(e -> updateFieldVisibility());
 
-        JPanel wrapper = new JPanel(new BorderLayout());
-        wrapper.setOpaque(false);
-        wrapper.setBorder(new EmptyBorder(20, 0, 0, 0));
+        if (mode == Mode.ADD_OTHER) {
+            employeeCombo = comboBox(new String[0]);
+            loadEmployeeChoices();
+            employeeCombo.addActionListener(e -> fillPositionFromEmployee());
+            fillPositionFromEmployee();
+        } else if (mode == Mode.ADD_SELF) {
+            prefillSelf();
+        }
 
-        JPanel form = new JPanel(new GridLayout(1, 2, 40, 0));
-        form.setOpaque(false);
-
-        form.add(createLeftColumn());
-        form.add(createRightColumn());
-
-        wrapper.add(form, BorderLayout.CENTER);
-        wrapper.add(createButtonRow(), BorderLayout.SOUTH);
-
-        return wrapper;
-    }
-    
-    private JPanel createLeftColumn() {
-        JPanel col = new JPanel(new GridBagLayout());
-        col.setOpaque(false);
-
-        nameField = createTextField();
-        positionField = createTextField();
-        requestTypeCombo = createRequestTypeComboBox();
-        startDateSpinner = createDatePicker();
-        endDateSpinner = createDatePicker();
-        startTimeCombo = createTimeComboBox();
-        endTimeCombo = createTimeComboBox();
-
-        requestTypeCombo.addActionListener(e -> updateTimeFieldsState());
-
-        int row = 0;
-        addStackedField(col, row++, "Name", nameField);
-        addStackedField(col, row++, "Position", positionField);
-        addStackedField(col, row++, "Request Type", requestTypeCombo);
-        addTwoFields(col, row++, "Start Date", startDateSpinner, "End Date", endDateSpinner);
-        addTwoFields(col, row++, "Start Time", startTimeCombo, "End Time", endTimeCombo);
-
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.gridx = 0;
-        gbc.gridy = row;
-        gbc.weighty = 1;
-        gbc.fill = GridBagConstraints.VERTICAL;
-        col.add(Box.createVerticalGlue(), gbc);
-        return col;
-    }
-
-    private JPanel createRightColumn() {
-        JPanel col = new JPanel(new GridBagLayout());
-        col.setOpaque(false);
-
-        JScrollPane reasonScroll = createTextArea();
-        reasonArea = (JTextArea) reasonScroll.getViewport().getView();
-
-        JScrollPane notesScroll = createTextArea();
-        notesArea = (JTextArea) notesScroll.getViewport().getView();
-
-        statusCombo = createStatusComboBox();
-
-        if (existingData == null) {
+        if (mode == Mode.EDIT) {
+            // Identity and request type are fixed once a request exists.
+            categoryCombo.setEnabled(false);
+            leaveTypeCombo.setEnabled(false);
+            workTypeCombo.setEnabled(false);
+        } else {
+            // New requests always start Pending.
             statusCombo.setSelectedItem("Pending");
             statusCombo.setEnabled(false);
         }
-
-        int row = 0;
-        addStackedField(col, row++, "Reason", reasonScroll);
-        addStackedField(col, row++, "Notes", notesScroll);
-        addStackedField(col, row++, "Status", statusCombo);
-
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.gridx = 0;
-        gbc.gridy = row;
-        gbc.weighty = 1;
-        gbc.fill = GridBagConstraints.VERTICAL;
-        col.add(Box.createVerticalGlue(), gbc);
-        return col;
     }
 
-    private JPanel createButtonRow() {
-        JPanel row = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
-        row.setOpaque(false);
-        row.setBorder(new EmptyBorder(8, 0, 0, 0));
+    private JScrollPane reasonScroll() {
+        JScrollPane scroll = new JScrollPane(reasonArea);
+        scroll.setPreferredSize(new Dimension(0, 130));
+        scroll.setBorder(new CompoundBorder(
+                new EmptyBorder(1, 2, 1, 2),
+                new RoundedBorder(8, FIELD_BORDER)));
+        scroll.getViewport().setBackground(BG);
+        return scroll;
+    }
 
-        JButton submit = navyButton(existingData == null ? "Submit" : "Update");
+    private void loadEmployeeChoices() {
+        employeesByLabel.clear();
+        employeeCombo.removeAllItems();
+        for (Employee emp : employeeService.getAllEmployees()) {
+            String label = emp.getEmployeeId() + " - " + emp.getFullName();
+            employeesByLabel.put(label, emp);
+            employeeCombo.addItem(label);
+        }
+    }
 
-        submit.addActionListener(e -> {
-            try {
-                requireUiFields();
+    private void fillPositionFromEmployee() {
+        Employee emp = selectedEmployee();
+        positionField.setText(emp == null ? "" : emp.getPosition());
+    }
 
-                if (existingData == null) {
-                    Request request = buildRequestFromForm();
-                    requestService.submit(request);
-                }
+    private Employee selectedEmployee() {
+        if (employeeCombo == null) {
+            return null;
+        }
+        Object sel = employeeCombo.getSelectedItem();
+        return sel == null ? null : employeesByLabel.get(sel.toString());
+    }
 
-                Object[] rowData = collectFormData();
+    private void prefillSelf() {
+        UserAccount user = Session.getCurrentUser();
+        if (user == null) {
+            return;
+        }
+        Employee me = employeeService.findEmployee(String.valueOf(user.getEmployeeId()));
+        if (me != null) {
+            nameField.setText(me.getFullName());
+            positionField.setText(me.getPosition());
+        }
+    }
 
-                if (onSubmit != null) {
-                    onSubmit.onSubmit(rowData);
-                }
+    /** Show only the fields relevant to the selected category. */
+    private void updateFieldVisibility() {
+        boolean leave = LEAVE_CATEGORY.equals(String.valueOf(categoryCombo.getSelectedItem()));
+        if (leaveTypeRow != null) leaveTypeRow.setVisible(leave);
+        if (workTypeRow != null) workTypeRow.setVisible(!leave);
+        if (timeRow != null) timeRow.setVisible(!leave);
+        revalidate();
+        repaint();
+    }
 
-                JOptionPane.showMessageDialog(
-                        this,
-                        existingData == null
-                                ? "Request submitted successfully."
-                                : "Request updated successfully.",
-                        "Success",
-                        JOptionPane.INFORMATION_MESSAGE
-                );
+    // ── view-only content ───────────────────────────────────────────────────
+    private JComponent buildViewContent() {
+        JPanel content = new JPanel();
+        content.setBackground(BG);
+        content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
+        content.setBorder(new EmptyBorder(28, 40, 20, 40));
 
-                if (onBack != null) {
-                    onBack.run();
-                }
+        String type = value(existingData, 2);
+        boolean workTime = OVERTIME.equalsIgnoreCase(type) || UNDERTIME.equalsIgnoreCase(type);
 
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(
-                        this,
-                        ex.getMessage(),
-                        "Validation Error",
-                        JOptionPane.WARNING_MESSAGE
-                );
-            }
-        });
+        addRow(content, stacked("Name", viewField(value(existingData, 0))));
+        addRow(content, stacked("Position", viewField(value(existingData, 1))));
+        addRow(content, stacked("Request Type", viewField(type)));
+        addRow(content, twoLine("Start Date", viewField(value(existingData, 3)),
+                                "End Date", viewField(value(existingData, 4))));
+        if (workTime) {
+            addRow(content, twoLine("Start Time", viewField(value(existingData, 5)),
+                                    "End Time", viewField(value(existingData, 6))));
+        }
+        addRow(content, stacked("Reason", viewArea(value(existingData, 7))));
+        addRow(content, stacked("Status", viewField(value(existingData, 9))));
+        return content;
+    }
 
+    // ── buttons ─────────────────────────────────────────────────────────────
+    private JPanel buildButtonRow() {
+        JPanel row = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 12));
+        row.setBackground(BG);
+        row.setBorder(new MatteBorder(1, 0, 0, 0, new Color(230, 230, 230)));
+
+        if (mode == Mode.VIEW) {
+            JButton close = navyButton("Close");
+            close.addActionListener(e -> close());
+            row.add(close);
+            return row;
+        }
+
+        JButton cancel = navyButton("Cancel");
+        cancel.addActionListener(e -> close());
+
+        JButton submit = navyButton(mode == Mode.EDIT ? "Update" : "Submit");
+        submit.addActionListener(e -> onSubmitClicked());
+
+        row.add(cancel);
         row.add(submit);
         return row;
     }
 
-    private void requireUiFields() {
-        if (nameField.getText().trim().isBlank()) {
-            throw new IllegalArgumentException("Name is required.");
-        }
+    private void onSubmitClicked() {
+        try {
+            validateForm();
 
-        if (positionField.getText().trim().isBlank()) {
-            throw new IllegalArgumentException("Position is required.");
-        }
+            if (mode == Mode.ADD_SELF || mode == Mode.ADD_OTHER) {
+                requestService.submit(buildRequestFromForm());
+            }
 
+            if (onSubmit != null) {
+                onSubmit.onSubmit(collectFormData());
+            }
+
+            JOptionPane.showMessageDialog(
+                    this,
+                    mode == Mode.EDIT
+                            ? "Request updated successfully."
+                            : "Request submitted successfully.",
+                    "Success",
+                    JOptionPane.INFORMATION_MESSAGE);
+
+            close();
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(),
+                    "Validation Error", JOptionPane.WARNING_MESSAGE);
+        }
+    }
+
+    private void close() {
+        if (onClose != null) {
+            onClose.run();
+        }
+    }
+
+    // ── validation + model building ─────────────────────────────────────────
+    private void validateForm() {
+        if (mode == Mode.ADD_OTHER && selectedEmployee() == null) {
+            throw new IllegalArgumentException("Please select an employee.");
+        }
+        if (nameField != null && mode != Mode.ADD_OTHER && nameField.getText().trim().isBlank()) {
+            throw new IllegalArgumentException("Employee name could not be resolved.");
+        }
         if (reasonArea.getText().trim().isBlank()) {
             throw new IllegalArgumentException("Reason is required.");
         }
-
-        UserAccount user = Session.getCurrentUser();
-        if (user == null) {
+        if (Session.getCurrentUser() == null) {
             throw new IllegalStateException("No active session found.");
         }
     }
 
     private Request buildRequestFromForm() {
-        UserAccount user = Session.getCurrentUser();
-        int employeeId = user.getEmployeeId();
-
-        String selectedType = String.valueOf(requestTypeCombo.getSelectedItem());
+        int employeeId = targetEmployeeId();
         String reason = reasonArea.getText().trim();
 
-        LocalDate startDate = getSpinnerLocalDate(startDateSpinner);
-        LocalDate endDate = getSpinnerLocalDate(endDateSpinner);
+        LocalDate startDate = spinnerDate(startDateSpinner);
+        LocalDate endDate = spinnerDate(endDateSpinner);
+
+        boolean leave = LEAVE_CATEGORY.equals(String.valueOf(categoryCombo.getSelectedItem()));
+
+        if (leave) {
+            String leaveName = String.valueOf(leaveTypeCombo.getSelectedItem());
+            return new LeaveRequest(
+                    0, employeeId, RequestStatus.PENDING, null, reason, null,
+                    startDate, endDate, new LeaveType(leaveTypeId(leaveName), leaveName));
+        }
+
         LocalTime startTime = parseTime(String.valueOf(startTimeCombo.getSelectedItem()));
         LocalTime endTime = parseTime(String.valueOf(endTimeCombo.getSelectedItem()));
 
-        if (VACATION_LEAVE.equals(selectedType)) {
-            return new LeaveRequest(
-                    0,
-                    employeeId,
-                    RequestStatus.PENDING,
-                    null,
-                    reason,
-                    null,
-                    startDate,
-                    endDate,
-                    new LeaveType(VACATION_LEAVE_TYPE_ID, VACATION_LEAVE)
-            );
+        if (!startDate.equals(endDate)) {
+            throw new IllegalArgumentException(
+                    "For a Work Time request, Start Date and End Date must be the same.");
         }
 
-        if (SICK_LEAVE.equals(selectedType)) {
-            return new LeaveRequest(
-                    0,
-                    employeeId,
-                    RequestStatus.PENDING,
-                    null,
-                    reason,
-                    null,
-                    startDate,
-                    endDate,
-                    new LeaveType(SICK_LEAVE_TYPE_ID, SICK_LEAVE)
-            );
+        if (OVERTIME.equals(String.valueOf(workTypeCombo.getSelectedItem()))) {
+            return new OvertimeRequest(0, employeeId, RequestStatus.PENDING, null,
+                    reason, null, startDate, startTime, endTime);
         }
-
-        if (OVERTIME.equals(selectedType)) {
-            if (!startDate.equals(endDate)) {
-                throw new IllegalArgumentException("For Overtime, Start Date and End Date must be the same.");
-            }
-
-            return new OvertimeRequest(
-                    0,
-                    employeeId,
-                    RequestStatus.PENDING,
-                    null,
-                    reason,
-                    null,
-                    startDate,
-                    startTime,
-                    endTime
-            );
-        }
-
-        if (UNDERTIME.equals(selectedType)) {
-            if (!startDate.equals(endDate)) {
-                throw new IllegalArgumentException("For Undertime, Start Date and End Date must be the same.");
-            }
-
-            return new UndertimeRequest(
-                    0,
-                    employeeId,
-                    RequestStatus.PENDING,
-                    null,
-                    reason,
-                    null,
-                    startDate,
-                    startTime,
-                    endTime
-            );
-        }
-
-        throw new IllegalArgumentException("Unknown request type: " + selectedType);
+        return new UndertimeRequest(0, employeeId, RequestStatus.PENDING, null,
+                reason, null, startDate, startTime, endTime);
     }
 
+    private int targetEmployeeId() {
+        if (mode == Mode.ADD_OTHER) {
+            Employee emp = selectedEmployee();
+            return Integer.parseInt(emp.getEmployeeId());
+        }
+        return Session.getCurrentUser().getEmployeeId();
+    }
+
+    /**
+     * Returns the 10-column row the table expects:
+     * name, position, type, startDate, endDate, startTime, endTime, reason, notes, status.
+     */
     private Object[] collectFormData() {
-        String selectedType = String.valueOf(requestTypeCombo.getSelectedItem());
-        boolean leave = VACATION_LEAVE.equals(selectedType) || SICK_LEAVE.equals(selectedType);
+        boolean leave = LEAVE_CATEGORY.equals(String.valueOf(categoryCombo.getSelectedItem()));
+        String type = leave ? "Leave" : String.valueOf(workTypeCombo.getSelectedItem());
+
+        String name = mode == Mode.ADD_OTHER
+                ? (selectedEmployee() == null ? "" : selectedEmployee().getFullName())
+                : nameField.getText().trim();
 
         return new Object[]{
-            nameField.getText().trim(),
+            name,
             positionField.getText().trim(),
-            selectedType,
+            type,
             dateFormat.format((Date) startDateSpinner.getValue()),
             dateFormat.format((Date) endDateSpinner.getValue()),
-            leave ? "" : startTimeCombo.getSelectedItem().toString(),
-            leave ? "" : endTimeCombo.getSelectedItem().toString(),
+            leave ? "" : String.valueOf(startTimeCombo.getSelectedItem()),
+            leave ? "" : String.valueOf(endTimeCombo.getSelectedItem()),
             reasonArea.getText().trim(),
-            notesArea.getText().trim(),
-            statusCombo.getSelectedItem().toString()
+            "",
+            String.valueOf(statusCombo.getSelectedItem())
         };
-    }
-
-    private void updateTimeFieldsState() {
-        if (requestTypeCombo == null || startTimeCombo == null || endTimeCombo == null) {
-            return;
-        }
-
-        String selectedType = String.valueOf(requestTypeCombo.getSelectedItem());
-        boolean timeBased = UNDERTIME.equals(selectedType) || OVERTIME.equals(selectedType);
-
-        startTimeCombo.setEnabled(timeBased);
-        endTimeCombo.setEnabled(timeBased);
-
-        if (!timeBased) {
-            startTimeCombo.setSelectedItem("9:00 AM");
-            endTimeCombo.setSelectedItem("5:00 PM");
-        }
-    }
-
-    private boolean isValidRequestTypeValue(String value) {
-        for (String type : REQUEST_TYPES) {
-            if (type.equalsIgnoreCase(value)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private LocalDate getSpinnerLocalDate(JSpinner spinner) {
-        Date date = (Date) spinner.getValue();
-        return date.toInstant()
-                .atZone(ZoneId.systemDefault())
-                .toLocalDate();
-    }
-
-    private LocalTime parseTime(String text) {
-        try {
-            Date parsed = new SimpleDateFormat("h:mm a").parse(text);
-            return parsed.toInstant()
-                    .atZone(ZoneId.systemDefault())
-                    .toLocalTime()
-                    .withSecond(0)
-                    .withNano(0);
-        } catch (Exception ex) {
-            return LocalTime.of(9, 0);
-        }
     }
 
     private void populateFields(Object[] data) {
         nameField.setText(value(data, 0));
         positionField.setText(value(data, 1));
 
-        String requestType = value(data, 2);
-
-        if ("Leave".equalsIgnoreCase(requestType)) {
-            requestTypeCombo.setSelectedItem(VACATION_LEAVE);
-        } else if (isValidRequestTypeValue(requestType)) {
-            requestTypeCombo.setSelectedItem(requestType);
+        String type = value(data, 2);
+        if (OVERTIME.equalsIgnoreCase(type) || UNDERTIME.equalsIgnoreCase(type)) {
+            categoryCombo.setSelectedItem(WORK_TIME_CATEGORY);
+            workTypeCombo.setSelectedItem(OVERTIME.equalsIgnoreCase(type) ? OVERTIME : UNDERTIME);
         } else {
-            requestTypeCombo.setSelectedItem(VACATION_LEAVE);
+            categoryCombo.setSelectedItem(LEAVE_CATEGORY);
         }
 
-        setSpinnerDate(startDateSpinner, value(data, 3), dateFormat);
-        setSpinnerDate(endDateSpinner, value(data, 4), dateFormat);
-
+        setSpinnerDate(startDateSpinner, value(data, 3));
+        setSpinnerDate(endDateSpinner, value(data, 4));
         setComboValue(startTimeCombo, value(data, 5), "9:00 AM");
         setComboValue(endTimeCombo, value(data, 6), "5:00 PM");
-
         reasonArea.setText(value(data, 7));
-        notesArea.setText(value(data, 8));
 
         String status = value(data, 9);
         statusCombo.setSelectedItem(status.isBlank() ? "Pending" : status);
+    }
 
-        updateTimeFieldsState();
+    // ── small helpers ────────────────────────────────────────────────────────
+    private static int leaveTypeId(String name) {
+        for (int i = 0; i < LEAVE_TYPES.length; i++) {
+            if (LEAVE_TYPES[i].equalsIgnoreCase(name)) {
+                return i + 1; // seed ids are 1-based in LEAVE_TYPES order
+            }
+        }
+        return 1;
     }
 
     private void setComboValue(JComboBox<String> combo, String value, String fallback) {
@@ -437,203 +450,173 @@ public class RequestFormPanel extends JPanel {
             combo.setSelectedItem(fallback);
             return;
         }
-
         for (int i = 0; i < combo.getItemCount(); i++) {
             if (combo.getItemAt(i).equalsIgnoreCase(value.trim())) {
                 combo.setSelectedIndex(i);
                 return;
             }
         }
-
         combo.setSelectedItem(fallback);
     }
 
-    private String value(Object[] data, int index) {
+    private static String value(Object[] data, int index) {
         if (data == null || index >= data.length || data[index] == null) {
             return "";
         }
-
         return data[index].toString();
     }
 
-    private void setSpinnerDate(JSpinner spinner, String text, SimpleDateFormat format) {
+    private LocalDate spinnerDate(JSpinner spinner) {
+        return ((Date) spinner.getValue()).toInstant()
+                .atZone(ZoneId.systemDefault()).toLocalDate();
+    }
+
+    private void setSpinnerDate(JSpinner spinner, String text) {
         if (text == null || text.isBlank()) {
             return;
         }
-
         try {
-            spinner.setValue(format.parse(text));
+            spinner.setValue(dateFormat.parse(text));
         } catch (ParseException ignored) {
             spinner.setValue(new Date());
         }
     }
 
-    private void addStackedField(JPanel parent, int row, String labelText, JComponent field) {
-        GridBagConstraints gbc = baseGbc(row);
-        gbc.insets = new Insets(0, 0, 22, 0);
-
-        JPanel panel = new JPanel(new BorderLayout(0, 8));
-        panel.setOpaque(false);
-        panel.add(createLabel(labelText), BorderLayout.NORTH);
-        panel.add(field, BorderLayout.CENTER);
-
-        parent.add(panel, gbc);
+    private LocalTime parseTime(String text) {
+        try {
+            return new SimpleDateFormat("h:mm a").parse(text).toInstant()
+                    .atZone(ZoneId.systemDefault()).toLocalTime()
+                    .withSecond(0).withNano(0);
+        } catch (Exception ex) {
+            return LocalTime.of(9, 0);
+        }
     }
 
-    private void addTwoFields(JPanel parent, int row,
-                              String firstLabel, JComponent firstField,
-                              String secondLabel, JComponent secondField) {
-
-        GridBagConstraints gbc = baseGbc(row);
-        gbc.insets = new Insets(0, 0, 22, 0);
-
-        JPanel panel = new JPanel(new GridLayout(1, 2, 15, 0));
-        panel.setOpaque(false);
-        panel.add(twoFieldPanel(firstLabel, firstField));
-        panel.add(twoFieldPanel(secondLabel, secondField));
-
-        parent.add(panel, gbc);
+    // ── layout helpers ────────────────────────────────────────────────────────
+    private void addRow(JPanel content, JComponent row) {
+        row.setAlignmentX(LEFT_ALIGNMENT);
+        content.add(row);
+        content.add(Box.createVerticalStrut(18));
     }
 
-    private JPanel twoFieldPanel(String labelText, JComponent field) {
-        JPanel panel = new JPanel(new BorderLayout(0, 8));
-        panel.setOpaque(false);
-        panel.add(createLabel(labelText), BorderLayout.NORTH);
-        panel.add(field, BorderLayout.CENTER);
-        return panel;
+    private JPanel stacked(String label, JComponent field) {
+        JPanel p = stackedInner(label, field);
+        p.setAlignmentX(LEFT_ALIGNMENT);
+        p.setMaximumSize(new Dimension(Integer.MAX_VALUE, p.getPreferredSize().height));
+        return p;
     }
 
-    private JLabel createLabel(String labelText) {
-        JLabel label = new JLabel(labelText);
+    private JPanel stackedInner(String label, JComponent field) {
+        JPanel p = new JPanel(new BorderLayout(0, 6));
+        p.setOpaque(false);
+        p.add(makeLabel(label), BorderLayout.NORTH);
+        p.add(field, BorderLayout.CENTER);
+        return p;
+    }
+
+    private JPanel twoLine(String l1, JComponent f1, String l2, JComponent f2) {
+        JPanel row = new JPanel(new GridLayout(1, 2, 15, 0));
+        row.setOpaque(false);
+        row.add(stackedInner(l1, f1));
+        row.add(stackedInner(l2, f2));
+        row.setAlignmentX(LEFT_ALIGNMENT);
+        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, row.getPreferredSize().height));
+        return row;
+    }
+
+    private JLabel makeLabel(String text) {
+        JLabel label = new JLabel(text);
         label.setFont(new Font(FONT, Font.PLAIN, 14));
         label.setForeground(TEXT_DARK);
         return label;
     }
 
-    private GridBagConstraints baseGbc(int row) {
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.gridx = 0;
-        gbc.gridy = row;
-        gbc.weightx = 1.0;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.anchor = GridBagConstraints.NORTHWEST;
-        return gbc;
-    }
-
-    private void addVerticalGlue(JPanel parent, int row) {
-        GridBagConstraints gbc = baseGbc(row);
-        gbc.weighty = 1.0;
-        gbc.fill = GridBagConstraints.VERTICAL;
-        parent.add(Box.createVerticalGlue(), gbc);
-    }
-
-    private JTextField createTextField() {
+    // ── field factories ───────────────────────────────────────────────────────
+    private JTextField baseField() {
         JTextField field = new JTextField();
         field.setFont(new Font(FONT, Font.PLAIN, 13));
         field.setPreferredSize(new Dimension(0, 44));
-        field.setMinimumSize(new Dimension(0, 44));
-        field.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
         field.setBackground(Color.WHITE);
         field.setForeground(TEXT_DARK);
         field.setCaretColor(NAVY);
         field.setBorder(new CompoundBorder(
-                new RoundedBorder(8, FIELD_BORDER),
-                new EmptyBorder(4, 10, 4, 10)
-        ));
+                new EmptyBorder(1, 2, 1, 2),   // keep the rounded outline off the edge
+                new CompoundBorder(
+                        new RoundedBorder(8, FIELD_BORDER),
+                        new EmptyBorder(4, 10, 4, 10))));
         return field;
     }
 
-    private JScrollPane createTextArea() {
-        JTextArea area = new JTextArea();
+    private JTextField readOnlyField() {
+        JTextField field = baseField();
+        field.setEditable(false);
+        field.setFocusable(false);
+        return field;
+    }
+
+    /** Read-only, black-text field used for VIEW mode (never a disabled combo). */
+    private JTextField viewField(String text) {
+        JTextField field = baseField();
+        field.setText(text);
+        field.setEditable(false);
+        field.setFocusable(false);
+        field.setForeground(Color.BLACK);
+        return field;
+    }
+
+    private JScrollPane viewArea(String text) {
+        JTextArea area = new JTextArea(text);
         area.setFont(new Font(FONT, Font.PLAIN, 13));
         area.setLineWrap(true);
         area.setWrapStyleWord(true);
+        area.setEditable(false);
+        area.setFocusable(false);
+        area.setForeground(Color.BLACK);
         area.setBackground(Color.WHITE);
-        area.setForeground(TEXT_DARK);
-        area.setCaretColor(NAVY);
         area.setBorder(new EmptyBorder(6, 10, 6, 10));
 
         JScrollPane scroll = new JScrollPane(area);
-        scroll.setPreferredSize(new Dimension(0, 140));
-        scroll.setMinimumSize(new Dimension(0, 140));
-        scroll.setMaximumSize(new Dimension(Integer.MAX_VALUE, 140));
-        scroll.setBorder(new RoundedBorder(8, FIELD_BORDER));
-        scroll.setBackground(Color.WHITE);
+        scroll.setPreferredSize(new Dimension(0, 130));
+        scroll.setBorder(new CompoundBorder(
+                new EmptyBorder(1, 2, 1, 2),
+                new RoundedBorder(8, FIELD_BORDER)));
         scroll.getViewport().setBackground(Color.WHITE);
-
         return scroll;
     }
 
-    private JComboBox<String> createRequestTypeComboBox() {
-        return createRoundedComboBox(REQUEST_TYPES);
-    }
-
-    private JComboBox<String> createStatusComboBox() {
-        return createRoundedComboBox(new String[]{
-            "Pending", "Approved", "Rejected"
-        });
-    }
-
-    private JComboBox<String> createTimeComboBox() {
-        return createRoundedComboBox(WORK_TIMES);
-    }
-
-    private JComboBox<String> createRoundedComboBox(String[] items) {
-
+    private JComboBox<String> comboBox(String[] items) {
         JComboBox<String> combo = new JComboBox<>(items);
-
         combo.setFont(new Font(FONT, Font.PLAIN, 13));
         combo.setPreferredSize(new Dimension(0, 44));
-        combo.setMinimumSize(new Dimension(0, 44));
-        combo.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
-
         combo.setBackground(Color.WHITE);
         combo.setFocusable(false);
-        combo.setBorder(new RoundedBorder(8, FIELD_BORDER));
-
+        combo.setBorder(new CompoundBorder(
+                new EmptyBorder(1, 2, 1, 2),
+                new RoundedBorder(8, FIELD_BORDER)));
         return combo;
     }
 
-    private JSpinner createDatePicker() {
+    private JSpinner dateSpinner() {
         SpinnerDateModel model = new SpinnerDateModel(
-                new Date(),
-                null,
-                null,
-                java.util.Calendar.DAY_OF_MONTH
-        );
-
-        JSpinner spinner = createRoundedSpinner(model);
-        spinner.setEditor(new JSpinner.DateEditor(spinner, "MM/dd/yyyy"));
-        return spinner;
-    }
-
-    private JSpinner createRoundedSpinner(SpinnerDateModel model) {
-
+                new Date(), null, null, java.util.Calendar.DAY_OF_MONTH);
         JSpinner spinner = new JSpinner(model);
-
         spinner.setFont(new Font(FONT, Font.PLAIN, 13));
         spinner.setPreferredSize(new Dimension(0, 44));
-        spinner.setMinimumSize(new Dimension(0, 44));
-        spinner.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
-
         spinner.setBorder(new CompoundBorder(
-                new RoundedBorder(8, FIELD_BORDER),
-                new EmptyBorder(4, 8, 4, 8)
-        ));
+                new EmptyBorder(1, 2, 1, 2),
+                new CompoundBorder(
+                        new RoundedBorder(8, FIELD_BORDER),
+                        new EmptyBorder(4, 8, 4, 8))));
+        spinner.setEditor(new JSpinner.DateEditor(spinner, "MM/dd/yyyy"));
 
-        JComponent editor = spinner.getEditor();
-
-        if (editor instanceof JSpinner.DefaultEditor defaultEditor) {
-
-            JFormattedTextField textField = defaultEditor.getTextField();
-
-            textField.setFont(new Font(FONT, Font.PLAIN, 13));
-            textField.setBorder(BorderFactory.createEmptyBorder());
-            textField.setBackground(Color.WHITE);
-            textField.setForeground(TEXT_DARK);
-            textField.setCaretColor(NAVY);
+        if (spinner.getEditor() instanceof JSpinner.DefaultEditor editor) {
+            JFormattedTextField tf = editor.getTextField();
+            tf.setFont(new Font(FONT, Font.PLAIN, 13));
+            tf.setBorder(BorderFactory.createEmptyBorder());
+            tf.setBackground(Color.WHITE);
+            tf.setForeground(TEXT_DARK);
+            tf.setCaretColor(NAVY);
         }
-
         return spinner;
     }
 
@@ -642,11 +625,7 @@ public class RequestFormPanel extends JPanel {
             @Override
             protected void paintComponent(Graphics g) {
                 Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(
-                        RenderingHints.KEY_ANTIALIASING,
-                        RenderingHints.VALUE_ANTIALIAS_ON
-                );
-
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 if (getModel().isPressed()) {
                     g2.setColor(new Color(3, 15, 78));
                 } else if (getModel().isRollover()) {
@@ -654,22 +633,17 @@ public class RequestFormPanel extends JPanel {
                 } else {
                     g2.setColor(NAVY);
                 }
-
                 g2.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
-
                 g2.setColor(Color.WHITE);
                 g2.setFont(new Font(FONT, Font.PLAIN, 13));
-
                 FontMetrics fm = g2.getFontMetrics();
                 int x = (getWidth() - fm.stringWidth(getText())) / 2;
                 int y = (getHeight() + fm.getAscent() - fm.getDescent()) / 2;
-
                 g2.drawString(getText(), x, y);
                 g2.dispose();
             }
         };
-
-        button.setPreferredSize(new Dimension(128, 44));
+        button.setPreferredSize(new Dimension(128, 40));
         button.setForeground(Color.WHITE);
         button.setFocusPainted(false);
         button.setBorderPainted(false);
@@ -679,7 +653,6 @@ public class RequestFormPanel extends JPanel {
     }
 
     private static class RoundedBorder extends AbstractBorder {
-
         private final int radius;
         private final Color color;
 
@@ -689,24 +662,12 @@ public class RequestFormPanel extends JPanel {
         }
 
         @Override
-        public void paintBorder(Component c, Graphics g, int x, int y,
-                                int width, int height) {
-
+        public void paintBorder(Component c, Graphics g, int x, int y, int width, int height) {
             Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(
-                    RenderingHints.KEY_ANTIALIASING,
-                    RenderingHints.VALUE_ANTIALIAS_ON
-            );
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             g2.setColor(color);
             g2.setStroke(new BasicStroke(1.1f));
-            g2.drawRoundRect(
-                    x,
-                    y,
-                    width - 1,
-                    height - 1,
-                    radius,
-                    radius
-            );
+            g2.drawRoundRect(x, y, width - 1, height - 1, radius, radius);
             g2.dispose();
         }
 

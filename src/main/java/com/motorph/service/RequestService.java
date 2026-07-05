@@ -13,6 +13,7 @@ public class RequestService {
 
     private static final int MAX_SICK_LEAVE = 15;
     private static final int MAX_VACATION_LEAVE = 15;
+    private static final int MAX_DEFAULT_LEAVE = 15;
 
     private static final LocalTime MIN_WORK_TIME = LocalTime.of(9, 0);
     private static final LocalTime MAX_WORK_TIME = LocalTime.of(17, 0);
@@ -263,7 +264,10 @@ public class RequestService {
             return MAX_VACATION_LEAVE;
         }
 
-        throw new IllegalArgumentException("Unsupported leave type: " + leaveTypeName);
+        // Other seeded leave types (Emergency, Maternity, Paternity, Solo Parent,
+        // Unpaid) don't have a dedicated cap yet, so fall back to the default
+        // allowance instead of rejecting the request outright.
+        return MAX_DEFAULT_LEAVE;
     }
 
     private int getUsedLeaveDays(int employeeId, String leaveTypeName) {

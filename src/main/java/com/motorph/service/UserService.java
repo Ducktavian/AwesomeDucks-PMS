@@ -6,9 +6,10 @@ import com.motorph.model.Role;
 import com.motorph.model.UserAccount;
 import com.motorph.util.PasswordUtil;
 import com.motorph.util.Session;
-import com.motorph.model.Role;
 
 import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public class UserService {
 
@@ -98,6 +99,24 @@ public class UserService {
     public List<UserAccount> listUsers() {
         authorizeAdmin();
         return userDAO.findAll();
+    }
+
+    /**
+     * Returns the account role assigned to each employee for directory filtering.
+     * Reading this mapping is available to every authenticated role because the
+     * Employees page itself applies the logged-in user's RBAC view restrictions.
+     */
+    public Map<Integer, Role> getEmployeeRoles() {
+        if (Session.getCurrentUser() == null) {
+            throw new UnauthorizedException("No active session found.");
+        }
+
+        Map<Integer, Role> rolesByEmployeeId = new LinkedHashMap<>();
+        for (UserAccount account : userDAO.findAll()) {
+            Role role = account.getRole() == null ? Role.EMPLOYEE : account.getRole();
+            rolesByEmployeeId.put(account.getEmployeeId(), role);
+        }
+        return rolesByEmployeeId;
     }
 
     public UserAccount findByEmployeeId(int employeeId) {
