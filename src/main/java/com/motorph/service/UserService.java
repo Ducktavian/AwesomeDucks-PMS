@@ -34,13 +34,11 @@ public class UserService {
         createUser(employeeId, username, password, role, true);
     }
 
-    // NEW: full create — also persists the role (account_role) and the active flag.
-    // The plain save() only writes the user_account row; the role lives in a
-    // separate table, so we set it via changeRole() once we have the new PK.
+    // New accounts start with a default password; the owner changes it later via Account Security.
     public void createUser(int employeeId, String username, String password, Role role, boolean active) {
         authorizeAdmin();
 
-        String hash = hashOrThrow(password);
+        String hash = hashOrThrow(password == null || password.isBlank() ? "password" : password);
         UserAccount newUser = new UserAccount(0, employeeId, username, hash, role, active);
         userDAO.save(newUser); // save() writes the generated id back into newUser
 
