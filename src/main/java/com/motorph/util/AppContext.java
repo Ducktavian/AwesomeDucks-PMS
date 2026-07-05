@@ -35,7 +35,8 @@ public class AppContext {
                     deductionService,
                     payPeriodDAO,
                     payrollDAO,
-                    payslipDAO
+                    payslipDAO,
+                    requestDAO
             );
 
     private static final AuthService authService =

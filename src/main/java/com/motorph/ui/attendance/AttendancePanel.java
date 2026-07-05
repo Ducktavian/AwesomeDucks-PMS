@@ -174,7 +174,9 @@ public class AttendancePanel extends JPanel {
     // Type ay wala pa, so that cell is left blank.
     private Object[] toTableRow(Attendance a) {
         double hours = attendanceService.computeDailyHours(a);
-        boolean complete = a.getLogIn() != null && a.getLogOut() != null;
+        // "Valid" mirrors payroll: a record only counts when it is complete AND
+        // its status is payable (see AttendanceService.isValidForPayroll).
+        boolean valid = attendanceService.isValidForPayroll(a);
 
         return new Object[]{
             a.getEmployeeId(),
@@ -182,8 +184,8 @@ public class AttendancePanel extends JPanel {
             a.getDate() == null ? "" : a.getDate().format(DATE_FMT),
             a.getLogIn() == null ? "" : a.getLogIn().format(TIME_FMT),
             a.getLogOut() == null ? "" : a.getLogOut().format(TIME_FMT),
-            complete ? hours + " hrs" : "",
-            complete ? "Valid" : "Invalid"
+            valid ? hours + " hrs" : "",
+            valid ? "Valid" : "Invalid"
         };
     }
 

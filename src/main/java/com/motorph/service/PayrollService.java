@@ -3,13 +3,17 @@ package com.motorph.service;
 import com.motorph.dao.PayPeriodDAO;
 import com.motorph.dao.PayrollDAO;
 import com.motorph.dao.PayslipDAO;
+import com.motorph.dao.RequestDAO;
 import com.motorph.model.AllowanceBreakdown;
 import com.motorph.model.DeductionBreakdown;
 import com.motorph.model.Employee;
 import com.motorph.model.FinancialSummary;
+import com.motorph.model.OvertimeRequest;
 import com.motorph.model.PayPeriod;
 import com.motorph.model.Payroll;
 import com.motorph.model.Payslip;
+import com.motorph.model.Request;
+import com.motorph.model.RequestStatus;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -23,22 +27,32 @@ public class PayrollService {
     // payroll_status_id = 4 ("Paid") - see seed data for `payroll_status`.
     private static final int STATUS_PAID = 4;
 
+    // Overtime is paid at 1.25x the hourly rate. Because employees clock in/out
+    // once, the extra hours are already captured in time_out and therefore
+    // already counted at 1.0x in regular hours - so overtime pay only adds the
+    // remaining 0.25x premium on top, for a 1.25x effective rate. Hours are only
+    // credited when covered by an APPROVED overtime work_time_request.
+    private static final double OVERTIME_PREMIUM_RATE = 0.25;
+
     private final AttendanceService attendanceService;
     private final RateService rateService;
     private final DeductionService deductionService;
     private final PayPeriodDAO payPeriodDAO;
     private final PayrollDAO payrollDAO;
     private final PayslipDAO payslipDAO;
+    private final RequestDAO requestDAO;
 
     public PayrollService(AttendanceService attendanceService, RateService rateService,
                            DeductionService deductionService, PayPeriodDAO payPeriodDAO,
-                           PayrollDAO payrollDAO, PayslipDAO payslipDAO) {
+                           PayrollDAO payrollDAO, PayslipDAO payslipDAO,
+                           RequestDAO requestDAO) {
         this.attendanceService = attendanceService;
         this.rateService = rateService;
         this.deductionService = deductionService;
         this.payPeriodDAO = payPeriodDAO;
         this.payrollDAO = payrollDAO;
         this.payslipDAO = payslipDAO;
+        this.requestDAO = requestDAO;
     }
 
     /**
@@ -47,15 +61,17 @@ public class PayrollService {
      */
     public Payslip computePayslip(Employee employee, LocalDate periodStart, LocalDate periodEnd) {
         double basicSalary = rateService.computeBasicSalary(employee);
-        double overtimePay = 0; // overtime not modeled yet
-        double holidayPay = 0; // holiday pay not modeled anywhere yet 
+        double holidayPay = 0; // holiday pay not modeled yet
 
         double cutoffHours = attendanceService.computeTotalHours(employee.getEmployeeId(), periodStart, periodEnd);
         double hourlyRate = rateService.computeHourlyRate(employee);
         double cutoffGross = round(cutoffHours * hourlyRate);
 
+        // Overtime premium for approved overtime requests falling in this cutoff.
+        double overtimePay = computeOvertimePay(employee, periodStart, periodEnd, hourlyRate);
+
         AllowanceBreakdown allowanceBreakdown = computeAllowances(employee);
-        double totalGross = round(cutoffGross + allowanceBreakdown.getTotal());
+        double totalGross = round(cutoffGross + overtimePay + allowanceBreakdown.getTotal());
 
         DeductionBreakdown deductionBreakdown;
         if (isSecondCutoff(periodEnd)) {
@@ -109,9 +125,11 @@ public class PayrollService {
 
         if (payrollId == -1) {
             // No payroll yet for this employee/period - save it. basicPay is the
-            // cutoff gross (gross minus allowances), the same figure computePayslip
-            // derived it from.
-            double basicPay = round(payslip.getGrossPay() - payslip.getAllowances());
+            // regular cutoff gross: total gross minus allowances and the overtime
+            // premium (overtime is stored separately in the overtime_pay column).
+            double basicPay = round(payslip.getGrossPay()
+                    - payslip.getAllowances()
+                    - payslip.getOvertimePay());
 
             Payroll payroll = new Payroll(
                     employeeId,
@@ -175,6 +193,31 @@ public class PayrollService {
     // Earliest pay period starting after today, or null if none is set up yet.
     public PayPeriod getUpcomingPayPeriod() {
         return payPeriodDAO.findUpcoming(LocalDate.now());
+    }
+
+    /**
+     * Sums the premium pay for every APPROVED overtime request. 
+     * Pending, rejected or cancelled requests are ignored
+     * An employee who works late without an approved request earns no premium. :)
+     */
+    private double computeOvertimePay(Employee employee, LocalDate periodStart,
+                                      LocalDate periodEnd, double hourlyRate) {
+        int employeeId = Integer.parseInt(employee.getEmployeeId());
+
+        double overtimeHours = 0;
+        for (Request request : requestDAO.findByEmployeeId(employeeId)) {
+            if (request instanceof OvertimeRequest overtime
+                    && overtime.getStatus() == RequestStatus.APPROVED
+                    && isWithinPeriod(overtime.getOvertimeDate(), periodStart, periodEnd)) {
+                overtimeHours += overtime.getHours();
+            }
+        }
+
+        return round(overtimeHours * hourlyRate * OVERTIME_PREMIUM_RATE);
+    }
+
+    private boolean isWithinPeriod(LocalDate date, LocalDate periodStart, LocalDate periodEnd) {
+        return date != null && !date.isBefore(periodStart) && !date.isAfter(periodEnd);
     }
 
     // Divide allowances by 2 (semi-monthly)

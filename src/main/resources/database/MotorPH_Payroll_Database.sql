@@ -10802,6 +10802,9 @@ FROM attendance a
 JOIN employee e ON a.employee_id = e.employee_id
 WHERE a.time_in IS NOT NULL
   AND a.time_out IS NOT NULL
+  -- Only payable statuses count as worked hours. Absent (2) and On Leave (5)
+  -- are excluded; NULL (legacy imports with no status) still counts.
+  AND (a.attendance_status_id IS NULL OR a.attendance_status_id NOT IN (2, 5))
 GROUP BY
     e.employee_id, e.first_name, e.last_name,
     YEAR(a.attendance_date), MONTH(a.attendance_date)
