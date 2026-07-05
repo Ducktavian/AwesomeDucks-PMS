@@ -59,7 +59,7 @@ public class AttendanceService {
         return open;
     }
 
-    
+    // NEW
     public Attendance getTodaysAttendance(String employeeId) {
         validateEmployeeId(employeeId);
 

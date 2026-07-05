@@ -37,6 +37,21 @@ public class EmployeeService {
         return employeeDAO.findBy(employeeId);
     }
 
+    /**
+     * Returns the next sequential employee ID (highest existing numeric id + 1)..
+     */
+    public String getNextEmployeeId() {
+        int max = 0;
+        for (Employee employee : employeeDAO.findAll()) {
+            try {
+                max = Math.max(max, Integer.parseInt(employee.getEmployeeId()));
+            } catch (NumberFormatException ignored) {
+                // Non-numeric ids can't seed the sequence; skip them.
+            }
+        }
+        return String.valueOf(max < 10001 ? 10001 : max + 1);
+    }
+
     public Map<String, Integer> getAvailablePositions() {
         return employeeDAO.findAllPositions();
     }
@@ -102,13 +117,24 @@ public class EmployeeService {
         if (sssDigits.length() != 10) {
             throw new IllegalArgumentException("SSS Number must contain exactly 10 numeric digits.");
         }
-        if (employee.getPhilhealthNumber() == null || !employee.getPhilhealthNumber().matches("^\\d{12}$")) {
+        // Government IDs may be entered with separators (e.g. 442-605-657-000);
+        // validate on the digits only, so formatting hyphens don't count.
+        String philhealthDigits = employee.getPhilhealthNumber() == null
+                ? ""
+                : employee.getPhilhealthNumber().replaceAll("\\D", "");
+        if (philhealthDigits.length() != 12) {
             throw new IllegalArgumentException("PhilHealth Number must be 12 digits.");
         }
-        if (employee.getTIN() == null || !employee.getTIN().matches("^\\d{12}$")) {
+        String tinDigits = employee.getTIN() == null
+                ? ""
+                : employee.getTIN().replaceAll("\\D", "");
+        if (tinDigits.length() != 12) {
             throw new IllegalArgumentException("TIN must be exactly 12 digits.");
         }
-        if (employee.getPagIbigNumber() == null || !employee.getPagIbigNumber().matches("^\\d{12}$")) {
+        String pagibigDigits = employee.getPagIbigNumber() == null
+                ? ""
+                : employee.getPagIbigNumber().replaceAll("\\D", "");
+        if (pagibigDigits.length() != 12) {
             throw new IllegalArgumentException("Pag-IBIG Number must be exactly 12 digits.");
         }
         if (employee.getStatus() == null || employee.getStatus().isBlank()) {

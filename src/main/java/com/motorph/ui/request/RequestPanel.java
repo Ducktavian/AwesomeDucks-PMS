@@ -138,8 +138,12 @@ public class RequestPanel extends JPanel {
 
         currentEmployeeId = user == null ? "" : String.valueOf(user.getEmployeeId());
 
-        // The dropdown acts as a role changer; access starts at the real role.
-        viewAsRole = currentRole;
+        // The dropdown acts as a role changer; access starts at the real role
+        // on first load, but a previously chosen view is preserved across
+        // refreshes (e.g. after a modal closes) so it doesn't snap back.
+        if (viewAsRole == null) {
+            viewAsRole = currentRole;
+        }
     }
 
     /** Only Admin and HR see every request; other views see their own only. */
@@ -375,6 +379,9 @@ public class RequestPanel extends JPanel {
             return null; // pure Employee: nothing to switch, so no role changer
         }
         roleFilter = new JComboBox<>(views);
+        // Reflect the currently active view so a rebuilt combo (after a modal
+        // closes) stays on the last-selected role instead of resetting.
+        roleFilter.setSelectedItem(viewAsRole.getRoleName());
         roleFilter.setFont(new Font(FONT, Font.PLAIN, 13));
         roleFilter.setPreferredSize(new Dimension(140, 37));
         roleFilter.setBackground(Color.WHITE);

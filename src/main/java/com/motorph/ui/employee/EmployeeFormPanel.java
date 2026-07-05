@@ -908,10 +908,12 @@ public class EmployeeFormPanel extends JPanel {
         employee.setEmail(getValue(emailField));
         employee.setAddress(getValue(addressField));
 
-        employee.setSSSNumber(getValue(sssField));
-        employee.setPhilhealthNumber(getValue(philhealthField));
-        employee.setPagIbigNumber(getValue(pagibigField));
-        employee.setTIN(getValue(tinField));
+        // Government IDs are entered/displayed with hyphens, but stored as digits
+        // only — strip separators here so persistence is consistent.
+        employee.setSSSNumber(cleanDigits(getValue(sssField)));
+        employee.setPhilhealthNumber(cleanDigits(getValue(philhealthField)));
+        employee.setPagIbigNumber(cleanDigits(getValue(pagibigField)));
+        employee.setTIN(cleanDigits(getValue(tinField)));
 
         employee.setBasicSalary(parseDouble(getValue(basicSalaryField)));
         employee.setRiceSubsidy(parseDouble(getValue(riceSubsidyField)));
@@ -949,8 +951,12 @@ public class EmployeeFormPanel extends JPanel {
         restorePlaceholders();
         setFieldsEditable(true);
 
-        employeeIdField.setEditable(true);
-        employeeIdField.setFocusable(true);
+        // Employee ID is system-generated (next sequential id), never typed in.
+        employeeIdField.setText(employeeService.getNextEmployeeId());
+        employeeIdField.setForeground(Color.BLACK);
+        employeeIdField.setEditable(false);
+        employeeIdField.setFocusable(false);
+        employeeIdField.setBackground(new Color(245, 245, 245));
 
         departmentComboBox.setVisible(true);
         departmentField.setVisible(false);
