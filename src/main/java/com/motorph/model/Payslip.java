@@ -138,6 +138,9 @@ public class Payslip {
     public double getTotalDeductions() {
         return deductionBreakdown.getTotal();
     }
+    public double getTaxableIncome() {
+        return deductionBreakdown.getTaxableIncome();
+    }
 
     public double getNetPay() {
         return netPay;

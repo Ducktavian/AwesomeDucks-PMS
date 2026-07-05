@@ -195,11 +195,7 @@ public class PayrollService {
         return payPeriodDAO.findUpcoming(LocalDate.now());
     }
 
-    /**
-     * Sums the premium pay for every APPROVED overtime request. 
-     * Pending, rejected or cancelled requests are ignored
-     * An employee who works late without an approved request earns no premium. :)
-     */
+    
     private double computeOvertimePay(Employee employee, LocalDate periodStart,
                                       LocalDate periodEnd, double hourlyRate) {
         int employeeId = Integer.parseInt(employee.getEmployeeId());
@@ -231,7 +227,7 @@ public class PayrollService {
 
     // First cutoff: deductions are not withheld yet.
     private DeductionBreakdown computeMonthlyDeductions() {
-        return new DeductionBreakdown(0, 0, 0, 0);
+        return new DeductionBreakdown(0, 0, 0, 0, 0);
     }
 
     // Second cutoff: deductions are computed on the full month's gross and withheld.
@@ -240,10 +236,12 @@ public class PayrollService {
         double monthlyPhilHealth = deductionService.calculatePhilHealthContribution(monthlyGross);
         double monthlyPagIbig = deductionService.calculatePagIbigContribution(monthlyGross);
 
+        // Allowances are never part of the taxable base - monthlyGross here is pure hours * rate.
         double monthlyTaxableIncome = monthlyGross - monthlySSS - monthlyPhilHealth - monthlyPagIbig;
         double tax = deductionService.calculateTax(monthlyTaxableIncome);
 
         return new DeductionBreakdown(
+                round(monthlyTaxableIncome),
                 round(monthlySSS),
                 round(monthlyPhilHealth),
                 round(monthlyPagIbig),

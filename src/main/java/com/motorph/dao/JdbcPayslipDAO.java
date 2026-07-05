@@ -149,11 +149,23 @@ public class JdbcPayslipDAO implements PayslipDAO {
                 rs.getDouble("phone_allowance"),
                 rs.getDouble("clothing_allowance"));
 
+        double sss = rs.getDouble("sss");
+        double philHealth = rs.getDouble("philhealth");
+        double pagIbig = rs.getDouble("pagibig");
+        double withholdingTax = rs.getDouble("withholding_tax");
+
+        // The monthly gross the tax was originally computed from isn't persisted
+        // (only the resulting deduction amounts are), so reconstruct it from what
+        // we do have. No deductions were withheld on the first cutoff, so this
+        // is only meaningful when withholding tax was actually applied.
+        double taxableIncome = withholdingTax > 0
+                ? rs.getDouble("gross_pay") - rs.getDouble("rice_subsidy") - rs.getDouble("phone_allowance")
+                        - rs.getDouble("clothing_allowance") - rs.getDouble("overtime_pay")
+                        - sss - philHealth - pagIbig
+                : 0;
+
         DeductionBreakdown deductions = new DeductionBreakdown(
-                rs.getDouble("sss"),
-                rs.getDouble("philhealth"),
-                rs.getDouble("pagibig"),
-                rs.getDouble("withholding_tax"));
+                taxableIncome, sss, philHealth, pagIbig, withholdingTax);
 
         LocalDate periodStart = rs.getDate("period_start_date").toLocalDate();
         LocalDate periodEnd = rs.getDate("period_end_date").toLocalDate();

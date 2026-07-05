@@ -175,9 +175,8 @@ public class Reset extends JDialog {
         }
 
         JOptionPane.showMessageDialog(this,
-            "Password reset link sent to " + email + ". Please check your email.",
-            "Success", JOptionPane.INFORMATION_MESSAGE);
-        dispose();
+            "Email-based password reset is still under development. Please contact IT/Admin for now.",
+            "Feature Not Yet Available", JOptionPane.INFORMATION_MESSAGE);
     }
 
     // ═══════════════════════════════════════════════════════════════════════════

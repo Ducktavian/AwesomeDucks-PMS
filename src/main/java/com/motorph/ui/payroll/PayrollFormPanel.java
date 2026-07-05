@@ -99,6 +99,7 @@ public class PayrollFormPanel extends JPanel {
     private JTextField bonusAmountField;
 
     // Deduction fields
+    private JTextField taxableIncomeField;
     private JTextField withholdingTaxField;
     private JTextField sssField;
     private JTextField philHealthField;
@@ -232,6 +233,7 @@ public class PayrollFormPanel extends JPanel {
         addSpacer(col, row++, 16);
         addSectionTitle(col, row++, "Deduction");
 
+        addFormRow(col, row++, "Total Taxable Income", taxableIncomeField = createTextField());
         addFormRow(col, row++, "Withholding Tax", withholdingTaxField = createTextField());
         addFormRow(col, row++, "SSS", sssField = createTextField());
         addFormRow(col, row++, "PhilHealth", philHealthField = createTextField());
@@ -907,6 +909,7 @@ public class PayrollFormPanel extends JPanel {
         phoneAllowanceField.setText(money(payslip.getAllowanceBreakdown().getPhoneAllowance()));
         clothingAllowanceField.setText(money(payslip.getAllowanceBreakdown().getClothingAllowance()));
 
+        taxableIncomeField.setText(money(payslip.getTaxableIncome()));
         withholdingTaxField.setText(money(payslip.getDeductionBreakdown().getWithholdingTax()));
         sssField.setText(money(payslip.getDeductionBreakdown().getSss()));
         philHealthField.setText(money(payslip.getDeductionBreakdown().getPhilHealth()));
