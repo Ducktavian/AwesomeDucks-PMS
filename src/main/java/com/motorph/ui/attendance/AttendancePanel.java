@@ -57,7 +57,9 @@ import javax.swing.table.TableRowSorter;
 import com.motorph.model.Attendance;
 import com.motorph.model.Role;
 import com.motorph.model.UserAccount;
+import com.motorph.reporting.TimeCardReportGenerator;
 import com.motorph.service.AttendanceService;
+import com.motorph.service.EmployeeService;
 import com.motorph.util.AppContext;
 import com.motorph.util.Session;
 
@@ -82,6 +84,7 @@ public class AttendancePanel extends JPanel {
 
     // connection to the database via service -> dao
     private final AttendanceService attendanceService = AppContext.getAttendanceService();
+    private final EmployeeService employeeService = AppContext.getEmployeeService();
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("MM/dd/yyyy");
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("h:mm a");     
 
@@ -272,6 +275,10 @@ public class AttendancePanel extends JPanel {
 
         JPanel rightButtons = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         rightButtons.setOpaque(false);
+
+        JButton printTimecardButton = button("🖨  Print Timecard", 160);
+        printTimecardButton.addActionListener(e -> printTimecard());
+        rightButtons.add(printTimecardButton);
 
         // Everyone may log attendance, so Add is always present; its label
         // becomes "File Attendance" in a self-scoped view (you log your own).
@@ -468,6 +475,16 @@ public class AttendancePanel extends JPanel {
                         JOptionPane.ERROR_MESSAGE
                 );
             }
+        }
+    }
+
+    // Self-scoped views always print the logged-in user's own timecard.
+    // Admin/HR views pick the employee and the period in one modal.
+    private void printTimecard() {
+        if (canViewAll()) {
+            TimeCardReportGenerator.promptAndView(this, employeeService.getAllEmployees());
+        } else {
+            TimeCardReportGenerator.promptAndView(this, Integer.parseInt(currentEmployeeId));
         }
     }
 

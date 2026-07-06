@@ -34,11 +34,13 @@
 		<defaultValueExpression><![CDATA[Thread.currentThread().getContextClassLoader().getResourceAsStream("JasperReport/MotorPH-icon.png")]]></defaultValueExpression>
 	</parameter>
 	<parameter name="EMPLOYEE_ID" class="java.lang.Integer"/>
+	<parameter name="MONTH" class="java.lang.Integer"/>
+	<parameter name="YEAR" class="java.lang.Integer"/>
 	<query language="SQL"><![CDATA[SELECT
     a.employee_id,
     CONCAT(e.last_name, ', ', e.first_name) AS employee_name,
 
-    DATE_FORMAT(CURDATE(), '%m/%d/%Y') AS payroll_date_text,
+    DATE_FORMAT(STR_TO_DATE(CONCAT($P{YEAR}, '-', $P{MONTH}, '-01'), '%Y-%m-%d'), '%M %Y') AS payroll_date_text,
     CASE
         WHEN DAY(a.attendance_date) BETWEEN 1 AND 15 THEN '1st Cutoff'
         ELSE '2nd Cutoff'
@@ -81,6 +83,8 @@ LEFT JOIN employee e
 LEFT JOIN attendance_status ats
     ON a.attendance_status_id = ats.attendance_status_id
 WHERE a.employee_id = $P{EMPLOYEE_ID}
+    AND MONTH(a.attendance_date) = $P{MONTH}
+    AND YEAR(a.attendance_date) = $P{YEAR}
 ORDER BY
     a.employee_id,
     a.attendance_date]]></query>
@@ -132,7 +136,7 @@ ORDER BY
 		</element>
 		<element kind="staticText" uuid="188f96c0-4c04-463d-acbb-d9de0fda62da" mode="Opaque" x="300" y="0" width="160" height="23" backcolor="#03135F" vTextAlign="Middle" style="InfoLabel">
 			<paragraph leftIndent="4"/>
-			<text><![CDATA[PAYROLL DATE]]></text>
+			<text><![CDATA[PERIOD]]></text>
 			<box style="InfoLabel">
 				<pen lineWidth="0.25" lineColor="#FFFFFF"/>
 			</box>

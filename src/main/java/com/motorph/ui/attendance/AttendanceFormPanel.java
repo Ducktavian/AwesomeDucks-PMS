@@ -446,7 +446,8 @@ public class AttendanceFormPanel extends JPanel {
         }
     }
 
-    // Opens the employee's timecard in JasperViewer, where it can be saved as PDF.
+    // Prompts for a month/year, then opens that period's timecard in JasperViewer,
+    // where it can be saved as PDF.
     private void saveAttendanceAsPdf() {
         String employeeId = targetEmployeeId();
         if (employeeId.isBlank()) {
@@ -454,13 +455,7 @@ public class AttendanceFormPanel extends JPanel {
                     "Save PDF", JOptionPane.WARNING_MESSAGE);
             return;
         }
-        try {
-            TimeCardReportGenerator.view(Integer.parseInt(employeeId));
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            JOptionPane.showMessageDialog(this, "Failed to generate PDF:\n" + ex.getMessage(),
-                    "Save PDF Error", JOptionPane.ERROR_MESSAGE);
-        }
+        TimeCardReportGenerator.promptAndView(this, Integer.parseInt(employeeId));
     }
 
     // ── populate (EDIT / VIEW) ───────────────────────────────────────────────
