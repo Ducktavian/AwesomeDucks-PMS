@@ -188,7 +188,7 @@ public class PayrollFormPanel extends JPanel {
 
         // Payslip ID is system-generated (blank until a payslip is loaded, e.g.
         // in view-only mode), so it's never user-edited.
-        addFormRow(col, row++, "Payslip ID", payslipIdField = createTextField());
+        addFormRow(col, row++, "Payslip ID:", payslipIdField = createPayslipIdField());
         payslipIdField.setEditable(false);
         payslipIdField.setFocusable(false);
 
@@ -332,6 +332,14 @@ public class PayrollFormPanel extends JPanel {
                 new RoundedBorder(7, FIELD_BORDER),
                 new EmptyBorder(2, 8, 2, 8)
         ));
+        return field;
+    }
+
+    private JTextField createPayslipIdField() {
+        JTextField field = createTextField();
+        field.setPreferredSize(new Dimension(315, 28));
+        field.setMinimumSize(new Dimension(260, 28));
+        field.setColumns(24);
         return field;
     }
 
@@ -904,6 +912,7 @@ public class PayrollFormPanel extends JPanel {
     
     private void populateFromPayslip(Payslip payslip) {
         payslipIdField.setText(payslip.getPayslipId() == null ? "" : payslip.getPayslipId());
+        payslipIdField.setCaretPosition(0);
 
         selectEmployeeById(payslip.getEmployeeNumber());
 
