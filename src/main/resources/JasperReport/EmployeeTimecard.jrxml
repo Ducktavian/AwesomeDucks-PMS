@@ -30,7 +30,9 @@
 			<conditionExpression><![CDATA["Invalid".equals($F{validity})]]></conditionExpression>
 		</conditionalStyle>
 	</style>
-	<parameter name="LOGO_PATH" class="java.io.InputStream"/>
+	<parameter name="LOGO" class="java.io.InputStream">
+		<defaultValueExpression><![CDATA[Thread.currentThread().getContextClassLoader().getResourceAsStream("JasperReport/MotorPH-icon.png")]]></defaultValueExpression>
+	</parameter>
 	<parameter name="EMPLOYEE_ID" class="java.lang.Integer"/>
 	<query language="SQL"><![CDATA[SELECT
     a.employee_id,
@@ -95,7 +97,7 @@ ORDER BY
 	<background splitType="Stretch"/>
 	<title height="120" splitType="Stretch">
 		<element kind="image" uuid="0c88b846-14aa-441d-89b8-195eed9ea49d" x="240" y="-7" width="100" height="100" scaleImage="RetainShape" onErrorType="Blank">
-			<expression><![CDATA[$P{LOGO_PATH}]]></expression>
+			<expression><![CDATA[$P{LOGO}]]></expression>
 		</element>
 		<element kind="staticText" uuid="d3485558-dd6a-47d8-a611-974f1b5a9ed0" x="350" y="0" width="220" height="34" hTextAlign="Left" vTextAlign="Middle" style="CompanyName">
 			<text><![CDATA[MotorPH]]></text>
