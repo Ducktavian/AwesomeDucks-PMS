@@ -74,6 +74,7 @@ public class PayrollFormPanel extends JPanel {
     private final EmployeeService employeeService = AppContext.getEmployeeService();
     private final PayrollService payrollService = AppContext.getPayrollService();
 
+    private JTextField payslipIdField;
     private JComboBox<Employee> employeeCombo;
     private JTextField payrollDateField;
     private JButton dateButton;
@@ -184,6 +185,12 @@ public class PayrollFormPanel extends JPanel {
         col.setOpaque(false);
 
         int row = 0;
+
+        // Payslip ID is system-generated (blank until a payslip is loaded, e.g.
+        // in view-only mode), so it's never user-edited.
+        addFormRow(col, row++, "Payslip ID", payslipIdField = createTextField());
+        payslipIdField.setEditable(false);
+        payslipIdField.setFocusable(false);
 
         // FIX 1: "Employee:" now has a trailing colon so addFormRow's
         // labelText.endsWith(":") check bolds it, matching "Payroll Date:"
@@ -896,6 +903,8 @@ public class PayrollFormPanel extends JPanel {
 
     
     private void populateFromPayslip(Payslip payslip) {
+        payslipIdField.setText(payslip.getPayslipId() == null ? "" : payslip.getPayslipId());
+
         selectEmployeeById(payslip.getEmployeeNumber());
 
         basicSalaryField.setText(money(payslip.getBasicSalary()));

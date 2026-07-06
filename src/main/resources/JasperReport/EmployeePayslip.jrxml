@@ -30,13 +30,13 @@
     ep.position_name AS position,
     d.department_name AS department,
 
-    DATE_FORMAT(COALESCE(att.payroll_date, CURDATE()), '%m/%d/%Y') AS payroll_date_text,
+    DATE_FORMAT(COALESCE(pp.pay_date, att.payroll_date, CURDATE()), '%m/%d/%Y') AS payroll_date_text,
     CASE
-        WHEN DAY(COALESCE(att.payroll_date, CURDATE())) BETWEEN 1 AND 15 THEN '1st Cutoff'
+        WHEN DAY(pp.period_start_date) BETWEEN 1 AND 15 THEN '1st Cutoff'
         ELSE '2nd Cutoff'
     END AS payroll_period,
-    CAST(NULL AS DATE) AS period_start,
-    CAST(NULL AS DATE) AS period_end,
+    pp.period_start_date AS period_start,
+    pp.period_end_date AS period_end,
 
     CAST(COALESCE(pr.gross_pay, 0) AS DECIMAL(10,2)) AS basic_salary,
     CAST(COALESCE(pr.gross_pay, 0) AS DECIMAL(10,2)) AS monthly_salary,
@@ -76,9 +76,30 @@
 
     CAST(COALESCE(pr.gross_pay, 0) AS DECIMAL(10,2)) AS gross_income,
     CAST(COALESCE(pr.total_deductions, 0) AS DECIMAL(10,2)) AS total_deductions,
-    CAST(COALESCE(pr.net_pay, 0) AS DECIMAL(10,2)) AS net_pay
+    CAST(COALESCE(pr.net_pay, 0) AS DECIMAL(10,2)) AS net_pay,
+
+    -- Taxable income isn't persisted; reconstruct it the same way JdbcPayslipDAO
+    -- does. Only meaningful when withholding tax was actually applied (i.e. the
+    -- 2nd cutoff), otherwise 0 to match the view-payroll panel.
+    CAST(
+        CASE
+            WHEN COALESCE(pd.withholding_tax, 0) > 0
+            THEN COALESCE(pr.gross_pay, 0)
+                 - COALESCE(b.rice_subsidy, 0)
+                 - COALESCE(b.phone_allowance, 0)
+                 - COALESCE(b.clothing_allowance, 0)
+                 - COALESCE(pr.overtime_pay, 0)
+                 - COALESCE(pd.sss, 0)
+                 - COALESCE(pd.philhealth, 0)
+                 - COALESCE(pd.pagibig, 0)
+            ELSE 0
+        END AS DECIMAL(10,2)
+    ) AS taxable_income
 
 FROM payroll pr
+
+LEFT JOIN pay_period pp
+    ON pr.pay_period_id = pp.pay_period_id
 
 LEFT JOIN payslip ps
     ON ps.payroll_id = pr.payroll_id
@@ -177,6 +198,7 @@ ORDER BY pr.payroll_id DESC]]></query>
 	<field name="total_benefits" class="java.math.BigDecimal"/>
 	<field name="total_deductions" class="java.math.BigDecimal"/>
 	<field name="net_pay" class="java.math.BigDecimal"/>
+	<field name="taxable_income" class="java.math.BigDecimal"/>
 	<background splitType="Stretch"/>
 	<title splitType="Stretch"/>
 	<pageHeader splitType="Stretch"/>
@@ -421,11 +443,17 @@ ORDER BY pr.payroll_id DESC]]></query>
 			<element kind="textField" uuid="9b2b3eec-5e8c-4c06-aa67-0e23a1e3c377" x="420" y="722" width="130" height="16" pattern="₱#,##0.00" hTextAlign="Right" vTextAlign="Middle" style="RowValue">
 				<expression><![CDATA[$F{total_deductions}]]></expression>
 			</element>
-			<element kind="rectangle" uuid="3beba623-4fe6-4ce1-8f13-c29e673183c9" mode="Opaque" x="0" y="738" width="555" height="22" forecolor="#EAEAEA" backcolor="#EAEAEA"/>
-			<element kind="staticText" uuid="e8284499-b2b2-47a4-aace-0ad50d85c900" x="5" y="738" width="250" height="22" fontSize="10.0" underline="true" vTextAlign="Middle" style="TotalLabel">
+			<element kind="staticText" uuid="7c1e0a44-3d2b-4f61-9a8e-1c2f3b4d5e6f" x="5" y="738" width="250" height="16" vTextAlign="Middle" style="RowLabel">
+				<text><![CDATA[Total Taxable Income]]></text>
+			</element>
+			<element kind="textField" uuid="8d2f1b55-4e3c-4a72-8b9f-2d3e4c5f6a7b" x="420" y="738" width="130" height="16" pattern="₱#,##0.00" hTextAlign="Right" vTextAlign="Middle" style="RowValue">
+				<expression><![CDATA[$F{taxable_income}]]></expression>
+			</element>
+			<element kind="rectangle" uuid="3beba623-4fe6-4ce1-8f13-c29e673183c9" mode="Opaque" x="0" y="756" width="555" height="22" forecolor="#EAEAEA" backcolor="#EAEAEA"/>
+			<element kind="staticText" uuid="e8284499-b2b2-47a4-aace-0ad50d85c900" x="5" y="756" width="250" height="22" fontSize="10.0" underline="true" vTextAlign="Middle" style="TotalLabel">
 				<text><![CDATA[NET PAY]]></text>
 			</element>
-			<element kind="textField" uuid="0a4e97d9-8db8-4e11-8593-21e23073c0c6" x="420" y="738" width="130" height="22" fontSize="10.0" pattern="₱#,##0.00" underline="true" hTextAlign="Right" vTextAlign="Middle" style="TotalValue">
+			<element kind="textField" uuid="0a4e97d9-8db8-4e11-8593-21e23073c0c6" x="420" y="756" width="130" height="22" fontSize="10.0" pattern="₱#,##0.00" underline="true" hTextAlign="Right" vTextAlign="Middle" style="TotalValue">
 				<expression><![CDATA[$F{net_pay}]]></expression>
 			</element>
 		</band>
