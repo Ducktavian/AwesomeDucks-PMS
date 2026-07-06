@@ -350,7 +350,7 @@ public class RequestPanel extends JPanel {
 
         // Add is always present; in a self-scoped view it becomes "File Request"
         // (you file your own), while Admin/HR use it to add for anyone.
-        addButton = button("+  Add", 120);
+        addButton = button("+  Add", 105);
         addButton.addActionListener(e -> openAddForm());
         buttons.add(addButton);
 
@@ -362,7 +362,7 @@ public class RequestPanel extends JPanel {
         deleteButton.addActionListener(e -> deleteSelectedRequest());
         buttons.add(deleteButton);
 
-        JButton refreshButton = button("⟳  Refresh", 110);
+        JButton refreshButton = button("⟳  Refresh", 105);
         refreshButton.addActionListener(e -> showRequestList()); // reloads from DB
         buttons.add(refreshButton);
 
