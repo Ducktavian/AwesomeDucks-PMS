@@ -275,7 +275,7 @@ public class AttendancePanel extends JPanel {
 
         // Everyone may log attendance, so Add is always present; its label
         // becomes "File Attendance" in a self-scoped view (you log your own).
-        addButton = button("+  Add", 130);
+        addButton = button("+  Add", 105);
         addButton.addActionListener(e -> openAddForm());
         rightButtons.add(addButton);
 
