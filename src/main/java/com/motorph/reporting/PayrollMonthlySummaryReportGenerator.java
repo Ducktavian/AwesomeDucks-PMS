@@ -33,7 +33,7 @@ public class PayrollMonthlySummaryReportGenerator {
             JasperReport jasperReport = JasperCompileManager.compileReport(reportStream);
 
             Map<String, Object> params = new HashMap<>();
-            params.put("LOGO_PATH", logoStream);
+            params.put("LOGO", logoStream);
 
             JasperPrint jasperPrint = JasperFillManager.fillReport(jasperReport, params, connection);
             JasperViewer.viewReport(jasperPrint, false);

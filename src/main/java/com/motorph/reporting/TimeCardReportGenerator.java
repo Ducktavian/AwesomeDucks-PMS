@@ -48,7 +48,7 @@ public class TimeCardReportGenerator {
             params.put("EMPLOYEE_ID", employeeId);
             params.put("MONTH", month);
             params.put("YEAR", year);
-            params.put("LOGO_PATH", logoStream);
+            params.put("LOGO", logoStream);
 
             JasperPrint jasperPrint = JasperFillManager.fillReport(jasperReport, params, connection);
             JasperViewer.viewReport(jasperPrint, false);
