@@ -91,7 +91,9 @@ public class JdbcEmployeeDAO implements EmployeeDAO {
 
     @Override
     public List<Employee> findAll() {
-        String sql = SELECT_FROM_VIEW + " ORDER BY employee_id ASC";
+        // Deleted (soft-deleted) employees are excluded from the working list;
+        // their row and all payroll/attendance history remain in the DB.
+        String sql = SELECT_FROM_VIEW + " WHERE is_active = TRUE ORDER BY employee_id ASC";
         List<Employee> list = new ArrayList<>();
 
         try (Connection conn = DatabaseConnection.getConnection();
@@ -344,24 +346,37 @@ public class JdbcEmployeeDAO implements EmployeeDAO {
         }
     }
 
-    // The employee row stays intact; only the login is disabled.
-
+    // Soft delete: the employee row and all cascaded payroll/attendance/leave
+    // history stay intact, but the employee is marked inactive and disappears
+    // from findAll(); their login is disabled at the same time.
     @Override
     public void delete(String employeeId) {
-        String sql = "UPDATE user_account SET is_active = FALSE WHERE employee_id = ?";
+        Connection conn = null;
+        try {
+            conn = DatabaseConnection.getConnection();
+            conn.setAutoCommit(false);
 
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            int empId = Integer.parseInt(employeeId);
 
-            stmt.setInt(1, Integer.parseInt(employeeId));
-            int rows = stmt.executeUpdate();
-
-            if (rows == 0) {
-                System.out.println("No user_account found for employee_id: " + employeeId);
+            try (PreparedStatement stmt = conn.prepareStatement(
+                    "UPDATE employee SET is_active = FALSE WHERE employee_id = ?")) {
+                stmt.setInt(1, empId);
+                stmt.executeUpdate();
             }
 
+            try (PreparedStatement stmt = conn.prepareStatement(
+                    "UPDATE user_account SET is_active = FALSE WHERE employee_id = ?")) {
+                stmt.setInt(1, empId);
+                stmt.executeUpdate();
+            }
+
+            conn.commit();
+
         } catch (SQLException e) {
+            rollback(conn);
             e.printStackTrace();
+        } finally {
+            resetAndClose(conn);
         }
     }
 
@@ -409,6 +424,7 @@ public class JdbcEmployeeDAO implements EmployeeDAO {
         emp.setImmediateSupervisorId(rs.wasNull() ? null : supervisorId);
 
         emp.setEmploymentStatusId(rs.getInt("employment_status_id")); // never null
+        emp.setActive(rs.getBoolean("is_active"));
 
         return emp;
     }

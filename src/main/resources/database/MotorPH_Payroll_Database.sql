@@ -167,6 +167,7 @@ CREATE TABLE `employee` (
   `position_id`               INT          NOT NULL,
   `immediate_supervisor_id`   INT          NULL,
   `employment_status_id`      INT          NOT NULL,
+  `is_active`                 BOOLEAN      NOT NULL DEFAULT TRUE,
   `created_at`                DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at`                DATETIME     NULL ON UPDATE CURRENT_TIMESTAMP,
   `created_by`                INT          NULL,
@@ -10640,6 +10641,7 @@ SELECT
     e.position_id,
     e.immediate_supervisor_id,
     e.employment_status_id,
+    e.is_active,
 
     -- Position & Department
     p.position_name,
@@ -10687,6 +10689,7 @@ GROUP BY
     e.employee_id,      e.first_name,               e.last_name,
     e.birthdate,        e.phone_number,              e.email,
     e.position_id,      e.immediate_supervisor_id,   e.employment_status_id,
+    e.is_active,
     p.position_name,    d.department_name,           s.status_type,
     sup.first_name,     sup.last_name,
     a.full_address,

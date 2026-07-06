@@ -32,6 +32,7 @@ public class Employee {
     protected Integer positionId;
     protected Integer immediateSupervisorId;
     protected Integer employmentStatusId;
+    protected boolean active = true;
 
     public Employee() {}
 
@@ -107,6 +108,7 @@ public class Employee {
     public Integer getPositionId() { return positionId; }
     public Integer getImmediateSupervisorId() { return immediateSupervisorId; }
     public Integer getEmploymentStatusId() { return employmentStatusId; }
+    public boolean isActive() { return active; }
 
     public void setEmployeeId(String employeeId) { this.employeeId = employeeId; }
     public void setLastName(String lastName) { this.lastName = lastName; }
@@ -136,6 +138,7 @@ public class Employee {
     public void setPositionId(Integer positionId) { this.positionId = positionId; }
     public void setImmediateSupervisorId(Integer immediateSupervisorId) { this.immediateSupervisorId = immediateSupervisorId; }
     public void setEmploymentStatusId(Integer employmentStatusId) { this.employmentStatusId = employmentStatusId; }
+    public void setActive(boolean active) { this.active = active; }
 
     public String getFullName() {
         return safe(firstName) + " " + safe(lastName);
