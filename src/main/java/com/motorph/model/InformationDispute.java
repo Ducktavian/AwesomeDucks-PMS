@@ -22,4 +22,9 @@ public class InformationDispute extends Dispute {
 
     public void setCategory(String category)       { this.category = category; }
     public void setTargetField(String targetField) { this.targetField = targetField; }
+
+    @Override
+    public String getDisplayDescription() {
+        return "Information Dispute (" + category + "): request to correct " + targetField;
+    }
 }

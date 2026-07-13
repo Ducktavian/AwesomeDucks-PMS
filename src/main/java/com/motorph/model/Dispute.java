@@ -41,4 +41,6 @@ public abstract class Dispute implements Disputable {
     public void setStatus(DisputeStatus status) { this.status = status; }
     public void setReviewedById(Integer reviewedById) { this.reviewedById = reviewedById; }
     public void setDateReviewed(LocalDate dateReviewed) { this.dateReviewed = dateReviewed; }
+
+    public abstract String getDisplayDescription();
 }

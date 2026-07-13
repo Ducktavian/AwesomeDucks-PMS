@@ -144,6 +144,13 @@ public class Employee {
         return safe(firstName) + " " + safe(lastName);
     }
 
+    public String getFullName(boolean lastNameFirst) {
+        if (lastNameFirst) {
+            return safe(lastName) + ", " + safe(firstName);
+        }
+        return getFullName();
+    }
+
     public double getHourlyRate() {
         if (hourlyRate > 0) return hourlyRate;
         double raw = basicSalary / (21 * 8);

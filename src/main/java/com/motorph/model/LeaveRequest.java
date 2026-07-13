@@ -30,4 +30,9 @@ public class LeaveRequest extends Request {
     public double calculateImpact(double dailyRate) {
         return getLeaveDays() * dailyRate;
     }
+
+    @Override
+    public String getDisplayDescription() {
+        return leaveType + " Leave (" + getLeaveDays() + " day(s): " + startDate + " to " + endDate + ")";
+    }
 }

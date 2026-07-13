@@ -34,4 +34,6 @@ public abstract class Request implements Requestable {
 
     @Override public void setStatus(RequestStatus status) { this.status = status; }
     @Override public void setApproverId(Integer approverId) { this.approverId = approverId; }
+
+    public abstract String getDisplayDescription();
 }

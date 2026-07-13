@@ -32,4 +32,9 @@ public class OvertimeRequest extends Request {
     public double calculateImpact(double hourlyRate) {
         return getHours() * hourlyRate;
     }
+
+    @Override
+    public String getDisplayDescription() {
+        return "Overtime on " + overtimeDate + " (" + startTime + " to " + endTime + ", " + getHours() + " hr(s))";
+    }
 }

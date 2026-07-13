@@ -16,4 +16,9 @@ public class PayrollDispute extends Dispute {
     }
 
     public String getPayslipNumber() { return payslipNumber; }
+
+    @Override
+    public String getDisplayDescription() {
+        return "Payroll Dispute for payslip " + payslipNumber;
+    }
 }

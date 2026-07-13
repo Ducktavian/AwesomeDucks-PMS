@@ -32,4 +32,9 @@ public class UndertimeRequest extends Request {
     public double calculateImpact(double hourlyRate) {
         return -(getHours() * hourlyRate);
     }
+
+    @Override
+    public String getDisplayDescription() {
+        return "Undertime on " + undertimeDate + " (" + startTime + " to " + endTime + ", " + getHours() + " hr(s))";
+    }
 }
