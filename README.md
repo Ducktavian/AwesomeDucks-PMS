@@ -1,4 +1,4 @@
-# MotorPH Payroll System
+# AwesomeDucks: Payroll Management System
 
 Java Swing desktop application for payroll management. Built with Java 17, Maven, and MySQL.
 
